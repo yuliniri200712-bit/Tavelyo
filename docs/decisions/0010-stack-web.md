@@ -1,6 +1,6 @@
 # ADR-0010 — Bibliotecas y herramientas del stack web
 
-**Estado:** Propuesta (requiere aprobación del propietario: son paquetes y servicios nuevos, `CLAUDE.md` §4) · **Fecha:** 2026-11-13
+**Estado:** Aceptada · **Fecha:** 2026-11-13 · Aprobada por el propietario (D-16), salvo los puntos de «Pendiente de decisión»
 **Depende de:** ADR-0009 (React + Vite + TypeScript, dos PWA).
 
 ## Contexto
@@ -9,7 +9,7 @@ ADR-0009 fija la plataforma. Falta elegir las piezas concretas que antes cubría
 
 Versiones y compatibilidad (*peer dependencies*) consultadas en npm el 2026-11-13. Node.js instalado: 24.19.0.
 
-## Propuesta
+## Decisión
 
 | Necesidad | Propuesta | Versión vigente | Motivo |
 |---|---|---|---|
@@ -31,7 +31,7 @@ Versiones y compatibilidad (*peer dependencies*) consultadas en npm el 2026-11-1
 
 La integración React que genera SQL Connect usa `@tanstack-query-firebase/react` 2.1.1 (admite `firebase` ^11 o ^12, compatible con la 12.x propuesta). El motivo para no usarla es otro: la documentación de SQL Connect recomienda **no** combinarla con su tiempo real nativo, que es el mecanismo previsto para cocina (ADR-0007) y el que se verificó en el spike, incluida la entrega de errores en `onErr`. Además, ahorra una dependencia. Por eso se propone el SDK núcleo con *hooks* propios: `useQuery` sobre `execute()` y `useSubscription` sobre `subscribe()` con `useSyncExternalStore`, de unas decenas de líneas, en `packages/data-access`.
 
-## Estructura del repositorio propuesta
+## Estructura del repositorio
 
 ```text
 apps/menu-web/            # PWA del cliente
@@ -54,12 +54,11 @@ Los límites entre módulos se aplican con las dependencias declaradas en cada `
 
 ## Pendiente de decisión
 
-- Aprobación de esta lista (o cambios).
 - Formateador (Prettier u otro).
 - Validación de formularios y entradas en el cliente (p. ej. un validador de esquemas): se decide en Fase 1 si hace falta.
 - Biblioteca de internacionalización: no hace falta mientras solo haya español (SUP-01).
 
 ## Verificación pendiente
 
-- Repetir la compatibilidad exacta de versiones al crear el monorepo en Fase 1. TypeScript 7.0.2 se publicó el mismo día de esta consulta: preferir el último parche con al menos dos semanas.
+- Repetir la compatibilidad exacta de versiones al crear el monorepo en Fase 1 y fijar versiones con al menos dos semanas de publicadas.
 - Licencias de cada paquete.

@@ -1,6 +1,6 @@
 # Estrategia de pruebas
 
-Estado: **Fase 0**, adaptada a la plataforma web/PWA (ADR-0009). Las herramientas son las propuestas en ADR-0010, pendientes de aprobación (D-16). Base: PM §12, IV §13, CLAUDE.md §8. Prioriza la cobertura de riesgos e invariantes; no se impone un porcentaje decorativo de cobertura.
+Estado: **Fase 0**, adaptada a la plataforma web/PWA (ADR-0009). Las herramientas son las de ADR-0010 (aceptada). Base: PM §12, IV §13, CLAUDE.md §8. Prioriza la cobertura de riesgos e invariantes; no se impone un porcentaje decorativo de cobertura.
 
 ## 1. Niveles
 
