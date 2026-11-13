@@ -9,6 +9,7 @@ Estado: **Fase 0**, adaptada a la plataforma web/PWA (ADR-0009). Las herramienta
 | Unitarias de dominio | `Money`, impuestos, redondeo, descuentos, reparto, máquinas de estado, permisos, inventario | Vitest (TypeScript puro) |
 | Componentes | Componentes del sistema de diseño, formularios, estados de carga/error/vacío | Vitest + Testing Library |
 | Integración | Conectores SQL Connect, backend, transacciones, autorización | Emulador local de Firebase (Auth y SQL Connect) + pruebas del backend |
+| Matriz de navegadores (D-15) | Proyectos de Playwright: Chromium escritorio (Chrome/Edge), WebKit escritorio (Safari macOS), Chrome móvil emulado (Android) y Safari móvil emulado (iPhone/iPad); revisión manual en dispositivos reales antes de cerrar cada fase | Playwright |
 | Recorridos completos | Flujos de los cinco roles | Playwright contra entorno de pruebas aislado, en los navegadores de D-15 |
 | PWA | Instalación, arranque sin conexión, aviso de conexión, actualización controlada, que el *service worker* no cachee datos | Playwright |
 | Seguridad | Aislamiento entre empresas, revocación, webhooks, idempotencia | Integración + casos dedicados |

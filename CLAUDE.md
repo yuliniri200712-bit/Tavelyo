@@ -88,7 +88,7 @@ La marca es **Tavelyo**. La paleta oficial es:
 - Objetivo de accesibilidad: WCAG 2.2 AA. Ningún par de colores se aprueba sin medir su contraste.
 - Tipografía de interfaz: Plus Jakarta Sans, servida por la propia aplicación (sin CDN de fuentes) y con licencia registrada.
 - Definir colores, tipografía, espacios y radios **una sola vez** en el sistema de diseño (`packages/design-system`, como propiedades CSS personalizadas y tokens TypeScript) y consumirlos siempre desde ahí. No escribir valores hexadecimales ni tamaños sueltos en los componentes ni en sus estilos.
-- Logotipo: no usar sombrero de chef ni recrear el logo con iconos, CSS o caracteres. Mientras no exista el archivo maestro registrado en `docs/brand/asset-manifest.md`, usar solo la etiqueta textual neutra «Tavelyo» como marcador de desarrollo.
+- Logotipo: no usar sombrero de chef ni recrear el logo con iconos, CSS o caracteres. El propietario encargó a Claude diseñar el logotipo (2026-11-13) según el concepto de `docs/IDENTIDAD_VISUAL.md` §3: se entrega como **propuesta vectorial** en `assets/branding/proposals/` y solo la versión que el propietario apruebe se registra como maestro en `docs/brand/asset-manifest.md`. Mientras tanto, usar solo la etiqueta textual neutra «Tavelyo» como marcador de desarrollo.
 
 ---
 
@@ -98,7 +98,7 @@ La marca es **Tavelyo**. La paleta oficial es:
 - **No modificar código estable sin justificación.** Todo cambio a código existente debe ser necesario para la tarea en curso y explicarse.
 - **Evitar duplicaciones**: reutilizar componentes, utilidades y lógica existentes antes de crear nuevas.
 - Código legible, con nombres descriptivos, manejo explícito de errores y sin código muerto ni comentado.
-- Respetar el análisis estático y el formato: TypeScript en modo estricto (`tsc --noEmit`) más el linter y el formateador que fije ADR-0010.
+- Respetar el análisis estático y el formato: TypeScript en modo estricto (`tsc --noEmit`) más ESLint y Prettier (ADR-0010).
 
 ---
 

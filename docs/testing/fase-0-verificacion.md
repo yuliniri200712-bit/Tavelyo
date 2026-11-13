@@ -14,8 +14,18 @@ Fase 0 no produce código, así que no aplican pruebas unitarias, de integració
 | Matriz de contraste | Script Node.js con la fórmula de WCAG 2.2 | ✅ Valores recalculados y registrados en `brand/contrast-matrix.md` |
 | Alcance de cambios | `git status` | ✅ Solo `CLAUDE.md` y `docs/`; ningún otro archivo modificado |
 
+## Re-verificación al cierre (2026-11-13, tras el cambio a PWA y la aceptación de las ADR)
+
+| Comprobación | Método | Resultado |
+|---|---|---|
+| Documentos de origen sin cambios | `git diff 0aa20eb -- docs/PROMPT_MAESTRO.md docs/IDENTIDAD_VISUAL.md` y SHA-256 | ✅ Sin diferencias; hashes `73de0b46…` y `f24dd199…`, iguales a los originales |
+| Enlaces relativos | Script Node.js sobre `docs/` y `CLAUDE.md` | ✅ 17 enlaces, 0 rotos |
+| Decisiones | `grep` de `D-01`…`D-16` en `requirements.md` | ✅ Las 16 definidas |
+| Índice de ADR | `decisions/README.md` frente a archivos | 10 ADR, todas enlazadas |
+| Entregable del spike | `architecture/spike-sql-connect.md` | Existe; resultados reproducibles en la rama `spike/sql-connect` (23/23, 9/9 y tiempo real con SDK web) |
+
 ## No verificado
 
 - **Diagramas Mermaid:** no se renderizaron (no hay herramienta de renderizado instalada). Revisar visualmente en GitHub o en un visor compatible.
-- **Capacidades de SQL Connect, pasarela y librerías:** no verificadas; pendientes del spike (D-13) y de las decisiones D-02, D-07 y D-08.
+- **Capacidades de SQL Connect:** verificadas en emulador por el spike (D-13); IAM de producción y navegador real pendientes. **Pasarela:** pendiente de D-02.
 - **Contraste en interfaz real:** solo cálculo teórico; se valida con componentes en Fase 1.

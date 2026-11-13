@@ -1,6 +1,6 @@
 # ADR-0010 — Bibliotecas y herramientas del stack web
 
-**Estado:** Aceptada · **Fecha:** 2026-11-13 · Aprobada por el propietario (D-16), salvo los puntos de «Pendiente de decisión»
+**Estado:** Aceptada · **Fecha:** 2026-11-13 · Aprobada por el propietario (D-16), con Prettier como formateador; queda pendiente lo indicado en «Pendiente de decisión»
 **Depende de:** ADR-0009 (React + Vite + TypeScript, dos PWA).
 
 ## Contexto
@@ -23,7 +23,7 @@ Versiones y compatibilidad (*peer dependencies*) consultadas en npm el 2026-11-1
 | Firebase | `firebase` (Auth, SQL Connect) | **12.x** (12.19.0 verificada en el spike); la última es 13.3.0 | El SDK generado por la CLI 15.30.2 declara `firebase` ^12.11.0 como *peer*. Subir a 13 cuando el generador lo admita |
 | Pruebas unitarias y de componentes | Vitest + Testing Library (`@testing-library/react`) | 5.1.x / 16.3.x | Integradas con Vite |
 | Pruebas de recorrido, PWA y accesibilidad | Playwright + `@axe-core/playwright` | 1.65.x / 4.14.x | Navegadores reales, modo sin conexión, auditoría automática de accesibilidad |
-| Calidad | ESLint (+ `typescript-eslint`) y un formateador | 10.15.x | Equivalente a `dart analyze` y `dart format`; formateador por confirmar |
+| Calidad | ESLint (+ `typescript-eslint`) y **Prettier** | 10.15.x / vigente al crear el monorepo | Análisis estático y formato; Prettier aprobado por el propietario el 2026-11-13 |
 | Monorepo | **npm workspaces** | npm incluido con Node | Sin herramienta adicional; reemplaza a *pub workspaces* |
 | Alojamiento | **Firebase Hosting** con dos sitios (`menu-web`, `operations`) | — | Mismo proveedor; cabeceras de seguridad por sitio. **Servicio nuevo**: requiere aprobación |
 
@@ -54,7 +54,6 @@ Los límites entre módulos se aplican con las dependencias declaradas en cada `
 
 ## Pendiente de decisión
 
-- Formateador (Prettier u otro).
 - Validación de formularios y entradas en el cliente (p. ej. un validador de esquemas): se decide en Fase 1 si hace falta.
 - Biblioteca de internacionalización: no hace falta mientras solo haya español (SUP-01).
 

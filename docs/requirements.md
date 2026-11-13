@@ -134,7 +134,9 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-08 | Gestor de estado y navegación | ~~Riverpod + go_router~~. **Sustituida por D-14**; las bibliotecas web se deciden en D-16 | ADR-0004 reemplazado por ADR-0009 |
 | D-13 | Spike de SQL Connect | **Autorizado**, solo con emuladores locales y en rama aparte que no se integra a `main` | `plans/spike-sql-connect.md` |
 | D-14 | Tecnología de la aplicación | **Sin Flutter. Sistema web instalable como PWA con React + Vite + TypeScript, en dos aplicaciones** (`menu-web` y `operations`) | ADR-0009 aceptado; reemplaza ADR-0002 y ADR-0004 y la herramienta de ADR-0001 |
-| D-16 | Bibliotecas y herramientas del stack web, y Firebase Hosting | **Aceptadas** según ADR-0010; formateador y validación de formularios se deciden en Fase 1 | ADR-0010 aceptado |
+| D-12 (fuente) | Tipografía | **Plus Jakarta Sans confirmada** por el propietario. Licencia SIL Open Font License 1.1, repositorio oficial `tokotype/PlusJakartaSans`, versión 2.7.1 | `brand/asset-manifest.md` |
+| D-15 | Navegadores soportados | **Móvil:** Chrome en Android; Safari en iPhone y iPad (en iOS/iPadOS todos los navegadores usan WebKit). **Escritorio:** Chrome y Edge (Windows y macOS) y Safari (macOS). Versiones: las dos últimas mayores de cada uno | Matriz de pruebas con Playwright (Chromium y WebKit) más revisión en dispositivos reales |
+| D-16 | Bibliotecas y herramientas del stack web, y Firebase Hosting | **Aceptadas** según ADR-0010; formateador **Prettier** (2026-11-13); validación de formularios se decide en Fase 1 | ADR-0010 aceptado |
 
 ### Pendientes
 
@@ -148,5 +150,4 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-09 | Carga objetivo por sucursal, latencia aceptable y presupuesto mensual | RNF-12, dimensionamiento de Cloud SQL |
 | D-10 | Jurisdicción de datos personales, retención y anonimización | Modelo de datos personales |
 | D-11 | RPO/RTO para copias y restauración | Fase 6 |
-| D-12 | Archivo maestro vectorial del logotipo y licencia de Plus Jakarta Sans | Aprobación de recursos de marca |
-| D-15 | Navegadores y dispositivos soportados oficialmente por las PWA (p. ej. Chrome/Edge en Android y escritorio; Safari en iOS/iPadOS) | Matriz de pruebas de Fase 1; alcance de notificaciones e instalación |
+| D-12 | **Logotipo:** el propietario no tiene el maestro y encarga a Claude su diseño (2026-11-13), según el concepto de IV §3. Pendiente de **aprobar la propuesta** | Aprobación de recursos de marca; iconos de las PWA |

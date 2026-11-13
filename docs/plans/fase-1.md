@@ -1,6 +1,6 @@
 # Plan de Fase 1 — Base
 
-Estado: **propuesta para revisión. No autorizada.** No se inicia sin aprobación expresa del propietario.
+Estado: **autorizada por el propietario el 2026-11-13.** Rama de trabajo: `fase-1-base`.
 
 ## 1. Objetivo
 
@@ -11,12 +11,12 @@ Dejar la base técnica sobre la que se construyen las demás fases: estructura d
 | Requisito | Motivo |
 |---|---|
 | ✅ D-14 Plataforma: PWA con React + Vite + TypeScript, dos aplicaciones (ADR-0009) | Estructura de `apps/` y CI |
-| ⏳ D-15 Navegadores soportados | Matriz de pruebas de Playwright |
+| ✅ D-15 Navegadores: Chrome (Android), Safari (iOS/iPadOS), Chrome/Edge y Safari de escritorio | Matriz de pruebas de Playwright |
 | ✅ D-07 Backend: Cloud Functions con TypeScript (ADR-0003) | Estructura de `backend/` |
 | ✅ D-16 Bibliotecas web y alojamiento (ADR-0010) | Dependencias de las apps y despliegue |
 | ✅ D-13 Spike de SQL Connect: ejecutado; ADR-0007 y ADR-0008 aceptadas | Patrón de autorización y tiempo real del esquema |
-| Proyecto(s) de Firebase de desarrollo y pruebas creados por el propietario | No se crean recursos facturables sin autorización |
-| D-12 Licencia de Plus Jakarta Sans | Servir la fuente desde la propia app |
+| ⏳ Proyecto(s) de Firebase de desarrollo y pruebas creados por el propietario | No se crean recursos facturables sin autorización. Mientras no existan, todo se desarrolla y prueba con emuladores locales (proyecto `demo-`); el despliegue y la verificación de IAM quedan pendientes |
+| ✅ D-12 Plus Jakarta Sans confirmada (OFL 1.1) · ⏳ logotipo encargado a Claude, pendiente de aprobación | Servir la fuente desde la propia app; iconos de las PWA |
 
 ## 3. Alcance
 

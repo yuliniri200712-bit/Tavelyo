@@ -14,7 +14,7 @@ A la fecha **no hay ningún recurso maestro aprobado en el repositorio**. `asset
 
 | Recurso | Ruta prevista | Estado |
 |---|---|---|
-| Maestro del logotipo | `assets/branding/tavelyo-logo-master.svg` | ⏳ Pendiente de aportar (D-12) |
+| Maestro del logotipo | `assets/branding/tavelyo-logo-master.svg` | ⏳ **Encargado a Claude** (2026-11-13). Propuestas vectoriales en `assets/branding/proposals/`; se registra como maestro solo la aprobada (D-12) |
 | Horizontal fondo claro | `assets/branding/tavelyo-logo-horizontal-light.svg` | ⏳ Derivar del maestro |
 | Horizontal fondo oscuro | `assets/branding/tavelyo-logo-horizontal-dark.svg` | ⏳ Derivar del maestro |
 | Isotipo | `assets/branding/tavelyo-isotype.svg` | ⏳ Derivar del maestro |
@@ -23,7 +23,7 @@ A la fecha **no hay ningún recurso maestro aprobado en el repositorio**. `asset
 | Iconos de las PWA (manifiesto 192 y 512 px, variante *maskable* y `apple-touch-icon`) | — | ⏳ Derivar del isotipo con áreas seguras (ADR-0009) |
 | Icono de notificación | — | ⏳ Variante simplificada aprobada |
 | Favicon y splash | — | ⏳ Recursos específicos, no capturas |
-| Fuente Plus Jakarta Sans | — | ⏳ Registrar licencia y archivos (D-12) |
+| Fuente Plus Jakarta Sans | `packages/design-system/` (Fase 1) | ✅ **Confirmada** por el propietario (2026-11-13). Origen: repositorio oficial `tokotype/PlusJakartaSans`, versión 2.7.1. Licencia: SIL Open Font License 1.1 (se copia `OFL.txt` junto a los archivos). Se sirve desde la propia app, sin CDN |
 
 ## Reglas
 

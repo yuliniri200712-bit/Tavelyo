@@ -16,4 +16,4 @@ Una decisión solo pasa a *Aceptada* con aprobación expresa del propietario o c
 | [0007](0007-actualizacion-en-tiempo-real.md) | Mecanismo de actualización de cocina y meseros | Aceptada |
 | [0008](0008-autorizacion-multiempresa.md) | Autorización multiempresa y revocación | Aceptada |
 | [0009](0009-plataforma-web-pwa.md) | Plataforma: PWA con React, Vite y TypeScript; dos aplicaciones | Aceptada (decisión del propietario) |
-| [0010](0010-stack-web.md) | Bibliotecas y herramientas del stack web | Aceptada (formateador y validación de formularios pendientes) |
+| [0010](0010-stack-web.md) | Bibliotecas y herramientas del stack web | Aceptada (validación de formularios pendiente) |
