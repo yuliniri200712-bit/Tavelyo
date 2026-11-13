@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Propuestas de logotipo Tavelyo</title>
+    <style>
+      @font-face {
+        font-family: 'Plus Jakarta Sans';
+        src: url('../../../packages/design-system/assets/fonts/PlusJakartaSans%5Bwght%5D.ttf')
+          format('truetype');
+        font-weight: 200 800;
+      }
+      :root {
+        --tomato: #e54835;
+        --paprika: #ee8a34;
+        --cream: #fff5e9;
+        --espresso: #35241f;
+        --peach: #fce6d8;
+        --white: #ffffff;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: var(--white);
+        color: var(--espresso);
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      }
+      h1 {
+        font-size: 28px;
+        margin: 0 0 4px;
+      }
+      p.lead {
+        margin: 0 0 24px;
+        max-width: 72ch;
+      }
+      section {
+        border: 1px solid var(--peach);
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 24px;
+      }
+      h2 {
+        font-size: 20px;
+        margin: 0 0 4px;
+      }
+      section > p {
+        margin: 0 0 12px;
+        max-width: 72ch;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+      .tile {
+        border-radius: 12px;
+        padding: 12px;
+        display: grid;
+        place-items: center;
+        min-width: 152px;
+        min-height: 152px;
+      }
+      .light {
+        background: var(--cream);
+        --sym-main: var(--tomato);
+        --sym-accent: var(--paprika);
+        --sym-inner: var(--peach);
+        --word: var(--espresso);
+        --dot: var(--tomato);
+      }
+      .dark {
+        background: var(--espresso);
+        --sym-main: var(--tomato);
+        --sym-accent: var(--paprika);
+        --sym-inner: var(--espresso);
+        --word: var(--cream);
+        --dot: var(--tomato);
+      }
+      .icon {
+        background: var(--tomato);
+        border-radius: 28px;
+        --sym-main: var(--cream);
+        --sym-accent: var(--cream);
+        --sym-inner: var(--tomato);
+      }
+      .mono {
+        background: var(--white);
+        --sym-main: var(--espresso);
+        --sym-accent: var(--espresso);
+        --sym-inner: var(--white);
+        --word: var(--espresso);
+        --dot: var(--espresso);
+      }
+      .sizes {
+        display: flex;
+        gap: 16px;
+        align-items: end;
+      }
+      .caption {
+        font-size: 12px;
+        margin-top: 6px;
+        text-align: center;
+      }
+      .lockup {
+        padding: 16px 20px;
+      }
+      .wordmark {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: 800;
+        font-variation-settings: 'wght' 800;
+        font-size: 80px;
+        letter-spacing: -2px;
+        fill: var(--word);
+      }
+      .wordmark .dot {
+        fill: var(--dot);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Símbolos de las tres propuestas (caja de 128 × 128). Colores por variables CSS. -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <!-- A · Mesa conectada: las curvas nacen del tablero (no flotan como un icono de wifi). -->
+        <symbol id="iso-a" viewBox="0 0 128 128">
+          <path
+            d="M48 57 A16 16 0 0 1 80 57 M34 57 A30 30 0 0 1 94 57"
+            fill="none"
+            stroke="var(--sym-accent)"
+            stroke-width="7"
+            stroke-linecap="round"
+          />
+          <rect x="20" y="56" width="88" height="16" rx="8" fill="var(--sym-main)" />
+          <rect x="55" y="66" width="18" height="46" rx="9" fill="var(--sym-main)" />
+        </symbol>
+        <!-- B · Plato servido: el tablero es un plato en perspectiva; las curvas salen del plato. -->
+        <symbol id="iso-b" viewBox="0 0 128 128">
+          <path
+            d="M48 60 A16 16 0 0 1 80 60 M34 60 A30 30 0 0 1 94 60"
+            fill="none"
+            stroke="var(--sym-accent)"
+            stroke-width="7"
+            stroke-linecap="round"
+          />
+          <rect x="55" y="62" width="18" height="50" rx="9" fill="var(--sym-main)" />
+          <ellipse cx="64" cy="62" rx="46" ry="13" fill="var(--sym-main)" />
+          <ellipse cx="64" cy="60.5" rx="30" ry="6.5" fill="var(--sym-inner)" />
+        </symbol>
+        <!-- C · Trazo compacto: formas gruesas y una sola curva apoyada en el tablero; pensada para 24 px. -->
+        <symbol id="iso-c" viewBox="0 0 128 128">
+          <path
+            d="M42 56 A22 22 0 0 1 86 56"
+            fill="none"
+            stroke="var(--sym-accent)"
+            stroke-width="10"
+            stroke-linecap="round"
+          />
+          <rect x="14" y="50" width="100" height="24" rx="12" fill="var(--sym-main)" />
+          <rect x="51" y="62" width="26" height="54" rx="13" fill="var(--sym-main)" />
+        </symbol>
+      </defs>
+    </svg>
+
+    <h1>Propuestas de logotipo · Tavelyo</h1>
+    <p class="lead">
+      Tres interpretaciones originales del concepto aprobado (IDENTIDAD_VISUAL §3): isotipo en T con
+      superficie de mesa o plato, soporte vertical y curvas de conectividad; palabra en minúsculas
+      con punto final rojo tomate. Son <strong>propuestas para aprobación</strong>, no el maestro.
+    </p>
+
+    <template id="proposal">
+      <section>
+        <h2></h2>
+        <p></p>
+        <div class="row">
+          <div>
+            <div class="tile light">
+              <svg width="128" height="128"><use /></svg>
+            </div>
+            <div class="caption">Fondo claro</div>
+          </div>
+          <div>
+            <div class="tile dark">
+              <svg width="128" height="128"><use /></svg>
+            </div>
+            <div class="caption">Fondo oscuro</div>
+          </div>
+          <div>
+            <div class="tile icon">
+              <svg width="128" height="128"><use /></svg>
+            </div>
+            <div class="caption">Icono de app</div>
+          </div>
+          <div>
+            <div class="tile mono">
+              <svg width="128" height="128"><use /></svg>
+            </div>
+            <div class="caption">Monocromático</div>
+          </div>
+          <div>
+            <div class="tile light">
+              <div class="sizes">
+                <svg width="48" height="48"><use /></svg>
+                <svg width="24" height="24"><use /></svg>
+              </div>
+            </div>
+            <div class="caption">48 px y 24 px (mínimo)</div>
+          </div>
+        </div>
+        <div class="row" style="margin-top: 12px">
+          <div class="tile light lockup">
+            <svg width="380" height="96" viewBox="0 0 540 128">
+              <use width="128" height="128" />
+              <text class="wordmark" x="140" y="92">
+                tavelyo
+                <tspan class="dot">.</tspan>
+              </text>
+            </svg>
+          </div>
+          <div class="tile dark lockup">
+            <svg width="380" height="96" viewBox="0 0 540 128">
+              <use width="128" height="128" />
+              <text class="wordmark" x="140" y="92">
+                tavelyo
+                <tspan class="dot">.</tspan>
+              </text>
+            </svg>
+          </div>
+        </div>
+      </section>
+    </template>
+
+    <main id="proposals"></main>
+
+    <script>
+      const proposals = [
+        [
+          'iso-a',
+          'A · Mesa conectada',
+          'Tablero redondeado y soporte forman la T; dos curvas de conectividad nacen de la mesa, como una campana de servicio. Equilibrada y versátil.',
+        ],
+        [
+          'iso-b',
+          'B · Plato servido',
+          'El tablero es un plato en perspectiva, con el fondo en durazno, y las curvas salen del plato. Más gastronómica; el detalle interior se pierde a 24 px.',
+        ],
+        [
+          'iso-c',
+          'C · Trazo compacto',
+          'Formas más gruesas y una sola curva apoyada en el tablero: la más legible en tamaños pequeños e iconos.',
+        ],
+      ];
+      const template = document.getElementById('proposal');
+      const main = document.getElementById('proposals');
+      for (const [id, title, text] of proposals) {
+        const node = template.content.cloneNode(true);
+        node.querySelector('h2').textContent = title;
+        node.querySelector('section > p').textContent = text;
+        node.querySelectorAll('use').forEach((use) => use.setAttribute('href', `#${id}`));
+        main.append(node);
+      }
+    </script>
+  </body>
+</html>

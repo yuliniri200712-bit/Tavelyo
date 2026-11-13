@@ -8,6 +8,16 @@
 
 **Fase 0 — Análisis: cerrada** con aprobación del propietario el 2026-11-13 e integrada en `main`.
 
+## Fase 1 — avance
+
+| Bloque del plan | Estado |
+|---|---|
+| 1. Monorepo (npm workspaces, TypeScript 6.0.3, ESLint, Prettier, Vitest) | ✅ Base creada; `apps/` y los demás paquetes se crean en sus bloques |
+| 4. `core`: `Money`, `Result`, `UtcInstant` | ✅ 70 pruebas en verde (`testing/fase-1.md`) |
+| 8. `design-system` | 🔄 Fuente Plus Jakarta Sans 2.7.1 (OFL) incorporada; tokens y componentes pendientes |
+| 10. Logotipo | 🔄 Tres propuestas en `assets/branding/proposals/propuestas-logo.html`, pendientes de elección del propietario; mientras tanto, marcador textual |
+| 2, 3, 5, 6, 7, 9 | ⏳ Entornos, CI, esquema inicial, autenticación y selector de empresa, autorización, PWA base |
+
 ## Fase 0 — resumen de cierre
 
 | Entregable | Archivo | Estado |
@@ -30,7 +40,7 @@ D-07 Cloud Functions con TypeScript · D-12 (fuente) Plus Jakarta Sans, OFL 1.1 
 
 ## Pendiente
 
-- **Logotipo (D-12):** encargado a Claude; propuesta vectorial para aprobación del propietario.
+- **Logotipo (D-12):** elegir una de las tres propuestas (A, B o C) o pedir ajustes.
 - Validación de formularios en el cliente (pendiente dentro de ADR-0010; se decide en Fase 1 si hace falta).
 - Decisiones de negocio D-01, D-02, D-04 a D-06 y D-09 a D-11 (`requirements.md` §6). No bloquean la Fase 1.
 

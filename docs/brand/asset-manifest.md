@@ -10,6 +10,14 @@ A la fecha **no hay ningún recurso maestro aprobado en el repositorio**. `asset
 | Composición del logotipo (isotipo T, `tavelyo.`, eslogan, variante horizontal e iconos de app sobre tomate, paprika y durazno) | Imagen raster (WebP) adjunta en la conversación del 2026-11-13 | Propietario | **Referencia, no maestro** | Coincide con el concepto aprobado (IV §3). No es vectorial; no se copió al repositorio. Necesita el archivo original para registrarse como maestro |
 | Cinco composiciones de interfaz (Cliente, Personal, Cocina, Caja, Administración) | Imágenes raster (WebP) | Propietario | **Referencia visual** | Analizadas en `reference-review.md`. Usan un logotipo distinto (gorro de chef), por lo que no son fuente de marca |
 
+## Propuestas en revisión
+
+| Recurso | Archivo | Estado |
+|---|---|---|
+| Tres propuestas de isotipo y logotipo horizontal (A · Mesa conectada, B · Plato servido, C · Trazo compacto), originales de Claude según IV §3, en fondo claro, oscuro, icono de app, monocromático y a 48/24 px | `assets/branding/proposals/propuestas-logo.html` | ⏳ **Pendiente de elección del propietario**. No son maestro. Tras elegir: SVG independientes por variante, palabra convertida a trazos, área de protección 0,5X y exportaciones PNG |
+
+Notas de contraste (gráficos, mínimo 3:1): tomate sobre crema 3,67; tomate sobre espresso 3,73; crema sobre tomate 3,67; paprika sobre crema 2,34 (por eso la paprika solo se usa en las curvas secundarias y nunca en la forma principal); paprika sobre tomate 1,57 (por eso el icono de app usa el símbolo completo en crema).
+
 ## Recursos pendientes
 
 | Recurso | Ruta prevista | Estado |
