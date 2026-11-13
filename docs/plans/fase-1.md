@@ -14,7 +14,7 @@ Dejar la base técnica sobre la que se construyen las demás fases: estructura d
 | ⏳ D-15 Navegadores soportados | Matriz de pruebas de Playwright |
 | ✅ D-07 Backend: Cloud Functions con TypeScript (ADR-0003) | Estructura de `backend/` |
 | ⏳ D-16 Bibliotecas web y alojamiento (ADR-0010, propuesta) | Dependencias de las apps y despliegue |
-| ⏳ D-13 Spike de SQL Connect: ejecutado con cliente Flutter; **falta repetir la parte de cliente con el SDK web** (ADR-0009) | Confirmar ADR-0007 y ADR-0008 antes de comprometer el esquema |
+| ⏳ D-13 Spike de SQL Connect: **ejecutado** (servidor y cliente web); pendiente de revisión del propietario | Confirmar ADR-0007 y ADR-0008 antes de comprometer el esquema |
 | Proyecto(s) de Firebase de desarrollo y pruebas creados por el propietario | No se crean recursos facturables sin autorización |
 | D-12 Licencia de Plus Jakarta Sans | Servir la fuente desde la propia app |
 

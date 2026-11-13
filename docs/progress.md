@@ -18,7 +18,7 @@ Por decisión expresa del propietario, **no se usa Flutter**. Tavelyo será un s
 | ADR-0003, 0005, 0006, 0007 | Referencias a Dart adaptadas a TypeScript/web, sin cambiar su decisión |
 | `CLAUDE.md`, arquitectura, requisitos, plan de Fase 1, estrategia de pruebas, permisos, marca | Adaptados |
 | D-03 y D-08 | Sustituidas por D-14; nuevas pendientes D-15 (navegadores) y D-16 (stack web) |
-| Spike D-13 | Siguen válidos los resultados de servidor (autorización, revocación, atomicidad, FK compuestas, T10). La parte de cliente (SDK, `Int64`, tiempo real) **se repite con el SDK web** en `spike/sql-connect` |
+| Spike D-13 | Siguen válidos los resultados de servidor (autorización, revocación, atomicidad, FK compuestas, T10). Parte de cliente **repetida con el SDK web**: `Int64` exacto como cadena, tiempo real con aislamiento y errores entregados en `onErr` (ver `spike/sql-connect`) |
 
 ## Estado del repositorio
 
@@ -46,7 +46,7 @@ Por decisión expresa del propietario, **no se usa Flutter**. Tavelyo será un s
 | Estrategia de pruebas | `docs/testing/strategy.md` | ✅ Adaptada a herramientas web (pendientes de D-16) |
 | Verificación de Fase 0 | `docs/testing/fase-0-verificacion.md` | ✅ |
 | Plan de Fase 1 | `docs/plans/fase-1.md` | ✅ Propuesta adaptada a PWA, no autorizada |
-| Plan del spike SQL Connect | `docs/plans/spike-sql-connect.md` | Ejecutado con cliente Flutter; parte de cliente por repetir con SDK web |
+| Plan del spike SQL Connect | `docs/plans/spike-sql-connect.md` | ✅ Ejecutado (cliente web); resultados y propuestas en `architecture/spike-sql-connect.md` de la rama `spike/sql-connect` |
 
 ## Decisiones resueltas (2026-11-13)
 
@@ -55,11 +55,11 @@ D-07 Cloud Functions con TypeScript · D-13 spike autorizado · **D-14 PWA con R
 ## Pendiente
 
 - Aprobación de ADR-0010 (D-16) y elección de navegadores soportados (D-15).
-- Repetir la parte de cliente del spike con el SDK web: `Int64`, suscripciones en tiempo real y entrega de errores. Después, propuestas finales para ADR-0005, 0007 y 0008.
+- Revisión del propietario de los resultados del spike y de las propuestas para ADR-0005, 0007 y 0008 (§9 de `architecture/spike-sql-connect.md`, rama `spike/sql-connect`), **sin aplicar**.
 - Aprobación del resto de entregables de Fase 0 por el propietario.
 - Decisiones D-01, D-02, D-04 a D-06 y D-09 a D-12 (`requirements.md` §6).
 - Integración de `fase-0-arquitectura` en `main`: requiere aprobación del propietario.
 
 ## Bloqueos
 
-- Fase 1 depende de D-12, D-15, D-16, del cierre del spike con el SDK web y de proyectos Firebase de desarrollo/pruebas creados por el propietario.
+- Fase 1 depende de D-12, D-15, D-16, de la revisión del spike (ADR-0007 y ADR-0008) y de proyectos Firebase de desarrollo/pruebas creados por el propietario.

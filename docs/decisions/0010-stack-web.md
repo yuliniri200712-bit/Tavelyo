@@ -13,14 +13,14 @@ Versiones y compatibilidad (*peer dependencies*) consultadas en npm el 2026-11-1
 
 | Necesidad | Propuesta | Versión vigente | Motivo |
 |---|---|---|---|
-| Lenguaje | TypeScript en modo estricto | 7.0.x | Mismo lenguaje que el backend; tipos del SDK generado |
+| Lenguaje | TypeScript en modo estricto, con `skipLibCheck: true` | 7.0.x | Mismo lenguaje que el backend; tipos del SDK generado. `skipLibCheck` es necesario: el `.d.ts` generado (CLI 15.30.2) tiene `};` tras cada `enum`, que TypeScript 6 y 7 rechazan (spike D-13) |
 | Empaquetador y servidor de desarrollo | Vite | 8.3.x | Decidido en ADR-0009 |
 | Integración React | `@vitejs/plugin-react` | 6.3.x | Requiere Vite 8 |
 | UI | React + React DOM | 19.3.x | Decidido en ADR-0009 |
 | Rutas | React Router | 8.5.x | Rutas declarativas, guardas de UX y URL compartibles para el menú; requiere React ≥ 19.2.7 |
 | Datos y estado | **SDK web generado de SQL Connect (núcleo) + *hooks* propios mínimos**; estado de UI con el estado y el contexto de React | — | Ver «Por qué no TanStack Query» |
 | PWA | `vite-plugin-pwa` (Workbox) | 2.0.x | Manifiesto y *service worker* con caché solo de recursos estáticos; admite Vite 8 |
-| Firebase | `firebase` (Auth, SQL Connect) | 13.3.x | SDK oficial |
+| Firebase | `firebase` (Auth, SQL Connect) | **12.x** (12.19.0 verificada en el spike); la última es 13.3.0 | El SDK generado por la CLI 15.30.2 declara `firebase` ^12.11.0 como *peer*. Subir a 13 cuando el generador lo admita |
 | Pruebas unitarias y de componentes | Vitest + Testing Library (`@testing-library/react`) | 5.1.x / 16.3.x | Integradas con Vite |
 | Pruebas de recorrido, PWA y accesibilidad | Playwright + `@axe-core/playwright` | 1.65.x / 4.14.x | Navegadores reales, modo sin conexión, auditoría automática de accesibilidad |
 | Calidad | ESLint (+ `typescript-eslint`) y un formateador | 10.15.x | Equivalente a `dart analyze` y `dart format`; formateador por confirmar |
@@ -29,7 +29,7 @@ Versiones y compatibilidad (*peer dependencies*) consultadas en npm el 2026-11-1
 
 ### Por qué no TanStack Query
 
-La integración React que genera SQL Connect usa `@tanstack-query-firebase/react` 2.1.1, que solo admite `firebase` ^11 o ^12, mientras que la versión vigente es la 13.3.0. Además, la documentación de SQL Connect recomienda **no** combinar esa integración con su tiempo real nativo, que es el mecanismo previsto para cocina (ADR-0007). Por eso se propone el SDK núcleo con *hooks* propios: `useQuery` sobre `execute()` y `useSubscription` sobre `subscribe()` con `useSyncExternalStore`, de unas decenas de líneas, en `packages/data-access`.
+La integración React que genera SQL Connect usa `@tanstack-query-firebase/react` 2.1.1 (admite `firebase` ^11 o ^12, compatible con la 12.x propuesta). El motivo para no usarla es otro: la documentación de SQL Connect recomienda **no** combinarla con su tiempo real nativo, que es el mecanismo previsto para cocina (ADR-0007) y el que se verificó en el spike, incluida la entrega de errores en `onErr`. Además, ahorra una dependencia. Por eso se propone el SDK núcleo con *hooks* propios: `useQuery` sobre `execute()` y `useSubscription` sobre `subscribe()` con `useSyncExternalStore`, de unas decenas de líneas, en `packages/data-access`.
 
 ## Estructura del repositorio propuesta
 
