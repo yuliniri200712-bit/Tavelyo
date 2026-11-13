@@ -4,47 +4,62 @@
 
 ## Fase actual
 
-**Fase 0 — Análisis.** Autorizada por el propietario el 2026-11-13. Estado: **entregables documentales completos y confirmados en git**; ADR-0001 aprobada; ADR-0007 y ADR-0008 se deciden con el resultado del spike. No hay código de producto ni infraestructura desplegada.
+**Fase 0 — Análisis.** Autorizada por el propietario el 2026-11-13. Estado: **entregables documentales completos y adaptados a la plataforma web/PWA** (ADR-0009). ADR-0010 (bibliotecas web) propuesta; ADR-0007 y ADR-0008 pendientes del spike. No hay código de producto ni infraestructura desplegada.
+
+## Cambio de plataforma (2026-11-13)
+
+Por decisión expresa del propietario, **no se usa Flutter**. Tavelyo será un sistema web instalable como PWA, con React + Vite + TypeScript y dos aplicaciones (`menu-web` y `operations`).
+
+| Qué | Efecto |
+|---|---|
+| ADR-0009 | Nueva, **aceptada**. Incluye la tabla de equivalencias Flutter → web para leer los documentos de origen, que no se editan |
+| ADR-0010 | Nueva, **propuesta**: bibliotecas (React Router, SDK núcleo de SQL Connect con *hooks* propios, `vite-plugin-pwa`, Vitest, Playwright, ESLint), npm workspaces y Firebase Hosting |
+| ADR-0001, 0002, 0004 | Reemplazadas por ADR-0009 |
+| ADR-0003, 0005, 0006, 0007 | Referencias a Dart adaptadas a TypeScript/web, sin cambiar su decisión |
+| `CLAUDE.md`, arquitectura, requisitos, plan de Fase 1, estrategia de pruebas, permisos, marca | Adaptados |
+| D-03 y D-08 | Sustituidas por D-14; nuevas pendientes D-15 (navegadores) y D-16 (stack web) |
+| Spike D-13 | Siguen válidos los resultados de servidor (autorización, revocación, atomicidad, FK compuestas, T10). La parte de cliente (SDK, `Int64`, tiempo real) **se repite con el SDK web** en `spike/sql-connect` |
 
 ## Estado del repositorio
 
 | Elemento | Estado |
 |---|---|
-| Rama de trabajo | `fase-0-arquitectura` |
-| Commits | `Initial commit` (README) y commit de documentación de Fase 0 en `fase-0-arquitectura` (no integrado en `main`) |
-| Código, dependencias, pruebas, CI | No existen |
-| Herramientas locales detectadas | Flutter 3.47.7 (Dart 3.13.5), Firebase CLI 15.30.2, Node.js |
+| Rama de trabajo | `fase-0-arquitectura`; spike en `spike/sql-connect` |
+| Commits | Documentación de Fase 0 en `fase-0-arquitectura` (no integrada en `main`) |
+| Código, dependencias, pruebas, CI | No existen en el producto |
+| Herramientas locales detectadas | Node.js 24.19.0, Firebase CLI 15.30.2, Chrome 157. Flutter 3.47.7 instalado, pero ya no se usa |
 
 ## Fase 0 — entregables
 
 | Entregable | Archivo | Estado |
 |---|---|---|
-| Instrucciones permanentes | `CLAUDE.md` | ✅ Actualizado con precedencia, capas, tecnologías, marca y ubicación de docs |
-| Documentos de origen | `docs/PROMPT_MAESTRO.md`, `docs/IDENTIDAD_VISUAL.md` | ✅ Copias idénticas |
+| Instrucciones permanentes | `CLAUDE.md` | ✅ Adaptado a web/PWA |
+| Documentos de origen | `docs/PROMPT_MAESTRO.md`, `docs/IDENTIDAD_VISUAL.md` | ✅ Copias idénticas, sin editar (desviación registrada en ADR-0009) |
 | Requisitos, supuestos y decisiones | `docs/requirements.md` | ✅ Borrador |
-| Arquitectura | `docs/architecture/overview.md` | ✅ Propuesta |
+| Arquitectura | `docs/architecture/overview.md` | ✅ Propuesta, adaptada a PWA |
 | ERD y diccionario | `docs/architecture/data-model.md` | ✅ Borrador |
 | Matriz de permisos | `docs/architecture/permissions.md` | ✅ Borrador |
 | Modelo de amenazas | `docs/architecture/threat-model.md` | ✅ Borrador |
 | Estados y flujos | `docs/architecture/state-machines.md` | ✅ Borrador |
-| Decisiones (ADR 0001–0008) | `docs/decisions/` | ✅ 6 aceptadas (0001–0006), 2 propuestas pendientes del spike (0007, 0008) |
+| Decisiones (ADR 0001–0010) | `docs/decisions/` | 0003, 0005, 0006 y 0009 aceptadas; 0001, 0002 y 0004 reemplazadas; 0007, 0008 y 0010 propuestas |
 | Marca | `docs/brand/` | ✅ Manifiesto, matriz de contraste y revisión de referencias |
-| Estrategia de pruebas | `docs/testing/strategy.md` | ✅ |
+| Estrategia de pruebas | `docs/testing/strategy.md` | ✅ Adaptada a herramientas web (pendientes de D-16) |
 | Verificación de Fase 0 | `docs/testing/fase-0-verificacion.md` | ✅ |
-| Plan de Fase 1 | `docs/plans/fase-1.md` | ✅ Propuesta, no autorizada |
-| Plan del spike SQL Connect | `docs/plans/spike-sql-connect.md` | ✅ Autorizado, pendiente de ejecutar |
+| Plan de Fase 1 | `docs/plans/fase-1.md` | ✅ Propuesta adaptada a PWA, no autorizada |
+| Plan del spike SQL Connect | `docs/plans/spike-sql-connect.md` | Ejecutado con cliente Flutter; parte de cliente por repetir con SDK web |
 
 ## Decisiones resueltas (2026-11-13)
 
-D-03 web y Android · D-07 Cloud Functions con TypeScript · D-08 Riverpod + go_router · D-13 spike autorizado · ADR-0001 (monorepo con *pub workspaces*) aprobada.
+D-07 Cloud Functions con TypeScript · D-13 spike autorizado · **D-14 PWA con React + Vite + TypeScript, dos aplicaciones** (sustituye a D-03 y D-08).
 
 ## Pendiente
 
-- Aprobación del resto de entregables de Fase 0 por el propietario; ADR-0007 y ADR-0008 tras el spike.
+- Aprobación de ADR-0010 (D-16) y elección de navegadores soportados (D-15).
+- Repetir la parte de cliente del spike con el SDK web: `Int64`, suscripciones en tiempo real y entrega de errores. Después, propuestas finales para ADR-0005, 0007 y 0008.
+- Aprobación del resto de entregables de Fase 0 por el propietario.
 - Decisiones D-01, D-02, D-04 a D-06 y D-09 a D-12 (`requirements.md` §6).
-- Spike de SQL Connect en rama `spike/sql-connect`: en curso (ver esa rama).
 - Integración de `fase-0-arquitectura` en `main`: requiere aprobación del propietario.
 
 ## Bloqueos
 
-- Fase 1 depende de D-12, del resultado del spike (D-13) y de proyectos Firebase de desarrollo/pruebas creados por el propietario.
+- Fase 1 depende de D-12, D-15, D-16, del cierre del spike con el SDK web y de proyectos Firebase de desarrollo/pruebas creados por el propietario.

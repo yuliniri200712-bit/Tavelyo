@@ -20,7 +20,7 @@ A la fecha **no hay ningún recurso maestro aprobado en el repositorio**. `asset
 | Isotipo | `assets/branding/tavelyo-isotype.svg` | ⏳ Derivar del maestro |
 | Monocromático | `assets/branding/tavelyo-monochrome.svg` | ⏳ Derivar del maestro |
 | Vertical | — | ⏳ Derivar del maestro |
-| Icono de app (Android adaptativo / iOS) | — | ⏳ Derivar del isotipo con áreas seguras |
+| Iconos de las PWA (manifiesto 192 y 512 px, variante *maskable* y `apple-touch-icon`) | — | ⏳ Derivar del isotipo con áreas seguras (ADR-0009) |
 | Icono de notificación | — | ⏳ Variante simplificada aprobada |
 | Favicon y splash | — | ⏳ Recursos específicos, no capturas |
 | Fuente Plus Jakarta Sans | — | ⏳ Registrar licencia y archivos (D-12) |

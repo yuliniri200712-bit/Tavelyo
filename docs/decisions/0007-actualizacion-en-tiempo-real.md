@@ -20,5 +20,5 @@ Diseñar siempre la **consulta incremental por cursor (B)** como mecanismo base 
 
 ## Verificación pendiente (spike D-13)
 
-- ¿SQL Connect ofrece suscripciones o actualización en tiempo real para el SDK Dart? ¿Con qué autorización y límites?
+- ¿SQL Connect ofrece suscripciones o actualización en tiempo real para el SDK web (ADR-0009)? ¿Con qué autorización y límites?
 - Latencia y coste de B con un intervalo de 3–5 s para una sucursal con la carga de D-09.

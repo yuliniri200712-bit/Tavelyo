@@ -8,7 +8,7 @@ La pasarela depende del país, la moneda y el titular de la cuenta comercial. El
 
 ## Decisión
 
-Contrato en el backend (y su reflejo de tipos en Dart para presentación):
+Contrato en el backend (y sus tipos compartidos con el cliente web en `packages/contracts`, ADR-0010):
 
 | Operación | Entrada mínima | Garantía |
 |---|---|---|

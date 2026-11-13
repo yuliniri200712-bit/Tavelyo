@@ -1,6 +1,6 @@
 # ADR-0001 — Estructura del repositorio: monorepo con *pub workspaces*
 
-**Estado:** Aceptada · **Fecha:** 2026-11-13 · Aprobada por el propietario el 2026-11-13
+**Estado:** Reemplazada por 0009 (la herramienta *pub workspaces* deja de aplicar; el principio de monorepo se mantiene y su herramienta se propone en ADR-0010) · **Fecha:** 2026-11-13 · Aprobada por el propietario el 2026-11-13
 
 ## Contexto
 

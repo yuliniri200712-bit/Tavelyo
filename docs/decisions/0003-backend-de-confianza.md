@@ -26,5 +26,5 @@ Pagos, webhooks, conciliación, revalidación de precios, inventario y operacion
 ## Verificación pendiente
 
 - Confirmar en la documentación oficial los runtimes de Node.js soportados y las cuotas/costes aplicables.
-- No asumir soporte oficial de Dart en Cloud Functions sin verificarlo.
+- Con ADR-0009, cliente y backend comparten TypeScript: los contratos compartidos viven en `packages/contracts` (ADR-0010).
 - Confirmar la conexión segura del backend a Cloud SQL (conector oficial, IAM) en el spike o en Fase 1.

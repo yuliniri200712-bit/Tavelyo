@@ -1,6 +1,6 @@
 # ADR-0004 — Gestión de estado y navegación
 
-**Estado:** Aceptada · **Fecha:** 2026-11-13 · Aprobada por el propietario (D-08)
+**Estado:** Reemplazada por 0009 (sin Flutter; bibliotecas web propuestas en ADR-0010) · **Fecha:** 2026-11-13 · Aprobada por el propietario (D-08)
 
 ## Contexto
 

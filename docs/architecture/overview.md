@@ -6,8 +6,8 @@ Estado: **propuesta de Fase 0**. Las piezas marcadas como *pendiente* dependen d
 
 ```mermaid
 flowchart LR
-  subgraph Clientes Flutter
-    MW[client_web<br/>Menu — Cliente]
+  subgraph PWA[Aplicaciones web instalables · React + TypeScript]
+    MW[menu-web<br/>Menu — Cliente]
     OP[operations<br/>Staff · Kitchen · POS · Manager]
   end
   AUTH[Firebase Authentication]
@@ -34,21 +34,23 @@ flowchart LR
 Principios:
 
 - **PostgreSQL es la fuente de verdad.** FCM solo avisa; al recibir un aviso, el cliente consulta el estado real.
-- **Flutter nunca habla con PostgreSQL ni con la pasarela directamente.** Solo con SQL Connect (operaciones con autorización declarada) o con el backend.
+- **Las PWA nunca hablan con PostgreSQL ni con la pasarela directamente.** Solo con SQL Connect (operaciones con autorización declarada) o con el backend.
 - **El backend ejecuta lo que el conector no puede garantizar**: pagos, webhooks, conciliación, operaciones con invariantes transaccionales y tareas programadas.
 
-## 2. Estructura del repositorio (ADR-0001, aceptada)
+## 2. Estructura del repositorio (ADR-0009; herramientas propuestas en ADR-0010)
 
 ```text
 Tavelyo/
   CLAUDE.md
   docs/                       # Requisitos, arquitectura, decisiones, marca, pruebas, planes y progreso
   apps/
-    client_web/               # Menu — Cliente (ADR-0002)
-    operations/               # Staff, Kitchen, POS y Manager por rol (ADR-0002)
+    menu-web/                 # PWA del cliente (ADR-0009)
+    operations/               # PWA de Staff, Kitchen, POS y Manager por rol (ADR-0009)
   packages/
-    core/                     # Errores, Money, fechas, resultados, contratos compartidos
-    design_system/            # Tokens, tema y componentes
+    core/                     # Errores, Money, fechas, resultados (TypeScript puro)
+    contracts/                # Tipos compartidos entre las PWA y el backend
+    design-system/            # Tokens (CSS + TS), componentes React y catálogo visual
+    data-access/              # SDK web generado de SQL Connect y hooks propios
     features/
       identity/  tenancy/  catalog/  tables/  orders/
       kitchen/   billing/  payments/ inventory/ reporting/
@@ -57,27 +59,27 @@ Tavelyo/
   assets/branding/            # Solo recursos maestros aprobados (vacío hasta D-12)
 ```
 
-Los paquetes se crean **cuando una fase los necesita**, no por formalismo. Fase 1 crearía `core`, `design_system`, `identity` y `tenancy`.
+Los paquetes se crean **cuando una fase los necesita**, no por formalismo. Fase 1 crearía `core`, `contracts`, `design-system`, `data-access`, `identity` y `tenancy`.
 
 ## 3. Capas dentro de cada módulo
 
 ```mermaid
 flowchart TB
-  P[presentation<br/>widgets · estado de UI] --> A[application<br/>casos de uso]
+  P[presentation<br/>componentes React · estado de UI] --> A[application<br/>casos de uso]
   A --> D[domain<br/>entidades · reglas · contratos]
   DA[data<br/>repositorios · SQL Connect · backend] --> D
 ```
 
-- `domain` es Dart puro: sin Flutter, Firebase ni SDK de pagos.
-- `data` implementa los contratos de `domain`. El SDK generado de SQL Connect solo se importa en `data`.
+- `domain` es TypeScript puro: sin React, Firebase ni SDK de pagos.
+- `data` implementa los contratos de `domain`. El SDK generado de SQL Connect solo se importa en `data` (a través de `data-access`).
 - Los módulos se comunican mediante contratos públicos, nunca importando internos de otro módulo.
-- La inyección de dependencias se resuelve en cada app (composición en el arranque).
+- La inyección de dependencias se resuelve en cada app: composición en el arranque y entrega por contexto de React.
 
 ## 4. Responsabilidades por componente
 
 | Componente | Hace | No hace |
 |---|---|---|
-| Apps Flutter | Presentación, validación de entrada, caché de lectura, borradores | Cálculo financiero autoritativo, autorización, estados finales de pago |
+| PWA (`menu-web`, `operations`) | Presentación, validación de entrada, caché de lectura en memoria, borradores | Cálculo financiero autoritativo, autorización, estados finales de pago |
 | SQL Connect | Lecturas y escrituras simples con `@auth` y filtros por membresía | Invariantes multi-tabla que no pueda garantizar (por verificar en spike) |
 | Backend | Pedidos con revalidación de precios, pagos, webhooks, conciliación, inventario, auditoría, outbox | Lógica de presentación |
 | PostgreSQL | Datos, restricciones, claves compuestas, transacciones | — |
@@ -91,7 +93,16 @@ flowchart TB
 - **Dinero**: objeto de valor `Money` (ADR-0005).
 - **Telemetría**: sin tokens, tarjetas ni datos personales innecesarios en logs.
 
-## 6. Documentos relacionados
+## 6. PWA (ADR-0009)
+
+- **Instalación:** manifiesto de aplicación web e iconos por aplicación; cada PWA se instala por separado.
+- **Service worker:** cachea solo la estructura de la app y los recursos estáticos (incluida Plus Jakarta Sans). No cachea datos de SQL Connect ni del backend.
+- **Sin conexión:** se muestra la última lectura con su hora y el estado de conexión; no se confirma ningún pedido ni pago. Al reconectar, se re-consulta el estado real (consulta incremental, ADR-0007).
+- **Actualizaciones:** aviso de nueva versión y recarga en un momento seguro, nunca durante un cobro o una comanda.
+- **Seguridad web:** cabeceras estrictas por sitio (CSP, `frame-ancestors`, HSTS, `Referrer-Policy`); sesión por pestaña en dispositivos compartidos.
+- **Alojamiento:** propuesto Firebase Hosting con un sitio por PWA (ADR-0010, pendiente de aprobación).
+
+## 7. Documentos relacionados
 
 - Modelo de datos: [`data-model.md`](data-model.md)
 - Permisos: [`permissions.md`](permissions.md)

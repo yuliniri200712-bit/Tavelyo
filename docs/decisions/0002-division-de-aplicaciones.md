@@ -1,6 +1,6 @@
 # ADR-0002 — División en dos aplicaciones Flutter
 
-**Estado:** Aceptada · **Fecha:** 2026-11-13 · Aprobada por el propietario junto con D-03 (web y Android)
+**Estado:** Reemplazada por 0009 (dos PWA con React; se conserva la división en dos aplicaciones) · **Fecha:** 2026-11-13 · Aprobada por el propietario junto con D-03 (web y Android)
 
 ## Contexto
 

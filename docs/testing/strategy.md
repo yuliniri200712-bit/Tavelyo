@@ -1,18 +1,19 @@
 # Estrategia de pruebas
 
-Estado: **Fase 0**. Base: PM §12, IV §13, CLAUDE.md §8. Prioriza la cobertura de riesgos e invariantes; no se impone un porcentaje decorativo de cobertura.
+Estado: **Fase 0**, adaptada a la plataforma web/PWA (ADR-0009). Las herramientas son las propuestas en ADR-0010, pendientes de aprobación (D-16). Base: PM §12, IV §13, CLAUDE.md §8. Prioriza la cobertura de riesgos e invariantes; no se impone un porcentaje decorativo de cobertura.
 
 ## 1. Niveles
 
 | Nivel | Qué cubre | Herramienta prevista |
 |---|---|---|
-| Unitarias de dominio | `Money`, impuestos, redondeo, descuentos, reparto, máquinas de estado, permisos, inventario | `package:test` (Dart puro) |
-| Widgets | Componentes del sistema de diseño, formularios, estados de carga/error/vacío | `flutter_test` |
+| Unitarias de dominio | `Money`, impuestos, redondeo, descuentos, reparto, máquinas de estado, permisos, inventario | Vitest (TypeScript puro) |
+| Componentes | Componentes del sistema de diseño, formularios, estados de carga/error/vacío | Vitest + Testing Library |
 | Integración | Conectores SQL Connect, backend, transacciones, autorización | Emulador local de Firebase (Auth y SQL Connect) + pruebas del backend |
-| Recorridos completos | Flujos de los cinco roles | `integration_test` contra entorno de pruebas aislado |
+| Recorridos completos | Flujos de los cinco roles | Playwright contra entorno de pruebas aislado, en los navegadores de D-15 |
+| PWA | Instalación, arranque sin conexión, aviso de conexión, actualización controlada, que el *service worker* no cachee datos | Playwright |
 | Seguridad | Aislamiento entre empresas, revocación, webhooks, idempotencia | Integración + casos dedicados |
 | Regresión | Toda la suite en CI en cada cambio | CI (Fase 1) |
-| Visuales y accesibilidad | Contraste, foco, lector de pantalla, texto al 200 %, tamaños | `flutter_test` (golden con datos deterministas) + revisión manual |
+| Visuales y accesibilidad | Contraste, foco, lector de pantalla, texto al 200 %, tamaños | Playwright (capturas con datos deterministas) + `@axe-core/playwright` + revisión manual con lector de pantalla |
 
 Los dobles de prueba no sustituyen comprobar la pasarela en su entorno de pruebas ni las reglas desplegadas. Una herramienta ausente es una limitación documentada, no una prueba aprobada.
 

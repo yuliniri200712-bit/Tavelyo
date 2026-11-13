@@ -77,7 +77,7 @@ stateDiagram-v2
 
 ```mermaid
 sequenceDiagram
-  participant C as Cliente (client_web)
+  participant C as Cliente (menu-web)
   participant B as Backend
   participant DB as PostgreSQL
   participant P as Pasarela

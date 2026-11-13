@@ -7,7 +7,7 @@ Estado: **autorizado por el propietario el 2026-11-13; pendiente de ejecutar** (
 Comprobar con evidencia las capacidades que la arquitectura no puede suponer:
 
 1. Autorización: ¿`@auth` y los filtros de SQL Connect permiten restringir por membresía activa (`auth.uid` → `Membership` → `tenant_id`)? (ADR-0008)
-2. Generación del SDK Dart para las operaciones necesarias y su uso desde Flutter.
+2. Generación del SDK Dart para las operaciones necesarias y su uso desde Flutter. *(Con ADR-0009 este punto pasa a ser el SDK web generado en TypeScript y su uso desde el navegador.)*
 3. Atomicidad: ¿qué operaciones multi-tabla se pueden expresar en una mutación atómica y cuáles deben ir al backend?
 4. Actualización: ¿existe un mecanismo de suscripción/tiempo real utilizable para cocina? Si no, medir la consulta incremental por cursor. (ADR-0007)
 

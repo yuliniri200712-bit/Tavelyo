@@ -129,10 +129,11 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 
 | ID | Decisión | Respuesta (2026-11-13) | Efecto |
 |---|---|---|---|
-| D-03 | Plataformas prioritarias | **Web y Android.** iOS/iPad y escritorio Windows quedan fuera del alcance inicial | ADR-0002 aceptado; CI de Fase 1 compila web y Android |
+| D-03 | Plataformas prioritarias | ~~Web y Android~~. **Sustituida por D-14** (2026-11-13): sin apps nativas; los navegadores soportados se deciden en D-15 | ADR-0002 reemplazado por ADR-0009 |
 | D-07 | Backend de confianza y lenguaje | **Cloud Functions con TypeScript** | ADR-0003 aceptado |
-| D-08 | Gestor de estado y navegación | **Riverpod + go_router** | ADR-0004 aceptado |
+| D-08 | Gestor de estado y navegación | ~~Riverpod + go_router~~. **Sustituida por D-14**; las bibliotecas web se deciden en D-16 | ADR-0004 reemplazado por ADR-0009 |
 | D-13 | Spike de SQL Connect | **Autorizado**, solo con emuladores locales y en rama aparte que no se integra a `main` | `plans/spike-sql-connect.md` |
+| D-14 | Tecnología de la aplicación | **Sin Flutter. Sistema web instalable como PWA con React + Vite + TypeScript, en dos aplicaciones** (`menu-web` y `operations`) | ADR-0009 aceptado; reemplaza ADR-0002 y ADR-0004 y la herramienta de ADR-0001 |
 
 ### Pendientes
 
@@ -147,3 +148,5 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-10 | Jurisdicción de datos personales, retención y anonimización | Modelo de datos personales |
 | D-11 | RPO/RTO para copias y restauración | Fase 6 |
 | D-12 | Archivo maestro vectorial del logotipo y licencia de Plus Jakarta Sans | Aprobación de recursos de marca |
+| D-15 | Navegadores y dispositivos soportados oficialmente por las PWA (p. ej. Chrome/Edge en Android y escritorio; Safari en iOS/iPadOS) | Matriz de pruebas de Fase 1; alcance de notificaciones e instalación |
+| D-16 | Bibliotecas y herramientas del stack web, y Firebase Hosting | Creación del monorepo en Fase 1; ADR-0010 |

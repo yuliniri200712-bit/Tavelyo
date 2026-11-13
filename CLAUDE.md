@@ -39,16 +39,16 @@ Antes de crear o modificar cualquier archivo, en cada sesión:
 ## 3. Arquitectura
 
 - **Clean Architecture** con separación estricta de capas (cuando aporten claridad en el módulo):
-  - **Presentación**: widgets, páginas y gestión de estado. Sin lógica de negocio ni acceso directo a datos.
+  - **Presentación**: componentes React, páginas y estado de interfaz. Sin lógica de negocio ni acceso directo a datos.
   - **Aplicación**: casos de uso que orquestan el dominio y los contratos de repositorio.
-  - **Dominio**: entidades, objetos de valor, reglas e interfaces de repositorio. Dart puro, sin dependencias de Flutter, Firebase ni pasarelas de pago.
+  - **Dominio**: entidades, objetos de valor, reglas e interfaces de repositorio. TypeScript puro, sin dependencias de React, Firebase ni pasarelas de pago.
   - **Datos**: implementaciones de repositorios, fuentes de datos (SQL Connect, Auth, backend, FCM) y modelos/mapeadores.
 - No ejecutar lógica de cobro ni cálculos financieros autoritativos en el cliente: el servidor es la autoridad.
 - **Regla de dependencia**: las dependencias apuntan siempre hacia el dominio. El dominio no conoce a las capas externas.
 - Organización **modular por funcionalidad** (feature), con cada módulo conteniendo sus propias capas.
 - Aplicar los principios **SOLID** y la inyección de dependencias para desacoplar componentes y facilitar las pruebas.
 - Cada clase, función y archivo debe tener una única responsabilidad clara.
-- **Prohibido el código espagueti**: nada de lógica de negocio en widgets, acoplamiento directo entre módulos, funciones extensas con múltiples responsabilidades ni dependencias circulares.
+- **Prohibido el código espagueti**: nada de lógica de negocio en componentes de interfaz, acoplamiento directo entre módulos, funciones extensas con múltiples responsabilidades ni dependencias circulares.
 
 ---
 
@@ -56,16 +56,18 @@ Antes de crear o modificar cualquier archivo, en cada sesión:
 
 | Área | Tecnología |
 |---|---|
-| Aplicación | Flutter y Dart |
+| Aplicación | Web instalable como **PWA**: React + Vite + TypeScript, en dos aplicaciones, `menu-web` y `operations` (ADR-0009). **No se usa Flutter** |
 | Autenticación | Firebase Authentication |
 | Capa de datos | Firebase Data Connect, denominado actualmente **SQL Connect** (la CLI conserva los comandos `firebase dataconnect:*`) |
 | Base de datos | Cloud SQL para PostgreSQL (fuente de verdad de pedidos, cuentas, inventario y pagos) |
 | Lógica de servidor | Cloud Functions (Cloud Run como alternativa, según `docs/decisions/`) |
 | Notificaciones | Firebase Cloud Messaging (apoyo, nunca registro autoritativo) |
 
-- Componentes previstos en `docs/PROMPT_MAESTRO.md` pero pendientes de decisión (Cloud Run, Storage, App Check, gestor de estado, pasarela): se adoptan solo mediante una decisión de arquitectura aprobada en `docs/decisions/`.
+- Componentes previstos en `docs/PROMPT_MAESTRO.md` pero pendientes de decisión (Cloud Run, Storage, App Check, pasarela) y bibliotecas web (ADR-0010): se adoptan solo mediante una decisión de arquitectura aprobada en `docs/decisions/`.
+- Las referencias a Flutter y Dart de los documentos de origen se interpretan según la tabla de equivalencias de ADR-0009.
 - No introducir otras tecnologías, servicios ni paquetes sin aprobación previa.
-- No conectar Flutter directamente a PostgreSQL ni distribuir credenciales de base de datos o claves de pasarela en la aplicación.
+- No conectar la aplicación web directamente a PostgreSQL ni distribuir credenciales de base de datos, claves de pasarela o secretos en el código que llega al navegador.
+- El *service worker* de la PWA solo cachea recursos estáticos; nunca respuestas de datos. Sin conexión no se confirma ningún pedido ni pago (ADR-0009).
 - **Verificar las APIs y dependencias antes de usarlas**: confirmar en la documentación oficial que el paquete existe, que la versión es compatible y que la API se usa correctamente. No suponer firmas ni comportamientos.
 
 ---
@@ -84,8 +86,8 @@ La marca es **Tavelyo**. La paleta oficial es:
 
 - La paleta oficial no se modifica. Los colores funcionales de interfaz (por ejemplo, `action.primary = #BA3526` para botones con texto blanco, porque blanco sobre `#E54835` no alcanza 4,5:1) y los colores semánticos se definen en `docs/IDENTIDAD_VISUAL.md` y se verifican en `docs/brand/contrast-matrix.md`.
 - Objetivo de accesibilidad: WCAG 2.2 AA. Ningún par de colores se aprueba sin medir su contraste.
-- Tipografía de interfaz: Plus Jakarta Sans, empaquetada localmente y con licencia registrada.
-- Definir colores, tipografía, espacios y radios **una sola vez** en el sistema de diseño (`packages/design_system` o equivalente) y consumirlos siempre desde ahí. No escribir valores hexadecimales directamente en los widgets.
+- Tipografía de interfaz: Plus Jakarta Sans, servida por la propia aplicación (sin CDN de fuentes) y con licencia registrada.
+- Definir colores, tipografía, espacios y radios **una sola vez** en el sistema de diseño (`packages/design-system`, como propiedades CSS personalizadas y tokens TypeScript) y consumirlos siempre desde ahí. No escribir valores hexadecimales ni tamaños sueltos en los componentes ni en sus estilos.
 - Logotipo: no usar sombrero de chef ni recrear el logo con iconos, CSS o caracteres. Mientras no exista el archivo maestro registrado en `docs/brand/asset-manifest.md`, usar solo la etiqueta textual neutra «Tavelyo» como marcador de desarrollo.
 
 ---
@@ -96,7 +98,7 @@ La marca es **Tavelyo**. La paleta oficial es:
 - **No modificar código estable sin justificación.** Todo cambio a código existente debe ser necesario para la tarea en curso y explicarse.
 - **Evitar duplicaciones**: reutilizar componentes, utilidades y lógica existentes antes de crear nuevas.
 - Código legible, con nombres descriptivos, manejo explícito de errores y sin código muerto ni comentado.
-- Respetar el análisis estático y el formato estándar de Dart (`dart analyze`, `dart format`).
+- Respetar el análisis estático y el formato: TypeScript en modo estricto (`tsc --noEmit`) más el linter y el formateador que fije ADR-0010.
 
 ---
 
@@ -117,7 +119,7 @@ Aplicar, según corresponda a cada cambio:
 
 - **Unitarias**: casos de uso, entidades, repositorios y lógica de presentación.
 - **De integración**: interacción entre capas y con los servicios de Firebase.
-- **De interfaz (widgets / UI)**: pantallas y flujos de usuario.
+- **De interfaz (componentes / UI)**: pantallas y flujos de usuario, incluidos instalación, funcionamiento sin conexión y actualización de la PWA.
 - **De seguridad**: autorización, aislamiento entre restaurantes y sucursales, y manejo de datos sensibles.
 - **De regresión**: confirmar que la funcionalidad existente sigue operando tras cada cambio.
 

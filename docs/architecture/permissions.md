@@ -1,6 +1,6 @@
 # Matriz de permisos
 
-Estado: **borrador de Fase 0**. Base: PM §5. Los permisos se modelan **por acción**; los roles son agrupaciones de permisos. Toda comprobación ocurre en el servidor; ocultar botones en Flutter solo mejora la experiencia.
+Estado: **borrador de Fase 0**. Base: PM §5. Los permisos se modelan **por acción**; los roles son agrupaciones de permisos. Toda comprobación ocurre en el servidor; ocultar botones o rutas en la PWA solo mejora la experiencia.
 
 ## 1. Reglas generales
 
