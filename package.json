@@ -1,0 +1,30 @@
+{
+  "name": "tavelyo",
+  "private": true,
+  "type": "module",
+  "description": "Tavelyo: plataforma web instalable (PWA) para restaurantes",
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/features/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.13.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "4.1.12"
+  }
+}

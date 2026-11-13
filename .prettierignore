@@ -1,0 +1,10 @@
+# La documentación aprobada no se reformatea automáticamente.
+docs/
+CLAUDE.md
+README.md
+# Código generado por SQL Connect: no se edita.
+**/dataconnect-generated/
+**/dataconnect/.dataconnect/
+# Restos locales de la rama spike/sql-connect, que no se integra en main.
+spike/
+package-lock.json

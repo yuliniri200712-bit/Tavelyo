@@ -13,7 +13,7 @@ Versiones y compatibilidad (*peer dependencies*) consultadas en npm el 2026-11-1
 
 | Necesidad | Propuesta | Versión vigente | Motivo |
 |---|---|---|---|
-| Lenguaje | TypeScript en modo estricto, con `skipLibCheck: true` | 7.0.x | Mismo lenguaje que el backend; tipos del SDK generado. `skipLibCheck` es necesario: el `.d.ts` generado (CLI 15.30.2) tiene `};` tras cada `enum`, que TypeScript 6 y 7 rechazan (spike D-13) |
+| Lenguaje | TypeScript en modo estricto, con `skipLibCheck: true` | **6.0.3** (instalada en Fase 1; ver nota de versiones) | Mismo lenguaje que el backend; tipos del SDK generado. `skipLibCheck` es necesario: el `.d.ts` generado (CLI 15.30.2) tiene `};` tras cada `enum`, que TypeScript 6 y 7 rechazan (spike D-13) |
 | Empaquetador y servidor de desarrollo | Vite | 8.3.x | Decidido en ADR-0009 |
 | Integración React | `@vitejs/plugin-react` | 6.3.x | Requiere Vite 8 |
 | UI | React + React DOM | 19.3.x | Decidido en ADR-0009 |
@@ -21,7 +21,7 @@ Versiones y compatibilidad (*peer dependencies*) consultadas en npm el 2026-11-1
 | Datos y estado | **SDK web generado de SQL Connect (núcleo) + *hooks* propios mínimos**; estado de UI con el estado y el contexto de React | — | Ver «Por qué no TanStack Query» |
 | PWA | `vite-plugin-pwa` (Workbox) | 2.0.x | Manifiesto y *service worker* con caché solo de recursos estáticos; admite Vite 8 |
 | Firebase | `firebase` (Auth, SQL Connect) | **12.x** (12.19.0 verificada en el spike); la última es 13.3.0 | El SDK generado por la CLI 15.30.2 declara `firebase` ^12.11.0 como *peer*. Subir a 13 cuando el generador lo admita |
-| Pruebas unitarias y de componentes | Vitest + Testing Library (`@testing-library/react`) | 5.1.x / 16.3.x | Integradas con Vite |
+| Pruebas unitarias y de componentes | Vitest + Testing Library (`@testing-library/react`) | **4.1.12** (instalada) / 16.3.x | Integradas con Vite |
 | Pruebas de recorrido, PWA y accesibilidad | Playwright + `@axe-core/playwright` | 1.65.x / 4.14.x | Navegadores reales, modo sin conexión, auditoría automática de accesibilidad |
 | Calidad | ESLint (+ `typescript-eslint`) y **Prettier** | 10.15.x / vigente al crear el monorepo | Análisis estático y formato; Prettier aprobado por el propietario el 2026-11-13 |
 | Monorepo | **npm workspaces** | npm incluido con Node | Sin herramienta adicional; reemplaza a *pub workspaces* |
@@ -56,6 +56,12 @@ Los límites entre módulos se aplican con las dependencias declaradas en cada `
 
 - Validación de formularios y entradas en el cliente (p. ej. un validador de esquemas): se decide en Fase 1 si hace falta.
 - Biblioteca de internacionalización: no hace falta mientras solo haya español (SUP-01).
+
+## Nota de versiones (Fase 1, 2026-11-13)
+
+Al crear el monorepo se fijaron versiones exactas con al menos dos semanas de publicadas: TypeScript 6.0.3, ESLint 10.13.0, `@eslint/js` 10.0.1, `typescript-eslint` 8.72.1, Prettier 3.9.10 y Vitest 4.1.12. TypeScript baja de 7.0 a **6.0.3** porque `typescript-eslint` 8.72.1 solo admite TypeScript < 6.1. Vitest 5 se descarta por ser más reciente que dos semanas.
+
+`npm audit` informa 8 avisos **moderados** de `minimatch` (posible denegación de servicio con patrones *glob*) dentro de ESLint y `typescript-eslint`. Solo afectan a herramientas de desarrollo y los patrones los define el proyecto. Se acepta temporalmente; se revisa al actualizar ESLint (≥ 10.15.0) cuando cumpla dos semanas.
 
 ## Verificación pendiente
 
