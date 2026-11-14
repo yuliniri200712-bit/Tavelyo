@@ -1,0 +1,91 @@
+# Integración continua (D-18, Fase 1 bloque 3). Sin secretos: todo corre contra emuladores con el
+# proyecto demo-tavelyo, que no puede acceder a la nube.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24.19.0'
+  FIREBASE_TOOLS: 'firebase-tools@15.30.2'
+  # Configuración pública del proyecto demo (igual que .env.example).
+  VITE_FIREBASE_PROJECT_ID: demo-tavelyo
+  VITE_FIREBASE_API_KEY: demo-api-key
+  VITE_FIREBASE_AUTH_DOMAIN: demo-tavelyo.firebaseapp.com
+  VITE_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000'
+  VITE_USE_EMULATORS: 'true'
+
+jobs:
+  calidad:
+    name: Formato, análisis, tipos, unitarias, auditoría, compilación y secretos
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Formato, ESLint, tipos y pruebas unitarias
+        run: npm run check
+      - name: Auditoría de dependencias
+        run: npm audit
+      - name: Esquema y conector válidos y SDK generado al día
+        run: |
+          npx --yes ${{ env.FIREBASE_TOOLS }} dataconnect:sdk:generate --project demo-tavelyo
+          git diff --exit-code -- packages/data-access/dataconnect-generated
+      - name: Compilación de las dos PWA
+        run: |
+          npm run build -w @tavelyo/menu-web
+          npm run build -w @tavelyo/operations
+      - name: Búsqueda de secretos (repositorio y builds)
+        run: npm run check:secrets
+
+  integracion:
+    name: Autorización y pasarelas contra emuladores
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run test:integration
+
+  navegadores:
+    name: PWA, accesibilidad y recorrido del personal (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Navegadores de la matriz D-15
+        run: npx playwright install --with-deps chromium webkit chrome msedge
+      - name: PWA y accesibilidad
+        run: npm run test:e2e
+      - name: Recorrido del personal con emuladores
+        run: npm run test:e2e:emulators
+      - name: Trazas de las pruebas fallidas
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-trazas
+          path: test-results/
+          retention-days: 7

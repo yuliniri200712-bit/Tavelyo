@@ -43,6 +43,10 @@ Cobertura de `design-system`:
 
 Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo extensiones estáticas, rutas `/__/` excluidas, actualización con aviso), manifiesto (iconos declarados existen con el tamaño real leído del PNG), marco común (logotipo con texto alternativo, salto al contenido, aviso sin conexión, aviso de nueva versión) y rutas de ambas apps (catálogo y página no encontrada).
 
+## 2026-11-13 — Búsqueda de secretos
+
+`npm run check:secrets` (`tools/check-secrets`, sin dependencias): revisa los archivos versionados y los builds de las PWA con patrones de claves privadas PEM, cuentas de servicio de Google, claves de API de Google/Firebase, claves de AWS, claves secretas de pasarela (`sk_live_`/`rk_live_`), tokens de GitHub y Slack y cadenas de conexión de base de datos con contraseña. Resultado: ✅ sin secretos en 216 archivos. 14 pruebas comprueban que detecta cada patrón (con muestras construidas por partes), que no marca la configuración de ejemplo y que no copia el secreto en el informe.
+
 ## 2026-11-13 — Autenticación del personal y contexto de empresa
 
 | Comprobación | Comando | Resultado |

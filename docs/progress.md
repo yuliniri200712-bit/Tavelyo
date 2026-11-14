@@ -21,7 +21,7 @@
 | 5. Esquema inicial | ✅ `Tenant`, `Branch`, `UserProfile`, `Role`, `Permission`, `RolePermission`, `Membership`, `MembershipBranch`, `AuditEvent` con FK compuestas; catálogo de roles en `packages/contracts` sincronizado con `permissions.md` |
 | 7. Autorización (conectores) | ✅ Conector `tavelyo` con 11 operaciones bajo el patrón de ADR-0008; reglas de los `.gql` en CI y 33 pruebas de integración con dos empresas e IDs alterados. Pendiente: autorización del backend cuando exista |
 | 6. Autenticación y contexto | ✅ Acceso con correo y contraseña (D-17), recuperación sin revelar si el correo existe, perfil mínimo, selector de empresa y sucursal, cambio de contexto que desmonta todo lo anterior, cierre de sesión siempre visible. Paquetes `features/identity` y `features/tenancy`; pasarelas en `data-access` con el SDK generado y sin caché de datos |
-| 3. CI | ⏳ GitHub Actions (D-18) |
+| 3. CI | 🔄 GitHub Actions (D-18), `.github/workflows/ci.yml`: formato, ESLint, tipos, unitarias, `npm audit`, esquema y SDK generado al día, compilación de las dos PWA, búsqueda de secretos (`npm run check:secrets`), integración con emuladores y Playwright (matriz D-15 y recorrido del personal). Pendiente: confirmar la primera ejecución en GitHub |
 
 ## Fase 0 — resumen de cierre
 
