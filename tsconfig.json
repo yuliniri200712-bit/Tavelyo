@@ -13,6 +13,7 @@
     "eslint.config.js",
     "tools",
     "dataconnect/tests",
-    "vitest.integration.config.ts"
+    "vitest.integration.config.ts",
+    "playwright.emulators.config.ts"
   ]
 }

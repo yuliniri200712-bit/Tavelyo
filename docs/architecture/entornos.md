@@ -18,4 +18,6 @@ Estado: **Fase 1** (2026-11-13). Configuración sin secretos en el repositorio.
 
 ## Emuladores
 
-`firebase.json` define Auth en el puerto 9099. SQL Connect (9399) se añade con el esquema inicial (bloque 5), con la misma configuración que el spike.
+`VITE_EMULATOR_HOST` (opcional) indica la IP del equipo cuando se prueba desde un teléfono en la misma red; por defecto `127.0.0.1`. Comandos: `npm run test:integration` (conectores y pasarelas) y `npm run test:e2e:emulators` (recorrido en navegador), que arrancan y detienen los emuladores con la CLI 15.30.2.
+
+`firebase.json` define Auth (puerto 9099) y SQL Connect (puerto 9399, servicio `tavelyo`, PostgreSQL embebido con PGlite).

@@ -43,6 +43,26 @@ Cobertura de `design-system`:
 
 Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo extensiones estáticas, rutas `/__/` excluidas, actualización con aviso), manifiesto (iconos declarados existen con el tamaño real leído del PNG), marco común (logotipo con texto alternativo, salto al contenido, aviso sin conexión, aviso de nueva versión) y rutas de ambas apps (catálogo y página no encontrada).
 
+## 2026-11-13 — Autenticación del personal y contexto de empresa
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Unitarias y componentes | `npm run check` | ✅ 18 archivos, **255 pruebas** |
+| Integración | `npm run test:integration` | ✅ **39/39** (33 de autorización + 6 de las pasarelas reales con el SDK web de Firebase y el SDK generado) |
+| Navegadores (sin emuladores) | `npm run test:e2e` | ✅ 71 superadas, 4 omitidas (Tab en Safari); axe sin infracciones también en la pantalla de acceso |
+| Recorrido real con emuladores | `npm run test:e2e:emulators` | ✅ 2/2 (Chrome y Safari iPhone) |
+| Auditoría | `npm audit` | ✅ 0 vulnerabilidades |
+
+Cobertura nueva:
+
+- Selección de contexto (máquina de estados pura): selección automática con una sola opción, IDs que no están en la lista se ignoran, cambiar de contexto descarta empresa y sucursal, respuestas tardías ignoradas, reintento tras error.
+- Pantalla de acceso: validación antes de llamar al servidor, mensaje único para correo o contraseña incorrectos, contraseña borrada tras un error, sin doble envío, recuperación con la misma respuesta exista o no el correo, perfil mínimo al entrar.
+- Pasarelas reales contra emuladores: contraseña incorrecta y correo inexistente responden igual; perfil creado; sin membresías no hay empresas; con membresía, solo la sucursal asignada; ID de otra empresa sin resultados; tras cerrar sesión las consultas se rechazan.
+- Rutas de `operations`: sin sesión llevan al acceso; con sesión piden empresa; cambiar de empresa quita el contenido anterior; cerrar sesión vuelve al acceso sin datos visibles.
+- Recorrido en navegador: acceso accesible (axe), error genérico, selección, cambio de empresa y sucursal, revocación en el servidor reflejada al recargar y cierre de sesión que persiste tras recargar.
+
+Pendiente: bloqueo por inactividad y política de dispositivos compartidos (PM §8); la sesión usa la persistencia local por defecto de Firebase Auth y el cierre de sesión es siempre visible.
+
 ## 2026-11-13 — Esquema inicial y autorización (SQL Connect)
 
 | Comprobación | Comando | Resultado |

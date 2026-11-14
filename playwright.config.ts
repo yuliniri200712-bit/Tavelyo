@@ -10,8 +10,18 @@ export const APPS = {
 
 const isCI = Boolean(process.env['CI']);
 
+/** Configuración pública del proyecto demo (solo emuladores). Ver .env.example. */
+export const EMULATOR_ENV = {
+  VITE_FIREBASE_PROJECT_ID: 'demo-tavelyo',
+  VITE_FIREBASE_API_KEY: 'demo-api-key',
+  VITE_FIREBASE_AUTH_DOMAIN: 'demo-tavelyo.firebaseapp.com',
+  VITE_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000',
+  VITE_USE_EMULATORS: 'true',
+};
+
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: '**/emulators/**',
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
@@ -36,6 +46,7 @@ export default defineConfig({
     },
     {
       command: 'npm run build -w @tavelyo/operations && npm run preview -w @tavelyo/operations',
+      env: EMULATOR_ENV,
       url: APPS.operations,
       reuseExistingServer: !isCI,
       timeout: 180_000,

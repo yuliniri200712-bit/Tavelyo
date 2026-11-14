@@ -11,6 +11,10 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@tavelyo/core": "*"
+    "@tavelyo/core": "*",
+    "@tavelyo/dataconnect-sdk": "file:dataconnect-generated",
+    "firebase": "12.19.0",
+    "@tavelyo/identity": "*",
+    "@tavelyo/tenancy": "*"
   }
 }

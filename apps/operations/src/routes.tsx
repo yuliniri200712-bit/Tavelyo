@@ -1,25 +1,39 @@
 import type { RouteObject } from 'react-router';
 import { DesignSystemCatalog, EmptyState } from '@tavelyo/design-system';
+import { SignInPage } from '@tavelyo/identity';
+import { AppLayout, PublicOnly, RequireStaffContext, StaffHome } from './layout.tsx';
 
-/** Rutas del personal. El acceso y el selector de empresa llegan en los bloques 6 y 7. */
+/** Rutas del personal. Toda ruta con datos exige sesión y contexto de empresa (bloques 6 y 7). */
 export const routes: RouteObject[] = [
   {
-    path: '/',
-    element: (
-      <EmptyState
-        title="Tavelyo Operaciones"
-        description="El acceso del personal estará disponible en esta pantalla."
-      />
-    ),
-  },
-  { path: '/catalogo', element: <DesignSystemCatalog /> },
-  {
-    path: '*',
-    element: (
-      <EmptyState
-        title="No encontramos esta página"
-        description="Revisa la dirección o vuelve al inicio."
-      />
-    ),
+    element: <AppLayout />,
+    children: [
+      {
+        path: '/',
+        element: (
+          <RequireStaffContext>
+            <StaffHome />
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/acceso',
+        element: (
+          <PublicOnly>
+            <SignInPage />
+          </PublicOnly>
+        ),
+      },
+      { path: '/catalogo', element: <DesignSystemCatalog /> },
+      {
+        path: '*',
+        element: (
+          <EmptyState
+            title="No encontramos esta página"
+            description="Revisa la dirección o vuelve al inicio."
+          />
+        ),
+      },
+    ],
   },
 ];

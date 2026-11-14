@@ -19,7 +19,8 @@
     "test": "vitest run",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
     "test:e2e": "playwright test",
-    "test:integration": "npx --yes firebase-tools@15.30.2 emulators:exec --project demo-tavelyo --only auth,dataconnect \"vitest run --config vitest.integration.config.ts\""
+    "test:integration": "npx --yes firebase-tools@15.30.2 emulators:exec --project demo-tavelyo --only auth,dataconnect \"vitest run --config vitest.integration.config.ts\"",
+    "test:e2e:emulators": "npx --yes firebase-tools@15.30.2 emulators:exec --project demo-tavelyo --only auth,dataconnect \"playwright test --config playwright.emulators.config.ts\""
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
@@ -46,6 +47,10 @@
   "overrides": {
     "minimatch@>=7.0.0 <11.0.1": "11.0.3",
     "glob@>=9.0.0 <14.0.2": "14.0.3",
-    "deepmerge": "file:./tools/deepmerge-safe"
+    "deepmerge": "file:./tools/deepmerge-safe",
+    "@grpc/grpc-js": "1.13.7"
+  },
+  "dependencies": {
+    "firebase": "12.19.0"
   }
 }

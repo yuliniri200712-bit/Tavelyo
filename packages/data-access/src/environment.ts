@@ -8,6 +8,8 @@ export interface FirebaseEnvironment {
   readonly appId: string;
   /** Auth y SQL Connect apuntan a los emuladores locales. */
   readonly useEmulators: boolean;
+  /** Host de los emuladores (127.0.0.1 por defecto; la IP del equipo para probar desde un teléfono). */
+  readonly emulatorHost: string;
 }
 
 export type RawEnvironment = Readonly<Record<string, string | boolean | undefined>>;
@@ -49,6 +51,15 @@ export function parseFirebaseEnvironment(
   }
   const useEmulators = emulatorsFlag === 'true' || emulatorsFlag === true;
 
+  const rawHost = env['VITE_EMULATOR_HOST'];
+  const emulatorHost =
+    typeof rawHost === 'string' && rawHost.trim() !== '' ? rawHost.trim() : '127.0.0.1';
+  if (!/^[\w.-]+$/.test(emulatorHost)) {
+    problems.push(
+      'VITE_EMULATOR_HOST debe ser un nombre de equipo o una IP, sin protocolo ni puerto.',
+    );
+  }
+
   if (projectId.startsWith('demo-') && !useEmulators) {
     problems.push(
       'Los proyectos «demo-*» solo funcionan con emuladores: usa VITE_USE_EMULATORS=true.',
@@ -63,5 +74,5 @@ export function parseFirebaseEnvironment(
 
   return problems.length > 0
     ? err(problems)
-    : ok({ projectId, apiKey, authDomain, appId, useEmulators });
+    : ok({ projectId, apiKey, authDomain, appId, useEmulators, emulatorHost });
 }

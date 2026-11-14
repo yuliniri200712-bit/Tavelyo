@@ -276,3 +276,40 @@
   gap: var(--tv-space-3);
   max-width: var(--tv-size-dialog-max-width);
 }
+
+/* ---------- Formularios ---------- */
+.tv-form {
+  display: grid;
+  gap: var(--tv-space-4);
+}
+.tv-form__error {
+  color: var(--tv-color-status-error);
+  font-weight: var(--tv-type-label-weight);
+}
+.tv-form__notice {
+  color: var(--tv-color-text-primary);
+}
+
+/* ---------- Barra de contexto (empresa y sucursal) ---------- */
+.tv-context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tv-space-3);
+  margin-left: auto;
+}
+.tv-context-bar__text {
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+}
+.tv-choice-list {
+  display: grid;
+  gap: var(--tv-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tv-choice-list .tv-button {
+  width: 100%;
+  justify-content: flex-start;
+}

@@ -1,1 +1,8 @@
 connectorId: 'tavelyo'
+# SDK web generado (ADR-0010). Sin clientCache: la PWA no guarda respuestas de datos entre
+# operaciones, así que no hay caché que vaciar al cerrar sesión o cambiar de empresa (ADR-0008 §8).
+generate:
+  javascriptSdk:
+    - outputDir: '../../packages/data-access/dataconnect-generated'
+      package: '@tavelyo/dataconnect-sdk'
+      packageJsonDir: '../../packages/data-access'

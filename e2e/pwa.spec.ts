@@ -6,7 +6,7 @@ const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 const apps = [
   { name: 'menu-web', url: APPS.menuWeb, heading: 'Bienvenido a Tavelyo' },
-  { name: 'operations', url: APPS.operations, heading: 'Tavelyo Operaciones' },
+  { name: 'operations', url: APPS.operations, heading: 'Acceso del personal' },
 ] as const;
 
 /** Espera a que el service worker esté activo y controle la página. */

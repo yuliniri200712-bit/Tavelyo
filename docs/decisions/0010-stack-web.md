@@ -88,6 +88,12 @@ A petición del propietario se eliminan los 13 avisos. `npm audit fix --force` n
 
 Resultado: `npm audit` → **0 vulnerabilidades**. Verificado con `npm run check` (174 pruebas), compilación de las dos PWA (mismas 22 entradas precacheadas que antes) y Playwright en los 5 navegadores (71 superadas, 4 omitidas, igual que antes). Revisar los `overrides` al actualizar ESLint, `typescript-eslint` o `vite-plugin-pwa`: cuando sus dependencias incluyan versiones corregidas, se eliminan.
 
+### Firebase y SDK generado (Fase 1, 2026-11-13)
+
+- `firebase` **12.19.0** (Apache-2.0). El SDK web del conector se genera en `packages/data-access/dataconnect-generated` (`@tavelyo/dataconnect-sdk`) y se guarda en el repositorio para compilar sin la CLI; se regenera con `npx firebase-tools@15.30.2 dataconnect:sdk:generate --project demo-tavelyo`.
+- `firebase` incluye Firestore, que arrastra `@grpc/grpc-js` 1.9.16 con 4 avisos **altos** (GHSA-m9gg-hp2v-232j y GHSA-f596-whhp-79r4, de lado servidor gRPC; en el navegador Firebase no usa gRPC). Se fuerza **1.13.7** (2026-10-08) con `overrides`. Por un fallo de npm 11.17, la sustitución no se aplica a dependencias que solo declara un *workspace*: `firebase` 12.19.0 se declara también en el `package.json` raíz. Resultado: `npm audit` 0.
+- npm bloquea por defecto los scripts de instalación de `protobufjs` (aviso de versiones) y `@firebase/util` (lee `FIREBASE_WEBAPP_CONFIG`, que no usamos). No se aprueban: no son necesarios.
+
 ## Verificación pendiente
 
 - Repetir la compatibilidad exacta de versiones al crear el monorepo en Fase 1 y fijar versiones con al menos dos semanas de publicadas.

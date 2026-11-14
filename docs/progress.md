@@ -20,7 +20,8 @@
 | 2. Entornos | ✅ `.firebaserc` con `demo-tavelyo` por defecto y `tavelyo-e2b57` como `dev`; `.env.example` sin secretos; `parseFirebaseEnvironment` valida la configuración al arrancar (`architecture/entornos.md`) |
 | 5. Esquema inicial | ✅ `Tenant`, `Branch`, `UserProfile`, `Role`, `Permission`, `RolePermission`, `Membership`, `MembershipBranch`, `AuditEvent` con FK compuestas; catálogo de roles en `packages/contracts` sincronizado con `permissions.md` |
 | 7. Autorización (conectores) | ✅ Conector `tavelyo` con 11 operaciones bajo el patrón de ADR-0008; reglas de los `.gql` en CI y 33 pruebas de integración con dos empresas e IDs alterados. Pendiente: autorización del backend cuando exista |
-| 3, 6 | ⏳ CI; autenticación del personal y selector de empresa y sucursal |
+| 6. Autenticación y contexto | ✅ Acceso con correo y contraseña (D-17), recuperación sin revelar si el correo existe, perfil mínimo, selector de empresa y sucursal, cambio de contexto que desmonta todo lo anterior, cierre de sesión siempre visible. Paquetes `features/identity` y `features/tenancy`; pasarelas en `data-access` con el SDK generado y sin caché de datos |
+| 3. CI | ⏳ GitHub Actions (D-18) |
 
 ## Fase 0 — resumen de cierre
 

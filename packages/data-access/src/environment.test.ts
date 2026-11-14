@@ -35,6 +35,7 @@ describe('parseFirebaseEnvironment', () => {
         authDomain: 'tavelyo-dev.firebaseapp.com',
         appId: '1:1:web:1',
         useEmulators: false,
+        emulatorHost: '127.0.0.1',
       },
     });
   });
@@ -62,6 +63,12 @@ describe('parseFirebaseEnvironment', () => {
   it('rechaza valores ambiguos del indicador de emuladores', () => {
     const result = parseFirebaseEnvironment({ ...valid, VITE_USE_EMULATORS: 'si' });
     expect(result.ok).toBe(false);
+  });
+
+  it('acepta un host de emuladores y rechaza URLs', () => {
+    const lan = parseFirebaseEnvironment({ ...valid, VITE_EMULATOR_HOST: '192.168.1.20' });
+    expect(lan.ok && lan.value.emulatorHost).toBe('192.168.1.20');
+    expect(parseFirebaseEnvironment({ ...valid, VITE_EMULATOR_HOST: 'http://x:9' }).ok).toBe(false);
   });
 
   it('rechaza variables VITE_* con nombre de secreto', () => {

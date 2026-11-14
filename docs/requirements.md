@@ -137,6 +137,8 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-12 (fuente) | Tipografía | **Plus Jakarta Sans confirmada** por el propietario. Licencia SIL Open Font License 1.1, repositorio oficial `tokotype/PlusJakartaSans`, versión 2.7.1 | `brand/asset-manifest.md` |
 | D-12 (logotipo) | Logotipo | **Aprobada la propuesta A · Mesa conectada** (diseño de Claude por encargo del propietario). Maestro v1.0.0 con variantes horizontal, vertical, monocromática, isotipo e iconos de las PWA. Queda pendiente aprobar un favicon simplificado de 16 px | `brand/asset-manifest.md` |
 | D-15 | Navegadores soportados | **Móvil:** Chrome en Android; Safari en iPhone y iPad (en iOS/iPadOS todos los navegadores usan WebKit). **Escritorio:** Chrome y Edge (Windows y macOS) y Safari (macOS). Versiones: las dos últimas mayores de cada uno | Matriz de pruebas con Playwright (Chromium y WebKit) más revisión en dispositivos reales |
+| D-17 | Acceso del personal | **Correo y contraseña** con Firebase Auth (2026-11-13), con recuperación de contraseña por correo. Sin acceso con Google por ahora | `features/identity`; autenticación reforzada para propietarios pendiente (PM §8) |
+| D-18 | Integración continua | **GitHub Actions** (2026-11-13) | `.github/workflows/` |
 | D-16 | Bibliotecas y herramientas del stack web, y Firebase Hosting | **Aceptadas** según ADR-0010; formateador **Prettier** (2026-11-13); validación de formularios se decide en Fase 1 | ADR-0010 aceptado |
 
 ### Pendientes

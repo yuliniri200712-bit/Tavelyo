@@ -9,9 +9,13 @@ const CONNECTOR = 'tavelyo';
 
 export interface TestUser {
   readonly label: string;
+  readonly email: string;
   readonly uid: string;
   readonly token: string;
 }
+
+/** Contraseña de las cuentas de prueba del emulador (no es un secreto). */
+export const TEST_PASSWORD = 'contraseña-de-prueba';
 
 export interface GraphqlResult<T = Record<string, unknown>> {
   readonly data: T | null | undefined;
@@ -30,7 +34,7 @@ export async function createUser(label: string): Promise<TestUser> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: `${label}-${runId}@example.test`,
-        password: 'contraseña-de-prueba',
+        password: TEST_PASSWORD,
         returnSecureToken: true,
       }),
     },
@@ -39,7 +43,7 @@ export async function createUser(label: string): Promise<TestUser> {
   if (!response.ok || !body.localId || !body.idToken) {
     throw new Error(`No se pudo crear el usuario ${label}: ${JSON.stringify(body)}`);
   }
-  return { label, uid: body.localId, token: body.idToken };
+  return { label, email: `${label}-${runId}@example.test`, uid: body.localId, token: body.idToken };
 }
 
 async function post<T>(url: string, headers: Record<string, string>, payload: unknown) {

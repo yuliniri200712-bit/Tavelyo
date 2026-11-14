@@ -1,0 +1,21 @@
+{
+  "name": "@tavelyo/tenancy",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Contexto de empresa y sucursal: membresías, selector y cambio de contexto con limpieza de estado",
+  "exports": {
+    ".": "./src/index.ts",
+    "./domain": "./src/domain/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@tavelyo/core": "*",
+    "@tavelyo/design-system": "*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.7"
+  }
+}

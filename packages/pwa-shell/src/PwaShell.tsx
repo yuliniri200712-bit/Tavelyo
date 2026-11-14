@@ -13,11 +13,13 @@ export interface PwaShellProps {
   /** Nombre del módulo junto al logo, p. ej. «Operaciones». */
   readonly appLabel: string;
   readonly update: PwaUpdateState;
+  /** Acciones de la cabecera, p. ej. el contexto activo y «Cerrar sesión». */
+  readonly headerActions?: ReactNode;
   readonly children: ReactNode;
 }
 
 /** Marco común: salto al contenido, logotipo, aviso de conexión y aviso de nueva versión. */
-export function PwaShell({ appLabel, update, children }: PwaShellProps) {
+export function PwaShell({ appLabel, update, headerActions, children }: PwaShellProps) {
   const online = useOnlineStatus();
   return (
     <>
@@ -27,6 +29,7 @@ export function PwaShell({ appLabel, update, children }: PwaShellProps) {
       <header className="tv-app-header">
         <img className="tv-app-header__logo" src={logoUrl} alt="Tavelyo" />
         <span className="tv-app-header__label">{appLabel}</span>
+        {headerActions}
       </header>
       <ConnectionNotice online={online} />
       {update.needRefresh ? (
