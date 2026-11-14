@@ -43,6 +43,24 @@ Cobertura de `design-system`:
 
 Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo extensiones estáticas, rutas `/__/` excluidas, actualización con aviso), manifiesto (iconos declarados existen con el tamaño real leído del PNG), marco común (logotipo con texto alternativo, salto al contenido, aviso sin conexión, aviso de nueva versión) y rutas de ambas apps (catálogo y página no encontrada).
 
+## 2026-11-13 — Navegadores (Playwright 1.64.1 + axe-core 4.14.0)
+
+Comando: `npm run test:e2e` (compila las dos apps y las sirve con `vite preview`). Matriz D-15: Chrome 1xx y Edge instalados (canales `chrome` y `msedge`), WebKit 27.2 de Playwright como Safari de escritorio, Chrome en Android emulado (Pixel 7) y Safari en iPhone emulado (iPhone 15).
+
+| Prueba (en cada app) | Resultado |
+|---|---|
+| Manifiesto instalable; los iconos declarados responden 200 como PNG | ✅ 5 navegadores |
+| Sin conexión: tras activarse el *service worker*, la app arranca desde la caché y muestra «ningún pedido ni pago se confirma» | ✅ 5 navegadores |
+| La caché del *service worker* solo contiene recursos del build (JS, CSS, HTML, imágenes, fuentes y manifiesto) | ✅ 5 navegadores |
+| axe sin infracciones WCAG 2.0/2.1/2.2 A y AA (inicio de ambas apps y catálogo) | ✅ 5 navegadores |
+| *Reflow*: sin desplazamiento horizontal a 320 px; catálogo con texto al 200 % a 640 px | ✅ 5 navegadores |
+| Diálogo destructivo real: modal, foco inicial en «Cancelar», Tab no sale a la página de detrás, Escape lo cierra | ✅ 5 navegadores |
+| Primer Tab al enlace «Saltar al contenido» y Enter enfoca el `main` | ✅ Chrome, Edge, Chrome Android · ⏭️ Safari (por defecto Safari no enfoca enlaces con Tab; se revisa en dispositivo real con la opción activada) |
+
+Total: **71 superadas, 4 omitidas** (las de Safari indicadas), 0 fallidas. Una primera ejecución falló porque el filtro de la prueba trataba `manifest.webmanifest` (precacheado por `vite-plugin-pwa`) como dato; es un archivo estático del build y se corrigió el filtro, no el *service worker*.
+
+Pendiente en navegador: actualización controlada entre dos versiones del build (el aviso y `registerType: 'prompt'` ya tienen prueba unitaria), instalación real en dispositivos Android e iOS y revisión con lector de pantalla (VoiceOver y TalkBack).
+
 Limitaciones conocidas: jsdom no implementa `showModal()`; la prueba usa un sustituto que solo alterna `open`. El foco atrapado, el fondo inerte y la tecla Escape reales se verifican con Playwright en navegadores (bloque 9).
 
 No ejecutado todavía: integración con emuladores, PWA, matriz de navegadores y auditoría axe (siguientes bloques de la fase).

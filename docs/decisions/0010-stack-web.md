@@ -74,6 +74,8 @@ Instaladas con al menos dos semanas de publicadas: Vite **8.3.5**, `@vitejs/plug
 
 Con `vite-plugin-pwa`, `npm audit` sube a **13 avisos (2 bajos, 11 moderados)**. Los nuevos vienen de `workbox-build` (`glob`, `@rollup/plugin-node-resolve` → `deepmerge`), que solo se ejecuta al compilar para generar el *service worker*; no llega al navegador y procesa únicamente archivos del propio proyecto. Se acepta temporalmente con el mismo criterio que los de ESLint; no se usa `npm audit fix --force` porque cambiaría versiones mayores.
 
+Playwright: `@playwright/test` **1.64.1** y `@axe-core/playwright` **4.14.0** (la 1.65.1 es del 2026-11-13). Se fija también `playwright-core` 1.64.1 como dependencia de desarrollo para que `@axe-core/playwright` use la misma versión que `@playwright/test` (sin ello npm instalaba 1.65.1 y los tipos no coincidían).
+
 ## Verificación pendiente
 
 - Repetir la compatibilidad exacta de versiones al crear el monorepo en Fase 1 y fijar versiones con al menos dos semanas de publicadas.
