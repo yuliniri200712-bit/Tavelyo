@@ -43,6 +43,16 @@ Cobertura de `design-system`:
 
 Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo extensiones estáticas, rutas `/__/` excluidas, actualización con aviso), manifiesto (iconos declarados existen con el tamaño real leído del PNG), marco común (logotipo con texto alternativo, salto al contenido, aviso sin conexión, aviso de nueva versión) y rutas de ambas apps (catálogo y página no encontrada).
 
+## 2026-11-14 — Integración continua en GitHub Actions
+
+| Ejecución | Commit | Resultado |
+|---|---|---|
+| #1 | `0acf725` | ⏹️ Cancelada a los 1 min 17 s por el envío siguiente (`concurrency` con `cancel-in-progress`); no es un fallo |
+| #2 | `e4c8c19` | ✅ |
+| #3 | `41089aa` | ✅ Los tres trabajos y todos sus pasos: `npm ci`, `npm run check`, `npm audit`, SDK generado al día, compilación de las dos PWA, búsqueda de secretos, `npm run test:integration`, instalación de Chromium, WebKit, Chrome y Edge en Linux, `npm run test:e2e` y `npm run test:e2e:emulators` |
+
+Verificado con la API pública de GitHub (el repositorio es público desde el 2026-11-14).
+
 ## 2026-11-13 — Búsqueda de secretos
 
 `npm run check:secrets` (`tools/check-secrets`, sin dependencias): revisa los archivos versionados y los builds de las PWA con patrones de claves privadas PEM, cuentas de servicio de Google, claves de API de Google/Firebase, claves de AWS, claves secretas de pasarela (`sk_live_`/`rk_live_`), tokens de GitHub y Slack y cadenas de conexión de base de datos con contraseña. Resultado: ✅ sin secretos en 216 archivos. 14 pruebas comprueban que detecta cada patrón (con muestras construidas por partes), que no marca la configuración de ejemplo y que no copia el secreto en el informe.
