@@ -1,0 +1,12 @@
+specVersion: 'v1'
+serviceId: 'tavelyo'
+# Región provisional: solo se usa al desplegar. Se fija con D-01/D-10 (país y jurisdicción de datos).
+location: 'us-central1'
+schema:
+  source: './schema'
+  datasource:
+    postgresql:
+      database: 'tavelyo'
+      cloudSql:
+        instanceId: 'tavelyo-fdc'
+connectorDirs: ['./connector']

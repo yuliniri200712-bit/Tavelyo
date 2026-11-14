@@ -11,6 +11,8 @@
     "vitest.config.ts",
     "vitest.setup.ts",
     "eslint.config.js",
-    "tools"
+    "tools",
+    "dataconnect/tests",
+    "vitest.integration.config.ts"
   ]
 }

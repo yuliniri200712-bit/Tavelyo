@@ -1,6 +1,8 @@
 # Modelo de datos — ERD y diccionario
 
-Estado: **borrador de Fase 0**. Es un diseño lógico para PostgreSQL; los nombres finales, tipos y directivas de SQL Connect se fijan al escribir el esquema en la fase correspondiente. No existen migraciones todavía.
+Estado: **grupo «Organización» implementado en la Fase 1** (`dataconnect/schema/schema.gql`); el resto sigue siendo el diseño lógico de la Fase 0 y se fija al escribir el esquema en su fase.
+
+**Implementado (Fase 1):** `Tenant` (con `status` ACTIVE/SUSPENDED), `Branch`, `UserProfile` (solo `displayName`; sin correo, por minimización), `Role`, `Permission`, `RolePermission`, `Membership`, `MembershipBranch` (FK compuestas hacia `Membership` y `Branch` con `tenantId`) y `AuditEvent` (operación, recurso, actor y motivo; sin `before`/`after` todavía). Diferencias con el borrador: los roles son **solo de sistema** (clave `code`, sin `tenant_id`) hasta que haga falta personalizarlos; `version` en `Membership` se aplaza hasta que haya edición concurrente real; las empresas, sucursales y el catálogo de roles se crean por aprovisionamiento en el servidor, nunca desde la app.
 
 ## 1. Convenciones comunes
 

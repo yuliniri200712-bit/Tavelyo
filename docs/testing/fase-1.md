@@ -43,6 +43,18 @@ Cobertura de `design-system`:
 
 Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo extensiones estáticas, rutas `/__/` excluidas, actualización con aviso), manifiesto (iconos declarados existen con el tamaño real leído del PNG), marco común (logotipo con texto alternativo, salto al contenido, aviso sin conexión, aviso de nueva versión) y rutas de ambas apps (catálogo y página no encontrada).
 
+## 2026-11-13 — Esquema inicial y autorización (SQL Connect)
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Unitarias | `npm run check` | ✅ 14 archivos, **223 pruebas** (37 del catálogo de roles contra `permissions.md`, 12 de reglas de los conectores) |
+| Integración | `npm run test:integration` (emuladores de la CLI 15.30.2: Auth y SQL Connect con PGlite, proyecto `demo-tavelyo`) | ✅ **33/33** |
+| Prueba de mutación | Quitar la comprobación de membresía de `TenantMembers` y repetir la integración | ✅ Fallan 4 pruebas (ID alterado, rol sin permiso, empresa suspendida, revocación); se restauró el archivo |
+
+Casos de integración (dos empresas, A y B, más una suspendida): sin sesión no responde nada; `MyMemberships` solo devuelve las empresas activas propias; `MyBranches` muestra todas las sucursales al propietario, las asignadas al resto y ninguna con el ID de otra empresa; `TenantMembers` y `TenantAuditEvents` exigen permiso y rechazan IDs ajenos; `AddMember`, `ChangeMemberRole`, `AssignMemberBranch`, `UnassignMemberBranch` y `RevokeMember` rechazan IDs de otra empresa, roles sin permiso, rangos iguales o superiores (incluido cambiarse el propio rol) y sucursales de otra empresa o no asignadas al administrador; quitar una sucursal y revocar una membresía se aplican en la **siguiente operación con el mismo token**; las operaciones rechazadas no dejan eventos de auditoría (atomicidad); la FK compuesta impide una sucursal de otra empresa incluso con credenciales de servidor.
+
+Limitación: el emulador no aplica IAM (ADR-0008, verificación pendiente en `tavelyo-e2b57`).
+
 ## 2026-11-13 — Corrección de vulnerabilidades de dependencias
 
 | Comprobación | Comando | Resultado |

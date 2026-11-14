@@ -66,7 +66,15 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - **Cliente**: solo su sesión; en mesas compartidas, según D-06.
 - **Nadie**: PAN ni CVV (no se almacenan).
 
-## 5. Pendiente
+## 5. Implementación (Fase 1)
+
+- Catálogo en código: `packages/contracts/src/authorization.ts`. Una prueba compara cada rol con la tabla de la sección 3 de este documento (✅ y 🔸 conceden); si cambia una sin la otra, CI falla. `service_request.create` es del cliente y no forma parte del catálogo del personal.
+- Permiso añadido: **`audit.read`** (ver el registro de auditoría), solo para el propietario.
+- Rangos: propietario 100, administrador de sucursal 80, cajero 40, mesero 30, cocina 30. Nadie agrega, modifica, asigna sucursales ni revoca a alguien de rango igual o superior al propio, ni asigna un rol igual o superior (incluye cambiar el propio rol).
+- Gestión del personal: `staff.invite` cubre agregar, listar y revocar; `role.assign` cubre cambiar el rol y asignar o quitar sucursales. Quien no es propietario solo asigna sucursales que tiene asignadas.
+- Pendiente de fases siguientes: invitar por correo (requiere el backend para buscar al usuario), reactivar una membresía revocada y roles personalizados por empresa.
+
+## 6. Pendiente
 
 - Topes concretos de descuento y reembolso por rol (configurables por empresa).
 - Política de autenticación reforzada para propietarios (según capacidades verificadas de Firebase Auth).

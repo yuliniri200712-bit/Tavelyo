@@ -32,6 +32,13 @@ El aislamiento entre empresas y sucursales es el requisito de seguridad más cr�
 - Comprobación en CI de que ningún conector expone `_delete`/`_deleteMany` sobre entidades con historia (las FK obligatorias de SQL Connect borran en cascada).
 - Lista de verificación de revisión de código para `.gql`.
 
+## Implementación (Fase 1, 2026-11-13)
+
+- Esquema y conector `tavelyo` en `dataconnect/`, con el patrón de la decisión en todas las operaciones de empresa: membresía activa por `auth.uid`, empresa activa, permiso consultado en `RolePermission` (`rolePermissions_on_role(...) @check(expr: "this.size() > 0")`), rango comparado dentro del mismo paso (`response.query.membership.role.rank`), pertenencia de los recursos a la empresa y `AuditEvent` en la misma transacción.
+- Limitaciones verificadas en el emulador: una mutación no admite dos pasos `query` (se agrupan en uno) y un filtro no mezcla `_or` con campos directos (se envuelve en `_and`).
+- Controles de proceso: `dataconnect/tests/connector-rules.test.ts` (en `npm run check`) exige `@auth`, comprobación de membresía salvo operaciones sobre uno mismo, `@transaction` + `@redact` + `AuditEvent` en mutaciones, ningún `_delete` fuera de la lista blanca (`UnassignMemberBranch`) y ninguna creación de empresas, sucursales, roles o permisos desde el conector. `dataconnect/tests/authorization.int.test.ts` (en `npm run test:integration`) prueba cada operación con dos empresas e IDs alterados: 33/33. Una prueba de mutación (quitar la comprobación de membresía de `TenantMembers`) hace fallar 4 pruebas, así que los controles detectan la regresión.
+- Pendiente: revocar los *refresh tokens* (punto 4) requiere el backend; el aislamiento ya no depende de ello porque cada operación consulta la base.
+
 ## Verificación pendiente
 
 - IAM real de `executeGraphql` e `impersonate*` en un proyecto de desarrollo: el emulador no aplica IAM.
