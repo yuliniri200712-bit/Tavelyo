@@ -45,7 +45,7 @@ D-07 Cloud Functions con TypeScript · D-12 (fuente) Plus Jakarta Sans, OFL 1.1 
 
 ## Pendiente
 
-- **Favicon de 16 px:** aprobar una variante simplificada del isotipo (las curvas no se distinguen a ese tamaño).
+- **Favicon de 16 px:** revisar la propuesta `assets/branding/proposals/favicon-16-propuesta.svg` (comparación en `favicon-16-comparacion.png`) y aprobarla o pedir ajustes.
 - Validación de formularios en el cliente (pendiente dentro de ADR-0010; se decide en Fase 1 si hace falta).
 - Decisiones de negocio D-01, D-02, D-04 a D-06 y D-09 a D-11 (`requirements.md` §6). No bloquean la Fase 1.
 

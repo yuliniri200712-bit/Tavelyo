@@ -40,7 +40,7 @@ La página de propuestas (`proposals/propuestas-logo.html`) se conserva como reg
 
 | Recurso | Ruta prevista | Estado |
 |---|---|---|
-| Favicon simplificado de 16 px | `assets/branding/app-icon/` | ⏳ Requiere aprobación expresa del propietario |
+| Favicon simplificado de 16 px | Propuesta: `assets/branding/proposals/favicon-16-propuesta.svg` (comparación: `favicon-16-comparacion.png`) | ⏳ **Pendiente de aprobación del propietario.** Una sola curva, abierta sobre el tablero, y formas alineadas a la cuadrícula de 16 px; crema sobre tomate (3,67:1). Tras aprobarse, se exporta como `favicon-16.png` y se enlaza en las dos apps |
 | Icono de notificación | — | ⏳ Variante de una tinta en la fase de notificaciones |
 | Pantalla de inicio (*splash*) | — | ⏳ En iOS se genera desde el manifiesto y `apple-touch-icon`; recursos propios si se necesitan |
 | Fuente Plus Jakarta Sans | `packages/design-system/assets/fonts/` | ✅ **Confirmada** por el propietario (2026-11-13). Origen: repositorio oficial `tokotype/PlusJakartaSans`, versión 2.7.1. Licencia: SIL Open Font License 1.1 (se copia `OFL.txt` junto a los archivos). Se sirve desde la propia app, sin CDN |
