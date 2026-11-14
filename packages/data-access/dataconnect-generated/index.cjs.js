@@ -13,6 +13,36 @@ const connectorConfig = {
 };
 exports.connectorConfig = connectorConfig;
 
+const publicMenuRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'PublicMenu', inputVars);
+}
+publicMenuRef.operationName = 'PublicMenu';
+exports.publicMenuRef = publicMenuRef;
+
+exports.publicMenu = function publicMenu(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(publicMenuRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const myParticipationRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'MyParticipation', inputVars);
+}
+myParticipationRef.operationName = 'MyParticipation';
+exports.myParticipationRef = myParticipationRef;
+
+exports.myParticipation = function myParticipation(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(myParticipationRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
 const upsertMyProfileRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();
@@ -169,5 +199,62 @@ exports.tenantAuditEvents = function tenantAuditEvents(dcOrVars, varsOrOptions, 
   
   const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
   return executeQuery(tenantAuditEventsRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const openTableSessionRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'OpenTableSession', inputVars);
+}
+openTableSessionRef.operationName = 'OpenTableSession';
+exports.openTableSessionRef = openTableSessionRef;
+
+exports.openTableSession = function openTableSession(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(openTableSessionRef(dcInstance, inputVars));
+}
+;
+
+const closeTableSessionRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'CloseTableSession', inputVars);
+}
+closeTableSessionRef.operationName = 'CloseTableSession';
+exports.closeTableSessionRef = closeTableSessionRef;
+
+exports.closeTableSession = function closeTableSession(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(closeTableSessionRef(dcInstance, inputVars));
+}
+;
+
+const serverOpenSessionByQrRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerOpenSessionByQr', inputVars);
+}
+serverOpenSessionByQrRef.operationName = 'ServerOpenSessionByQr';
+exports.serverOpenSessionByQrRef = serverOpenSessionByQrRef;
+
+exports.serverOpenSessionByQr = function serverOpenSessionByQr(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverOpenSessionByQrRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverInsertParticipantRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerInsertParticipant', inputVars);
+}
+serverInsertParticipantRef.operationName = 'ServerInsertParticipant';
+exports.serverInsertParticipantRef = serverInsertParticipantRef;
+
+exports.serverInsertParticipant = function serverInsertParticipant(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverInsertParticipantRef(dcInstance, inputVars));
 }
 ;

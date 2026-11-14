@@ -1,0 +1,33 @@
+# Operaciones solo de servidor (ADR-0011): @auth(level: NO_ACCESS). Solo las ejecuta el Admin SDK
+# del backend, después de sus propias comprobaciones; ningún cliente ni miembro del personal puede.
+
+# Sesión abierta de la mesa de un QR (para unirse a ella).
+query ServerOpenSessionByQr($qrPublicId: UUID!) @auth(level: NO_ACCESS) {
+  diningTables(where: { qrPublicId: { eq: $qrPublicId }, archivedAt: { isNull: true } }, limit: 1) {
+    id
+    tenantId
+    branchId
+    tableSessions_on_table(where: { status: { eq: OPEN } }, limit: 1) {
+      id
+    }
+  }
+}
+
+# Alta de un participante en una sesión (lo decide joinTableSession).
+mutation ServerInsertParticipant(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sessionId: UUID!
+  $authUid: String!
+  $expiresAt: Timestamp!
+) @auth(level: NO_ACCESS) {
+  sessionParticipant_insert(
+    data: {
+      tenantId: $tenantId
+      branchId: $branchId
+      sessionId: $sessionId
+      authUid: $authUid
+      expiresAt: $expiresAt
+    }
+  )
+}

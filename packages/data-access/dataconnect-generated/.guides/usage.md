@@ -14,8 +14,14 @@ If a user is not using a supported framework, they can use the generated SDK dir
 Here's an example of how to use it with the first 5 operations:
 
 ```js
-import { upsertMyProfile, addMember, changeMemberRole, revokeMember, assignMemberBranch, unassignMemberBranch, myProfile, myMemberships, myBranches, tenantMembers } from '@tavelyo/dataconnect-sdk';
+import { publicMenu, myParticipation, upsertMyProfile, addMember, changeMemberRole, revokeMember, assignMemberBranch, unassignMemberBranch, myProfile, myMemberships } from '@tavelyo/dataconnect-sdk';
 
+
+// Operation PublicMenu:  For variables, look at type PublicMenuVars in ../index.d.ts
+const { data } = await PublicMenu(dataConnect, publicMenuVars);
+
+// Operation MyParticipation:  For variables, look at type MyParticipationVars in ../index.d.ts
+const { data } = await MyParticipation(dataConnect, myParticipationVars);
 
 // Operation UpsertMyProfile:  For variables, look at type UpsertMyProfileVars in ../index.d.ts
 const { data } = await UpsertMyProfile(dataConnect, upsertMyProfileVars);
@@ -40,12 +46,6 @@ const { data } = await MyProfile(dataConnect);
 
 // Operation MyMemberships: 
 const { data } = await MyMemberships(dataConnect);
-
-// Operation MyBranches:  For variables, look at type MyBranchesVars in ../index.d.ts
-const { data } = await MyBranches(dataConnect, myBranchesVars);
-
-// Operation TenantMembers:  For variables, look at type TenantMembersVars in ../index.d.ts
-const { data } = await TenantMembers(dataConnect, tenantMembersVars);
 
 
 ```

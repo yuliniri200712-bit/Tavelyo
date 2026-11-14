@@ -4,7 +4,11 @@
 
 ## Fase actual
 
-**Fase 2 — Salón y carta: plan propuesto** (2026-11-14), pendiente de aprobación: [`plans/fase-2.md`](plans/fase-2.md). Decisiones tomadas para el plan: D-01b, D-21, D-22 y D-06 (carrito). No se implementa nada hasta aprobar el plan.
+**Fase 2 — Salón y carta.** Autorizada por el propietario el 2026-11-14. Rama: `fase-2-salon-carta`. Plan: [`plans/fase-2.md`](plans/fase-2.md). Decisiones: D-01b, D-21, D-22, D-06 (carrito) y ADR-0011.
+
+| Bloque del plan | Estado |
+|---|---|
+| 1. Decisiones, ADR-0011 y esquema | ✅ ADR-0011 aceptada y **verificada en el emulador** (6 pruebas de capacidades: carta `PUBLIC` sin sesión y nada con un QR inventado; un cliente anónimo no alcanza operaciones `USER`; `NO_ACCESS` rechaza a cliente, personal y anónimo y solo lo ejecuta el Admin SDK; una sola sesión abierta por mesa; participante vencido o de una sesión cerrada sin acceso; la sesión siguiente queda aislada). Esquema de salón, carta y resumen de pedido. Reglas de conectores ampliadas con listas blancas para `PUBLIC`, `USER_ANON` y `NO_ACCESS` |
 
 **Fase 1 — Base: cerrada** con aprobación del propietario el 2026-11-14 e integrada en `main` (rama `fase-1-base`, plan [`plans/fase-1.md`](plans/fase-1.md)). Queda pendiente, sin bloquear, la revisión en un iPhone (instalación y VoiceOver).
 

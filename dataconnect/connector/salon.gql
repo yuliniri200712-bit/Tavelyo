@@ -1,0 +1,117 @@
+# Operaciones del salón para el personal (Fase 2). Mismo patrón que mutations.gql (ADR-0008):
+# membresía activa, empresa activa, permiso, sucursal asignada (salvo propietario), pertenencia de
+# los recursos a la empresa y a la sucursal, y AuditEvent en la misma transacción.
+
+# Abre la mesa (D-21). La unicidad de openTableId impide dos sesiones abiertas en la misma mesa.
+mutation OpenTableSession($tenantId: UUID!, $branchId: UUID!, $tableId: UUID!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "session.open" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: session.open") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    diningTable(id: $tableId) @check(expr: "this != null", message: "Mesa inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "La mesa no pertenece a la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "La mesa no pertenece a la sucursal")
+      archivedAt @check(expr: "this == null", message: "La mesa está archivada")
+    }
+  }
+  tableSession_insert(
+    data: {
+      tenantId: $tenantId
+      branchId: $branchId
+      tableId: $tableId
+      openTableId: $tableId
+      status: OPEN
+      openedBy_expr: "auth.uid"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "table_session.open"
+      resourceType: "dining_table"
+      resourceId_expr: "vars.tableId"
+    }
+  )
+}
+
+# Cierra la sesión: sus participantes pierden el acceso y la mesa queda libre (caso 12).
+mutation CloseTableSession($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "session.close" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: session.close") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    tableSession(id: $sessionId) @check(expr: "this != null", message: "Sesión inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "La sesión no pertenece a la empresa")
+      branchId
+        @check(expr: "this == vars.branchId", message: "La sesión no pertenece a la sucursal")
+      status @check(expr: "this == 'OPEN'", message: "La sesión ya está cerrada")
+    }
+  }
+  tableSession_update(
+    id: $sessionId
+    data: {
+      status: CLOSED
+      openTableId: null
+      closedAt_expr: "request.time"
+      closedBy_expr: "auth.uid"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "table_session.close"
+      resourceType: "table_session"
+      resourceId_expr: "vars.sessionId"
+    }
+  )
+}

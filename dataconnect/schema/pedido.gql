@@ -1,0 +1,65 @@
+# Resumen verificable de pedido (Fase 2): lo calcula y lo guarda solo el backend
+# (operaciones NO_ACCESS, ADR-0011). La Fase 3 envía a cocina a partir de un resumen vigente.
+
+enum OrderQuoteStatus {
+  QUOTED
+  AUTHORIZED
+  DECLINED
+  EXPIRED
+}
+
+"""
+Resumen de un carrito validado por el servidor: precios vigentes, impuesto contenido y total.
+idempotencyKey evita duplicados por doble pulsación o reintento del mismo participante.
+"""
+type OrderQuote
+  @table
+  @unique(fields: ["participantId", "idempotencyKey"])
+  @unique(fields: ["id", "tenantId", "branchId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  sessionId: UUID!
+  session: TableSession!
+    @ref(fields: ["sessionId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  participantId: UUID!
+  participant: SessionParticipant!
+    @ref(
+      fields: ["participantId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  idempotencyKey: String!
+  currency: String! @col(dataType: "char(3)")
+  subtotalMinor: Int64!
+  taxMinor: Int64!
+  totalMinor: Int64!
+  status: OrderQuoteStatus!
+  "Referencia del adaptador de pago (simulado en la Fase 2)."
+  paymentRef: String
+  createdAt: Timestamp! @default(expr: "request.time")
+  expiresAt: Timestamp!
+}
+
+"Línea del resumen con instantánea del nombre y del precio aplicado (PM §6)."
+type OrderQuoteLine @table @unique(fields: ["quoteId", "position"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  quoteId: UUID!
+  quote: OrderQuote!
+    @ref(fields: ["quoteId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  position: Int!
+  productId: UUID!
+  priceId: UUID!
+  price: Price!
+    @ref(fields: ["priceId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  productNameSnapshot: String!
+  quantity: Int!
+  unitPriceMinor: Int64!
+  "Opciones elegidas: nombres e importes en el momento del resumen."
+  modifiersSnapshot: [String!]
+  modifiersMinor: Int64!
+  lineTotalMinor: Int64!
+  taxMinor: Int64!
+  note: String
+}

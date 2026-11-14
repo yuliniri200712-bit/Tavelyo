@@ -1,6 +1,6 @@
 # Plan de Fase 2 — Salón y carta
 
-Estado: **propuesta pendiente de aprobación del propietario** (2026-11-14). Rama de trabajo: `fase-2-salon-carta`.
+Estado: **aprobado por el propietario el 2026-11-14**, junto con `qrcode-generator` 2.0.4 y la sesión anónima de Firebase Authentication para clientes (ADR-0011). Rama de trabajo: `fase-2-salon-carta`.
 
 ## 1. Objetivo
 
@@ -22,7 +22,7 @@ Pendiente para la Fase 3: **D-04** (si la preautorización es obligatoria antes 
 
 ## 3. Diseño propuesto
 
-### Sesión de mesa del cliente (ADR-0011, se redacta en el bloque 1 para aprobación)
+### Sesión de mesa del cliente (ADR-0011, aceptada)
 
 - **QR:** es solo una URL de `menu-web` con el `qrPublicId` de la mesa, aleatorio y rotable desde administración. No lleva secretos.
 - **Carta pública:** cualquiera con el QR ve la carta de esa sucursal, solo con productos disponibles. Nunca ve datos de mesas, sesiones ni pedidos.

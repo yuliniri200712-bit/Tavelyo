@@ -47,6 +47,11 @@ export interface Branch_Key {
   __typename?: 'Branch_Key';
 }
 
+export interface Category_Key {
+  id: UUIDString;
+  __typename?: 'Category_Key';
+}
+
 export interface ChangeMemberRoleData {
   membership_update?: Membership_Key | null;
   auditEvent_insert: AuditEvent_Key;
@@ -56,6 +61,22 @@ export interface ChangeMemberRoleVariables {
   tenantId: UUIDString;
   userId: string;
   roleCode: string;
+}
+
+export interface CloseTableSessionData {
+  tableSession_update?: TableSession_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface CloseTableSessionVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+}
+
+export interface DiningTable_Key {
+  id: UUIDString;
+  __typename?: 'DiningTable_Key';
 }
 
 export interface MembershipBranch_Key {
@@ -69,6 +90,16 @@ export interface Membership_Key {
   tenantId: UUIDString;
   userId: string;
   __typename?: 'Membership_Key';
+}
+
+export interface ModifierGroup_Key {
+  id: UUIDString;
+  __typename?: 'ModifierGroup_Key';
+}
+
+export interface ModifierOption_Key {
+  id: UUIDString;
+  __typename?: 'ModifierOption_Key';
 }
 
 export interface MyBranchesData {
@@ -105,6 +136,23 @@ export interface MyMembershipsData {
   })[];
 }
 
+export interface MyParticipationData {
+  sessionParticipants: ({
+    id: UUIDString;
+    expiresAt: TimestampString;
+    session: {
+      status: TableSessionStatus;
+      table: {
+        code: string;
+      };
+    };
+  } & SessionParticipant_Key)[];
+}
+
+export interface MyParticipationVariables {
+  sessionId: UUIDString;
+}
+
 export interface MyProfileData {
   userProfile?: {
     id: string;
@@ -112,9 +160,99 @@ export interface MyProfileData {
   } & UserProfile_Key;
 }
 
+export interface OpenTableSessionData {
+  tableSession_insert: TableSession_Key;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface OpenTableSessionVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  tableId: UUIDString;
+}
+
+export interface OrderQuoteLine_Key {
+  id: UUIDString;
+  __typename?: 'OrderQuoteLine_Key';
+}
+
+export interface OrderQuote_Key {
+  id: UUIDString;
+  __typename?: 'OrderQuote_Key';
+}
+
 export interface Permission_Key {
   code: string;
   __typename?: 'Permission_Key';
+}
+
+export interface Price_Key {
+  id: UUIDString;
+  __typename?: 'Price_Key';
+}
+
+export interface ProductBranch_Key {
+  productId: UUIDString;
+  branchId: UUIDString;
+  __typename?: 'ProductBranch_Key';
+}
+
+export interface Product_Key {
+  id: UUIDString;
+  __typename?: 'Product_Key';
+}
+
+export interface PublicMenuData {
+  diningTables: ({
+    code: string;
+    sector: {
+      branch: {
+        name: string;
+        status: BranchStatus;
+        currency: string;
+        timezone: string;
+        productBranches_on_branch: ({
+          daysMask?: number | null;
+          startMinute?: number | null;
+          endMinute?: number | null;
+          currentPrice?: {
+            id: UUIDString;
+            amountMinor: Int64String;
+            currency: string;
+          } & Price_Key;
+          product: {
+            id: UUIDString;
+            name: string;
+            description?: string | null;
+            allergensDeclared?: string[] | null;
+            sort: number;
+            category: {
+              id: UUIDString;
+              name: string;
+              sort: number;
+            } & Category_Key;
+            modifierGroups_on_product: ({
+              id: UUIDString;
+              name: string;
+              minSelect: number;
+              maxSelect: number;
+              sort: number;
+              modifierOptions_on_group: ({
+                id: UUIDString;
+                name: string;
+                priceDeltaMinor: Int64String;
+                sort: number;
+              } & ModifierOption_Key)[];
+            } & ModifierGroup_Key)[];
+          } & Product_Key;
+        })[];
+      };
+    };
+  })[];
+}
+
+export interface PublicMenuVariables {
+  qrPublicId: UUIDString;
 }
 
 export interface RevokeMemberData {
@@ -137,6 +275,53 @@ export interface RolePermission_Key {
 export interface Role_Key {
   code: string;
   __typename?: 'Role_Key';
+}
+
+export interface Sector_Key {
+  id: UUIDString;
+  __typename?: 'Sector_Key';
+}
+
+export interface ServerInsertParticipantData {
+  sessionParticipant_insert: SessionParticipant_Key;
+}
+
+export interface ServerInsertParticipantVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  authUid: string;
+  expiresAt: TimestampString;
+}
+
+export interface ServerOpenSessionByQrData {
+  diningTables: ({
+    id: UUIDString;
+    tenantId: UUIDString;
+    branchId: UUIDString;
+    tableSessions_on_table: ({
+      id: UUIDString;
+    } & TableSession_Key)[];
+  } & DiningTable_Key)[];
+}
+
+export interface ServerOpenSessionByQrVariables {
+  qrPublicId: UUIDString;
+}
+
+export interface SessionParticipant_Key {
+  id: UUIDString;
+  __typename?: 'SessionParticipant_Key';
+}
+
+export interface TableSession_Key {
+  id: UUIDString;
+  __typename?: 'TableSession_Key';
+}
+
+export interface TaxRule_Key {
+  id: UUIDString;
+  __typename?: 'TaxRule_Key';
 }
 
 export interface TenantAuditEventsData {
@@ -209,6 +394,30 @@ export interface UserProfile_Key {
   id: string;
   __typename?: 'UserProfile_Key';
 }
+
+interface PublicMenuRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: PublicMenuVariables): QueryRef<PublicMenuData, PublicMenuVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: PublicMenuVariables): QueryRef<PublicMenuData, PublicMenuVariables>;
+  operationName: string;
+}
+export const publicMenuRef: PublicMenuRef;
+
+export function publicMenu(vars: PublicMenuVariables, options?: ExecuteQueryOptions): QueryPromise<PublicMenuData, PublicMenuVariables>;
+export function publicMenu(dc: DataConnect, vars: PublicMenuVariables, options?: ExecuteQueryOptions): QueryPromise<PublicMenuData, PublicMenuVariables>;
+
+interface MyParticipationRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: MyParticipationVariables): QueryRef<MyParticipationData, MyParticipationVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: MyParticipationVariables): QueryRef<MyParticipationData, MyParticipationVariables>;
+  operationName: string;
+}
+export const myParticipationRef: MyParticipationRef;
+
+export function myParticipation(vars: MyParticipationVariables, options?: ExecuteQueryOptions): QueryPromise<MyParticipationData, MyParticipationVariables>;
+export function myParticipation(dc: DataConnect, vars: MyParticipationVariables, options?: ExecuteQueryOptions): QueryPromise<MyParticipationData, MyParticipationVariables>;
 
 interface UpsertMyProfileRef {
   /* Allow users to create refs without passing in DataConnect */
@@ -341,4 +550,52 @@ export const tenantAuditEventsRef: TenantAuditEventsRef;
 
 export function tenantAuditEvents(vars: TenantAuditEventsVariables, options?: ExecuteQueryOptions): QueryPromise<TenantAuditEventsData, TenantAuditEventsVariables>;
 export function tenantAuditEvents(dc: DataConnect, vars: TenantAuditEventsVariables, options?: ExecuteQueryOptions): QueryPromise<TenantAuditEventsData, TenantAuditEventsVariables>;
+
+interface OpenTableSessionRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: OpenTableSessionVariables): MutationRef<OpenTableSessionData, OpenTableSessionVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: OpenTableSessionVariables): MutationRef<OpenTableSessionData, OpenTableSessionVariables>;
+  operationName: string;
+}
+export const openTableSessionRef: OpenTableSessionRef;
+
+export function openTableSession(vars: OpenTableSessionVariables): MutationPromise<OpenTableSessionData, OpenTableSessionVariables>;
+export function openTableSession(dc: DataConnect, vars: OpenTableSessionVariables): MutationPromise<OpenTableSessionData, OpenTableSessionVariables>;
+
+interface CloseTableSessionRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: CloseTableSessionVariables): MutationRef<CloseTableSessionData, CloseTableSessionVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: CloseTableSessionVariables): MutationRef<CloseTableSessionData, CloseTableSessionVariables>;
+  operationName: string;
+}
+export const closeTableSessionRef: CloseTableSessionRef;
+
+export function closeTableSession(vars: CloseTableSessionVariables): MutationPromise<CloseTableSessionData, CloseTableSessionVariables>;
+export function closeTableSession(dc: DataConnect, vars: CloseTableSessionVariables): MutationPromise<CloseTableSessionData, CloseTableSessionVariables>;
+
+interface ServerOpenSessionByQrRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerOpenSessionByQrVariables): QueryRef<ServerOpenSessionByQrData, ServerOpenSessionByQrVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerOpenSessionByQrVariables): QueryRef<ServerOpenSessionByQrData, ServerOpenSessionByQrVariables>;
+  operationName: string;
+}
+export const serverOpenSessionByQrRef: ServerOpenSessionByQrRef;
+
+export function serverOpenSessionByQr(vars: ServerOpenSessionByQrVariables, options?: ExecuteQueryOptions): QueryPromise<ServerOpenSessionByQrData, ServerOpenSessionByQrVariables>;
+export function serverOpenSessionByQr(dc: DataConnect, vars: ServerOpenSessionByQrVariables, options?: ExecuteQueryOptions): QueryPromise<ServerOpenSessionByQrData, ServerOpenSessionByQrVariables>;
+
+interface ServerInsertParticipantRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerInsertParticipantVariables): MutationRef<ServerInsertParticipantData, ServerInsertParticipantVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerInsertParticipantVariables): MutationRef<ServerInsertParticipantData, ServerInsertParticipantVariables>;
+  operationName: string;
+}
+export const serverInsertParticipantRef: ServerInsertParticipantRef;
+
+export function serverInsertParticipant(vars: ServerInsertParticipantVariables): MutationPromise<ServerInsertParticipantData, ServerInsertParticipantVariables>;
+export function serverInsertParticipant(dc: DataConnect, vars: ServerInsertParticipantVariables): MutationPromise<ServerInsertParticipantData, ServerInsertParticipantVariables>;
 
