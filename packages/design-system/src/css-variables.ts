@@ -3,13 +3,15 @@ import { tokens, type Tokens } from './tokens.ts';
 const PREFIX = '--tv';
 const rem = (px: number): string => `${px / 16}rem`;
 
+/** `bodyLarge` → `body-large`, como en los nombres de las propiedades CSS. */
+export const kebab = (key: string): string => key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+
 /** Convierte los tokens en propiedades CSS personalizadas `--tv-*` (longitudes en rem). */
 export function cssVariables(source: Tokens = tokens): Array<[name: string, value: string]> {
   const out: Array<[string, string]> = [];
   const add = (name: string, value: string | number): void => {
     out.push([`${PREFIX}-${name}`, String(value)]);
   };
-  const kebab = (key: string): string => key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 
   for (const [key, value] of Object.entries(source.brand)) add(`brand-${kebab(key)}`, value);
   for (const [key, value] of Object.entries(source.neutral)) add(`neutral-${kebab(key)}`, value);

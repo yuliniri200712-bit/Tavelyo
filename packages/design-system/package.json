@@ -6,6 +6,7 @@
   "description": "Tokens de marca, funcionales y semánticos (CSS + TypeScript), componentes React base y catálogo visual",
   "exports": {
     ".": "./src/index.ts",
+    "./tokens": "./src/tokens.ts",
     "./styles.css": "./src/styles/index.css"
   },
   "scripts": {

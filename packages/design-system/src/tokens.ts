@@ -125,6 +125,8 @@ export const stroke = {
 /** Medidas de componentes que no son espacios ni radios. */
 export const size = {
   icon: 20,
+  /** Altura del logotipo horizontal en la cabecera: 40 px dan ≥ 120 px de ancho (IV §3). */
+  logoHeader: 40,
   dialogMaxWidth: 480,
   contentMaxWidth: 1200,
 } as const;

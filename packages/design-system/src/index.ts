@@ -26,3 +26,4 @@ export {
   type ErrorStateProps,
   type LoadingStateProps,
 } from './components/States.tsx';
+export { DesignSystemCatalog } from './catalog/Catalog.tsx';

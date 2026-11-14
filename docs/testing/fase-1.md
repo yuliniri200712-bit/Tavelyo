@@ -32,6 +32,17 @@ Cobertura de `design-system`:
 - Sin valores sueltos: ningún HEX ni `px` en los componentes ni en sus estilos (criterio 5).
 - Componentes con Testing Library en jsdom: nombres accesibles, variantes del botón, carga sin doble envío y con foco conservado, campo con etiqueta persistente, ayuda y error enlazados (`aria-describedby`, `aria-invalid`), chips con texto, tarjeta como región con nombre, diálogo (confirmar, cancelar, Escape bloqueado durante la operación, foco inicial en «Cancelar» si es destructivo), aviso sin conexión, aviso de nueva versión que no se aplica sin aceptación, estados de carga (`status`), error (`alert`) y vacío.
 
+## 2026-11-13 — Apps y `packages/pwa-shell`
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Conjunto completo | `npm run check` | ✅ 10 archivos, **163 pruebas** |
+| Compilación | `npm run build -w @tavelyo/menu-web` y `-w @tavelyo/operations` (`tsc` + `vite build`) | ✅ Ambas; *service worker* `generateSW` con 22 entradas precacheadas |
+| *Service worker* generado | Inspección de `dist/sw.js` | ✅ Solo `NavigationRoute` hacia `/index.html` con `/__/` excluido; ninguna estrategia de caché en tiempo de ejecución |
+| Manifiesto generado | Inspección de `dist/manifest.webmanifest` e `index.html` | ✅ Nombre, `standalone`, `lang: es`, iconos any y maskable 192/512, `theme-color` desde el token, enlace al manifiesto inyectado |
+
+Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo extensiones estáticas, rutas `/__/` excluidas, actualización con aviso), manifiesto (iconos declarados existen con el tamaño real leído del PNG), marco común (logotipo con texto alternativo, salto al contenido, aviso sin conexión, aviso de nueva versión) y rutas de ambas apps (catálogo y página no encontrada).
+
 Limitaciones conocidas: jsdom no implementa `showModal()`; la prueba usa un sustituto que solo alterna `open`. El foco atrapado, el fondo inerte y la tecla Escape reales se verifican con Playwright en navegadores (bloque 9).
 
 No ejecutado todavía: integración con emuladores, PWA, matriz de navegadores y auditoría axe (siguientes bloques de la fase).

@@ -39,6 +39,7 @@ apps/operations/          # PWA del personal
 packages/core/            # Money, Result, fechas UTC (TypeScript puro)
 packages/contracts/       # Tipos compartidos con el backend
 packages/design-system/   # Tokens (CSS + TS), componentes y catálogo visual
+packages/pwa-shell/       # Configuración común de Vite/PWA y marco de las dos apps (Fase 1)
 packages/data-access/     # SDK generado de SQL Connect y hooks propios
 packages/features/*       # Un paquete por módulo, con sus capas
 dataconnect/  backend/  docs/
@@ -66,6 +67,12 @@ Al crear el monorepo se fijaron versiones exactas con al menos dos semanas de pu
 ### Complementos de prueba y tipos (Fase 1, 2026-11-13)
 
 Para ejecutar las pruebas de componentes aprobadas (Vitest + Testing Library) hacen falta piezas que la tabla no nombraba. Se instalan como dependencias de desarrollo, sin llegar al navegador: `jsdom` 30.1.3 (entorno DOM de Vitest; MIT), `@testing-library/dom` 10.4.2 (*peer* obligatorio de `@testing-library/react`; MIT), `@types/react` y `@types/react-dom` 19.3.0 y `@types/node` 24.19.2 (solo tipos; MIT). React y React DOM: **19.3.1**. Con `jsdom` 30 el mínimo de Node.js pasa a 22.22.2 (o 24.15.0).
+
+### Versiones de las apps (Fase 1, 2026-11-13)
+
+Instaladas con al menos dos semanas de publicadas: Vite **8.3.5**, `@vitejs/plugin-react` **6.1.2** (la 6.3.0 es del 2026-11-09, demasiado reciente), React Router **8.5.1**, `vite-plugin-pwa` **2.0.0**. Licencias MIT. `firebase` 12.19.0 se instala con el bloque de autenticación.
+
+Con `vite-plugin-pwa`, `npm audit` sube a **13 avisos (2 bajos, 11 moderados)**. Los nuevos vienen de `workbox-build` (`glob`, `@rollup/plugin-node-resolve` → `deepmerge`), que solo se ejecuta al compilar para generar el *service worker*; no llega al navegador y procesa únicamente archivos del propio proyecto. Se acepta temporalmente con el mismo criterio que los de ESLint; no se usa `npm audit fix --force` porque cambiaría versiones mayores.
 
 ## Verificación pendiente
 
