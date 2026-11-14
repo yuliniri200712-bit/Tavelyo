@@ -1,0 +1,105 @@
+# Esquema inicial de la Fase 1: organización, identidad, roles y auditoría.
+# Reglas (docs/architecture/data-model.md y ADR-0008):
+# - Toda relación dentro de una empresa usa FK compuesta con tenantId: impide vínculos cruzados
+#   incluso con credenciales de servidor.
+# - Las FK obligatorias borran en cascada: ningún conector expone _delete sobre entidades con
+#   historia (lo comprueba dataconnect/tests/connector-rules.test.ts).
+# - Empresas, sucursales, roles y permisos se crean por aprovisionamiento en el servidor, nunca
+#   desde la app.
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum BranchStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  REVOKED
+}
+
+"Empresa: límite de aislamiento de todos los datos."
+type Tenant @table {
+  id: UUID! @default(expr: "uuidV4()")
+  name: String!
+  status: TenantStatus!
+  defaultCurrency: String! @col(dataType: "char(3)")
+  defaultTimezone: String!
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+"Sucursal. (id, tenant) es único para servir de destino a FK compuestas."
+type Branch @table @unique(fields: ["id", "tenant"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenant: Tenant!
+  name: String!
+  currency: String! @col(dataType: "char(3)")
+  timezone: String!
+  status: BranchStatus!
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+"Perfil mínimo del usuario. La clave es el uid de Firebase Auth (D-10: minimización)."
+type UserProfile @table {
+  id: String!
+  displayName: String!
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+"Rol del sistema. rank impide asignar un rol igual o superior al propio."
+type Role @table(key: "code") {
+  code: String!
+  name: String!
+  rank: Int!
+}
+
+"Permiso por acción (catálogo versionado en packages/contracts)."
+type Permission @table(key: "code") {
+  code: String!
+  description: String!
+}
+
+type RolePermission @table(key: ["role", "permission"]) {
+  role: Role!
+  permission: Permission!
+}
+
+"Pertenencia de un usuario a una empresa: fuente de verdad de la autorización (ADR-0008)."
+type Membership @table(key: ["tenant", "user"]) {
+  tenant: Tenant!
+  user: UserProfile!
+  role: Role!
+  status: MembershipStatus!
+  createdAt: Timestamp! @default(expr: "request.time")
+  createdBy: String!
+  updatedAt: Timestamp! @default(expr: "request.time")
+  revokedAt: Timestamp
+}
+
+"Sucursales asignadas a una membresía. Ambas FK incluyen tenantId."
+type MembershipBranch @table(key: ["tenantId", "userId", "branchId"]) {
+  tenantId: UUID!
+  userId: String!
+  branchId: UUID!
+  membership: Membership! @ref(fields: ["tenantId", "userId"], references: ["tenantId", "userId"])
+  branch: Branch! @ref(fields: ["branchId", "tenantId"], references: ["id", "tenantId"])
+  createdAt: Timestamp! @default(expr: "request.time")
+  createdBy: String!
+}
+
+"Registro de auditoría: solo inserción desde los conectores."
+type AuditEvent @table {
+  id: UUID! @default(expr: "uuidV4()")
+  tenant: Tenant!
+  actorId: String!
+  operation: String!
+  resourceType: String!
+  resourceId: String!
+  reason: String
+  at: Timestamp! @default(expr: "request.time")
+}

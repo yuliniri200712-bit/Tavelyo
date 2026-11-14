@@ -1,0 +1,16 @@
+/* Plus Jakarta Sans 2.7.1 (SIL OFL 1.1), servida por la propia aplicación, sin CDN. */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('../../assets/fonts/PlusJakartaSans%5Bwght%5D.ttf') format('truetype');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('../../assets/fonts/PlusJakartaSans-Italic%5Bwght%5D.ttf') format('truetype');
+  font-weight: 200 800;
+  font-style: italic;
+  font-display: swap;
+}

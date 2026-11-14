@@ -1,0 +1,5 @@
+/* Punto de entrada de estilos: las apps lo importan una sola vez (`@tavelyo/design-system/styles.css`). */
+@import './fonts.css';
+@import './tokens.css';
+@import './base.css';
+@import './components.css';

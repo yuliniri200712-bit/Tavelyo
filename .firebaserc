@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "demo-tavelyo",
+    "dev": "tavelyo-e2b57"
+  }
+}

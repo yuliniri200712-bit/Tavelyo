@@ -1,0 +1,58 @@
+{
+  "name": "tavelyo",
+  "private": true,
+  "type": "module",
+  "description": "Tavelyo: plataforma web instalable (PWA) para restaurantes",
+  "engines": {
+    "node": "^22.22.2 || >=24.15.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/features/*",
+    "backend"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
+    "test:e2e": "playwright test",
+    "test:integration": "npm run build -w backend && npx --yes firebase-tools@15.30.2 emulators:exec --project demo-tavelyo --only auth,dataconnect,functions \"vitest run --config vitest.integration.config.ts\"",
+    "test:e2e:emulators": "npx --yes firebase-tools@15.30.2 emulators:exec --project demo-tavelyo --only auth,dataconnect \"playwright test --config playwright.emulators.config.ts\"",
+    "check:secrets": "node tools/check-secrets/check-secrets.ts"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.1",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "eslint": "10.13.0",
+    "jsdom": "30.1.3",
+    "playwright-core": "1.64.1",
+    "prettier": "3.9.10",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
+    "vite-plugin-pwa": "2.0.0",
+    "vitest": "4.1.12"
+  },
+  "overrides": {
+    "minimatch@>=7.0.0 <11.0.1": "11.0.3",
+    "glob@>=9.0.0 <14.0.2": "14.0.3",
+    "deepmerge": "file:./tools/deepmerge-safe",
+    "@grpc/grpc-js": "1.13.7"
+  },
+  "dependencies": {
+    "firebase": "12.19.0"
+  }
+}

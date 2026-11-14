@@ -1,0 +1,288 @@
+# Mutaciones del conector «tavelyo» (Fase 1). Cada mutación sobre una empresa comprueba, dentro
+# de la misma transacción: membresía activa del llamador, empresa activa, permiso de la acción,
+# rango (no se gestiona a nadie de rango igual o superior) y pertenencia de los recursos a la
+# empresa. Además deja un AuditEvent. Empresas, sucursales, roles y permisos no se crean aquí.
+
+# Perfil propio (excepción permitida de ADR-0008: solo afecta a auth.uid).
+mutation UpsertMyProfile($displayName: String!) @auth(level: USER) {
+  userProfile_upsert(
+    data: { id_expr: "auth.uid", displayName: $displayName, updatedAt_expr: "request.time" }
+  )
+}
+
+# Agrega a un usuario existente a la empresa con un rol inferior al del llamador.
+mutation AddMember($tenantId: UUID!, $userId: String!, $roleCode: String!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        rank
+        rolePermissions_on_role(where: { permission: { code: { eq: "staff.invite" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: staff.invite") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    role(key: { code: $roleCode }) @check(expr: "this != null", message: "Rol inexistente") {
+      rank
+        @check(
+          expr: "this < response.query.membership.role.rank"
+          message: "No puedes asignar un rol igual o superior al tuyo"
+        )
+    }
+  }
+  membership_insert(
+    data: {
+      tenantId: $tenantId
+      userId: $userId
+      roleCode: $roleCode
+      status: ACTIVE
+      createdBy_expr: "auth.uid"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "membership.add"
+      resourceType: "membership"
+      resourceId: $userId
+    }
+  )
+}
+
+# Cambia el rol de un miembro activo de rango inferior a otro rol de rango inferior.
+mutation ChangeMemberRole($tenantId: UUID!, $userId: String!, $roleCode: String!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        rank
+        rolePermissions_on_role(where: { permission: { code: { eq: "role.assign" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: role.assign") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    target: membership(key: { tenantId: $tenantId, userId: $userId })
+      @check(expr: "this != null", message: "El usuario no es miembro de la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "La membresía no está activa")
+      role {
+        rank
+          @check(
+            expr: "this < response.query.membership.role.rank"
+            message: "No puedes modificar a alguien de rango igual o superior"
+          )
+      }
+    }
+    role(key: { code: $roleCode }) @check(expr: "this != null", message: "Rol inexistente") {
+      rank
+        @check(
+          expr: "this < response.query.membership.role.rank"
+          message: "No puedes asignar un rol igual o superior al tuyo"
+        )
+    }
+  }
+  membership_update(
+    key: { tenantId: $tenantId, userId: $userId }
+    data: { roleCode: $roleCode, updatedAt_expr: "request.time" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "membership.change_role"
+      resourceType: "membership"
+      resourceId: $userId
+    }
+  )
+}
+
+# Revoca la membresía de un miembro de rango inferior. Efectiva en su siguiente operación.
+mutation RevokeMember($tenantId: UUID!, $userId: String!, $reason: String)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        rank
+        rolePermissions_on_role(where: { permission: { code: { eq: "staff.invite" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: staff.invite") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    target: membership(key: { tenantId: $tenantId, userId: $userId })
+      @check(expr: "this != null", message: "El usuario no es miembro de la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "La membresía ya está revocada")
+      role {
+        rank
+          @check(
+            expr: "this < response.query.membership.role.rank"
+            message: "No puedes revocar a alguien de rango igual o superior"
+          )
+      }
+    }
+  }
+  membership_update(
+    key: { tenantId: $tenantId, userId: $userId }
+    data: { status: REVOKED, revokedAt_expr: "request.time", updatedAt_expr: "request.time" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "membership.revoke"
+      resourceType: "membership"
+      resourceId: $userId
+      reason: $reason
+    }
+  )
+}
+
+# Asigna una sucursal de la empresa a un miembro de rango inferior. Quien no es propietario solo
+# puede asignar sucursales que tiene asignadas.
+mutation AssignMemberBranch($tenantId: UUID!, $userId: String!, $branchId: UUID!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rank
+        rolePermissions_on_role(where: { permission: { code: { eq: "role.assign" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: role.assign") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    branch(id: $branchId) @check(expr: "this != null", message: "Sucursal inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La sucursal no pertenece a la empresa")
+      status @check(expr: "this == 'ACTIVE'", message: "La sucursal no está activa")
+    }
+    target: membership(key: { tenantId: $tenantId, userId: $userId })
+      @check(expr: "this != null", message: "El usuario no es miembro de la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "La membresía no está activa")
+      role {
+        rank
+          @check(
+            expr: "this < response.query.membership.role.rank"
+            message: "No puedes modificar a alguien de rango igual o superior"
+          )
+      }
+    }
+  }
+  membershipBranch_insert(
+    data: { tenantId: $tenantId, userId: $userId, branchId: $branchId, createdBy_expr: "auth.uid" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "membership.assign_branch"
+      resourceType: "membership"
+      resourceId: $userId
+    }
+  )
+}
+
+# Quita una sucursal a un miembro de rango inferior (degradación de alcance). La asignación es una
+# relación sin historia propia: el borrado queda registrado en AuditEvent (lista blanca de
+# connector-rules.test.ts).
+mutation UnassignMemberBranch($tenantId: UUID!, $userId: String!, $branchId: UUID!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rank
+        rolePermissions_on_role(where: { permission: { code: { eq: "role.assign" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: role.assign") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    target: membership(key: { tenantId: $tenantId, userId: $userId })
+      @check(expr: "this != null", message: "El usuario no es miembro de la empresa") {
+      role {
+        rank
+          @check(
+            expr: "this < response.query.membership.role.rank"
+            message: "No puedes modificar a alguien de rango igual o superior"
+          )
+      }
+    }
+    assignment: membershipBranch(
+      key: { tenantId: $tenantId, userId: $userId, branchId: $branchId }
+    ) @check(expr: "this != null", message: "La sucursal no está asignada a ese miembro") {
+      branchId
+    }
+  }
+  membershipBranch_delete(key: { tenantId: $tenantId, userId: $userId, branchId: $branchId })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "membership.unassign_branch"
+      resourceType: "membership"
+      resourceId: $userId
+    }
+  )
+}

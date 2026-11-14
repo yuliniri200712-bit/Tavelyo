@@ -1,0 +1,142 @@
+# Consultas del conector «tavelyo» (Fase 1). Patrón de ADR-0008: la identidad sale de auth.uid;
+# toda lectura de una empresa comprueba en la base la membresía activa y, si aplica, el permiso.
+
+# Perfil propio. Solo afecta a auth.uid (excepción permitida de ADR-0008).
+query MyProfile @auth(level: USER) {
+  userProfile(key: { id_expr: "auth.uid" }) {
+    id
+    displayName
+  }
+}
+
+# Empresas a las que pertenece el usuario, con su rol y permisos (para la interfaz; el servidor
+# vuelve a comprobarlos en cada operación).
+query MyMemberships @auth(level: USER) {
+  memberships(
+    where: {
+      user: { id: { eq_expr: "auth.uid" } }
+      status: { eq: ACTIVE }
+      tenant: { status: { eq: ACTIVE } }
+    }
+  ) {
+    tenant {
+      id
+      name
+      defaultCurrency
+      defaultTimezone
+    }
+    role {
+      code
+      name
+      rank
+      rolePermissions_on_role {
+        permission {
+          code
+        }
+      }
+    }
+  }
+}
+
+# Sucursales visibles: todas para el propietario de la empresa; las asignadas para el resto.
+query MyBranches($tenantId: UUID!) @auth(level: USER) {
+  branches(
+    where: {
+      _and: [
+        { tenant: { id: { eq: $tenantId }, status: { eq: ACTIVE } } }
+        { status: { eq: ACTIVE } }
+        {
+          _or: [
+            {
+              tenant: {
+                memberships_on_tenant: {
+                  exist: {
+                    user: { id: { eq_expr: "auth.uid" } }
+                    status: { eq: ACTIVE }
+                    role: { code: { eq: "tenant_owner" } }
+                  }
+                }
+              }
+            }
+            {
+              membershipBranches_on_branch: {
+                exist: { userId: { eq_expr: "auth.uid" }, membership: { status: { eq: ACTIVE } } }
+              }
+            }
+          ]
+        }
+      ]
+    }
+    orderBy: [{ name: ASC }]
+  ) {
+    id
+    name
+    currency
+    timezone
+  }
+}
+
+# Personal de la empresa. Requiere staff.invite.
+query TenantMembers($tenantId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      rolePermissions_on_role(where: { permission: { code: { eq: "staff.invite" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: staff.invite") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  memberships(where: { tenant: { id: { eq: $tenantId } } }, orderBy: [{ createdAt: ASC }]) {
+    user {
+      id
+      displayName
+    }
+    role {
+      code
+      name
+      rank
+    }
+    status
+    revokedAt
+    membershipBranches_on_membership {
+      branch {
+        id
+        name
+      }
+    }
+  }
+}
+
+# Últimos eventos de auditoría de la empresa. Requiere audit.read.
+query TenantAuditEvents($tenantId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    role {
+      rolePermissions_on_role(where: { permission: { code: { eq: "audit.read" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: audit.read") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  auditEvents(where: { tenant: { id: { eq: $tenantId } } }, orderBy: [{ at: DESC }], limit: 100) {
+    id
+    actorId
+    operation
+    resourceType
+    resourceId
+    reason
+    at
+  }
+}

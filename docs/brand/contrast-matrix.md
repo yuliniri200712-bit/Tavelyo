@@ -1,10 +1,57 @@
 # Matriz de contraste
 
-Estado: **Fase 0 — valores calculados, sin validación en interfaz real**.
+Estado: **Fase 1** — los pares usados por los componentes se comprueban en cada ejecución de las pruebas (sección «Pares de los componentes»). Las tablas siguientes son los valores de la Fase 0.
 Método: fórmula de luminancia relativa y relación de contraste de WCAG 2.2, calculada con un script Node.js el 2026-11-13 sobre los valores HEX de `IDENTIDAD_VISUAL.md` §4.
 Umbrales: texto normal 4,5:1 · texto grande 3:1 · componentes de interfaz y señales gráficas 3:1.
 
 Esta matriz no sustituye la verificación en pantalla: en Fase 1 se repetirá para cada par realmente usado por los componentes, en todos sus estados (normal, foco, pulsado, deshabilitado, seleccionado).
+
+## Pares de los componentes (Fase 1)
+
+Fuente: `packages/design-system/src/contrast-pairs.ts`. La prueba `tokens.test.ts` falla si un par baja de su mínimo, así que la tabla no puede quedar desactualizada sin que CI lo detecte. Generada el 2026-11-13.
+
+Colores funcionales nuevos, medidos antes de adoptarlos: `text.secondary #6B5650`, `border.control #8A766F`, `action.primaryHover #A62F22`, `action.primaryPressed #9A2B1F`, `surface.disabled #F0E4DA` con `text.disabled #7D6A63` (los controles deshabilitados están exentos del criterio 1.4.3; se exige 3:1), `border.subtle #EBD9CC` (solo decorativo, no informa nada). El anillo de foco es espresso sobre superficies claras y crema sobre espresso. La casilla de verificación (`CheckboxField`, 2026-11-14) es nativa con `accent-color: action.primary`: su marca usa el par «action.primary (límite del botón)», ≥ 4,81:1 sobre las tres superficies claras.
+
+| Uso | Primer plano | Fondo | Relación | Mínimo | Resultado |
+|---|---|---|---|---|---|
+| text.primary sobre surface.page | `#35241F` | `#FFF5E9` | 13,69:1 | 4,5:1 | ✅ |
+| text.primary sobre surface.card | `#35241F` | `#FFFFFF` | 14,75:1 | 4,5:1 | ✅ |
+| text.primary sobre surface.grouped | `#35241F` | `#FCE6D8` | 12,26:1 | 4,5:1 | ✅ |
+| text.secondary sobre surface.page | `#6B5650` | `#FFF5E9` | 6,34:1 | 4,5:1 | ✅ |
+| text.secondary sobre surface.card | `#6B5650` | `#FFFFFF` | 6,84:1 | 4,5:1 | ✅ |
+| text.secondary sobre surface.grouped | `#6B5650` | `#FCE6D8` | 5,68:1 | 4,5:1 | ✅ |
+| border.control sobre surface.page | `#8A766F` | `#FFF5E9` | 3,98:1 | 3:1 | ✅ |
+| border.control sobre surface.card | `#8A766F` | `#FFFFFF` | 4,28:1 | 3:1 | ✅ |
+| border.control sobre surface.grouped | `#8A766F` | `#FCE6D8` | 3,56:1 | 3:1 | ✅ |
+| focus.ring sobre surface.page | `#35241F` | `#FFF5E9` | 13,69:1 | 3:1 | ✅ |
+| focus.ring sobre surface.card | `#35241F` | `#FFFFFF` | 14,75:1 | 3:1 | ✅ |
+| focus.ring sobre surface.grouped | `#35241F` | `#FCE6D8` | 12,26:1 | 3:1 | ✅ |
+| action.primary (límite del botón) sobre surface.page | `#BA3526` | `#FFF5E9` | 5,38:1 | 3:1 | ✅ |
+| action.primary (límite del botón) sobre surface.card | `#BA3526` | `#FFFFFF` | 5,79:1 | 3:1 | ✅ |
+| action.primary (límite del botón) sobre surface.grouped | `#BA3526` | `#FCE6D8` | 4,81:1 | 3:1 | ✅ |
+| status.error (texto de error de campo) sobre surface.page | `#B91C1C` | `#FFF5E9` | 6,00:1 | 4,5:1 | ✅ |
+| status.error (texto de error de campo) sobre surface.card | `#B91C1C` | `#FFFFFF` | 6,47:1 | 4,5:1 | ✅ |
+| status.error (texto de error de campo) sobre surface.grouped | `#B91C1C` | `#FCE6D8` | 5,38:1 | 4,5:1 | ✅ |
+| text.onAction sobre action.primary | `#FFFFFF` | `#BA3526` | 5,79:1 | 4,5:1 | ✅ |
+| text.onAction sobre action.primaryHover | `#FFFFFF` | `#A62F22` | 6,88:1 | 4,5:1 | ✅ |
+| text.onAction sobre action.primaryPressed | `#FFFFFF` | `#9A2B1F` | 7,67:1 | 4,5:1 | ✅ |
+| text.onAction sobre status.error (botón destructivo) | `#FFFFFF` | `#B91C1C` | 6,47:1 | 4,5:1 | ✅ |
+| text.primary sobre action.secondary | `#35241F` | `#FFFFFF` | 14,75:1 | 4,5:1 | ✅ |
+| text.primary sobre action.secondaryHover | `#35241F` | `#FFF5E9` | 13,69:1 | 4,5:1 | ✅ |
+| text.primary sobre action.secondaryPressed | `#35241F` | `#FCE6D8` | 12,26:1 | 4,5:1 | ✅ |
+| text.onInverse sobre surface.inverse | `#FFF5E9` | `#35241F` | 13,69:1 | 4,5:1 | ✅ |
+| focus.ringOnInverse sobre surface.inverse | `#FFF5E9` | `#35241F` | 13,69:1 | 3:1 | ✅ |
+| accent.identity (indicador de selección) sobre surface.page | `#E54835` | `#FFF5E9` | 3,67:1 | 3:1 | ✅ |
+| accent.identity (indicador de selección) sobre surface.card | `#E54835` | `#FFFFFF` | 3,95:1 | 3:1 | ✅ |
+| text.disabled sobre surface.disabled | `#7D6A63` | `#F0E4DA` | 4,09:1 | 3:1 | ✅ |
+| status.success sobre surface.card | `#15803D` | `#FFFFFF` | 5,02:1 | 4,5:1 | ✅ |
+| status.success sobre surface.page | `#15803D` | `#FFF5E9` | 4,65:1 | 4,5:1 | ✅ |
+| status.warning sobre surface.card | `#B45309` | `#FFFFFF` | 5,02:1 | 4,5:1 | ✅ |
+| status.warning sobre surface.page | `#B45309` | `#FFF5E9` | 4,66:1 | 4,5:1 | ✅ |
+| status.error sobre surface.card | `#B91C1C` | `#FFFFFF` | 6,47:1 | 4,5:1 | ✅ |
+| status.error sobre surface.page | `#B91C1C` | `#FFF5E9` | 6,00:1 | 4,5:1 | ✅ |
+| status.info sobre surface.card | `#1D4ED8` | `#FFFFFF` | 6,70:1 | 4,5:1 | ✅ |
+| status.info sobre surface.page | `#1D4ED8` | `#FFF5E9` | 6,22:1 | 4,5:1 | ✅ |
 
 ## Texto y elementos sobre fondos claros
 

@@ -117,7 +117,7 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 |---|---|---|
 | SUP-01 | Idioma de la interfaz: español, con localización preparada para importes, fechas y plurales | Se decida otro idioma |
 | SUP-02 | ~~Plataformas iniciales~~ → resuelto por D-03 | — |
-| SUP-03 | Una sola moneda por empresa en el alcance inicial | Se resuelva D-01 |
+| SUP-03 | Una sola moneda por empresa en el alcance inicial: COP (D-01) | Se opere en otro país |
 | SUP-04 | Tavelyo no custodia ni distribuye fondos: cada restaurante cobra con su propia cuenta comercial | Se resuelva D-02 |
 | SUP-05 | Tema claro únicamente en Fase 1; el oscuro se diseña y revisa aparte | Se decida incluirlo |
 
@@ -135,19 +135,24 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-13 | Spike de SQL Connect | **Autorizado**, solo con emuladores locales y en rama aparte que no se integra a `main` | `plans/spike-sql-connect.md` |
 | D-14 | Tecnología de la aplicación | **Sin Flutter. Sistema web instalable como PWA con React + Vite + TypeScript, en dos aplicaciones** (`menu-web` y `operations`) | ADR-0009 aceptado; reemplaza ADR-0002 y ADR-0004 y la herramienta de ADR-0001 |
 | D-12 (fuente) | Tipografía | **Plus Jakarta Sans confirmada** por el propietario. Licencia SIL Open Font License 1.1, repositorio oficial `tokotype/PlusJakartaSans`, versión 2.7.1 | `brand/asset-manifest.md` |
+| D-12 (logotipo) | Logotipo | **Aprobada la propuesta A · Mesa conectada** (diseño de Claude por encargo del propietario). Maestro v1.0.0 con variantes horizontal, vertical, monocromática, isotipo e iconos de las PWA. El favicon actual se conserva en todos los tamaños (2026-11-14) | `brand/asset-manifest.md` |
 | D-15 | Navegadores soportados | **Móvil:** Chrome en Android; Safari en iPhone y iPad (en iOS/iPadOS todos los navegadores usan WebKit). **Escritorio:** Chrome y Edge (Windows y macOS) y Safari (macOS). Versiones: las dos últimas mayores de cada uno | Matriz de pruebas con Playwright (Chromium y WebKit) más revisión en dispositivos reales |
+| D-17 | Acceso del personal | **Correo y contraseña** con Firebase Auth (2026-11-13), con recuperación de contraseña por correo. Sin acceso con Google por ahora | `features/identity`; autenticación reforzada para propietarios pendiente (PM §8) |
+| D-18 | Integración continua | **GitHub Actions** (2026-11-13) | `.github/workflows/` |
+| D-19 | Inactividad del personal | **Cerrar la sesión tras 15 minutos sin uso**, con aviso «¿Sigues ahí?» en el último minuto (2026-11-14). La actividad en otra pestaña de la misma persona cuenta | `features/identity` (`InactivityGuard`); PM §8 |
+| D-20 | Equipos compartidos de la sucursal | **Casilla «Equipo compartido» al entrar, marcada por defecto** (2026-11-14): la sesión vive solo en esa pestaña y se borra al cerrarla. Desmarcada (teléfono propio), la sesión se recuerda. El cierre por inactividad aplica siempre | `features/identity`, `data-access`; ADR-0009 |
+| D-01 (país y moneda) | País inicial y moneda | **Colombia, peso colombiano (COP)** (2026-11-14). Zona horaria de referencia `America/Bogota`. Sigue pendiente si los precios incluyen impuestos (ver D-01b) | `core` ya admite COP (ISO 4217, 2 decimales); el aprovisionamiento sigue exigiendo moneda y zona horaria explícitas por empresa |
 | D-16 | Bibliotecas y herramientas del stack web, y Firebase Hosting | **Aceptadas** según ADR-0010; formateador **Prettier** (2026-11-13); validación de formularios se decide en Fase 1 | ADR-0010 aceptado |
 
 ### Pendientes
 
 | ID | Decisión | Bloquea |
 |---|---|---|
-| D-01 | País inicial, moneda y si los precios incluyen impuestos | Modelo de impuestos, pasarela, Fase 2 |
-| D-02 | Pasarela de pago (debe admitir autorización y captura separadas en el país elegido) | Fase 4; ADR-0006 |
+| D-01b | Si los precios de la carta incluyen impuestos y qué impuestos aplican al restaurante en Colombia. Relacionado: COP tiene 2 decimales en ISO 4217, pero en la práctica no se usan centavos; la presentación y el redondeo se deciden con el modelo de impuestos | Modelo de impuestos, Fase 2 |
+| D-02 | Pasarela de pago (debe admitir autorización y captura separadas en Colombia). **El propietario está buscando proveedor** (2026-11-14) | Fase 4; ADR-0006 |
 | D-04 | Política de garantía: ¿preautorización obligatoria antes de enviar a cocina? Excepciones (efectivo, atención por mesero) | Flujo de pedido de Fase 2–3 |
 | D-05 | Propinas: momento, cálculo y si se capturan con la cuenta | Modelo de cuenta |
 | D-06 | Sesión de mesa compartida: quién ve y quién paga qué | RF-SA-02, división de cuentas |
 | D-09 | Carga objetivo por sucursal, latencia aceptable y presupuesto mensual | RNF-12, dimensionamiento de Cloud SQL |
-| D-10 | Jurisdicción de datos personales, retención y anonimización | Modelo de datos personales |
+| D-10 | Jurisdicción de datos personales (Colombia, por D-01), retención y anonimización | Modelo de datos personales |
 | D-11 | RPO/RTO para copias y restauración | Fase 6 |
-| D-12 | **Logotipo:** el propietario no tiene el maestro y encarga a Claude su diseño (2026-11-13), según el concepto de IV §3. Pendiente de **aprobar la propuesta** | Aprobación de recursos de marca; iconos de las PWA |

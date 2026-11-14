@@ -88,7 +88,7 @@ La marca es **Tavelyo**. La paleta oficial es:
 - Objetivo de accesibilidad: WCAG 2.2 AA. Ningún par de colores se aprueba sin medir su contraste.
 - Tipografía de interfaz: Plus Jakarta Sans, servida por la propia aplicación (sin CDN de fuentes) y con licencia registrada.
 - Definir colores, tipografía, espacios y radios **una sola vez** en el sistema de diseño (`packages/design-system`, como propiedades CSS personalizadas y tokens TypeScript) y consumirlos siempre desde ahí. No escribir valores hexadecimales ni tamaños sueltos en los componentes ni en sus estilos.
-- Logotipo: no usar sombrero de chef ni recrear el logo con iconos, CSS o caracteres. El propietario encargó a Claude diseñar el logotipo (2026-11-13) según el concepto de `docs/IDENTIDAD_VISUAL.md` §3: se entrega como **propuesta vectorial** en `assets/branding/proposals/` y solo la versión que el propietario apruebe se registra como maestro en `docs/brand/asset-manifest.md`. Mientras tanto, usar solo la etiqueta textual neutra «Tavelyo» como marcador de desarrollo.
+- Logotipo: no usar sombrero de chef ni recrear el logo con iconos, CSS o caracteres. El logotipo maestro (diseñado por Claude por encargo del propietario y **aprobado el 2026-11-13**, propuesta A) y sus variantes están en `assets/branding/` y registrados en `docs/brand/asset-manifest.md`: usarlos sin modificarlos. Cualquier cambio es una nueva versión que aprueba el propietario.
 
 ---
 

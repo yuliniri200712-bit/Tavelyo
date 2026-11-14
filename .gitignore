@@ -1,0 +1,13 @@
+node_modules/
+dist/
+backend/lib/
+coverage/
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+playwright-report/
+test-results/
+**/dataconnect/.dataconnect/
+.firebase/

@@ -1,0 +1,29 @@
+{
+  "dataconnect": {
+    "source": "dataconnect"
+  },
+  "functions": [
+    {
+      "source": "backend",
+      "codebase": "default",
+      "runtime": "nodejs24",
+      "ignore": ["node_modules", "src", "tests", "vite.config.ts", "tsconfig.json", "*.log"],
+      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
+    }
+  ],
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "dataconnect": {
+      "port": 9399
+    },
+    "functions": {
+      "port": 5001
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
+  }
+}

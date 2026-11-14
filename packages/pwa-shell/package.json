@@ -1,0 +1,21 @@
+{
+  "name": "@tavelyo/pwa-shell",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Configuración compartida de Vite y PWA (service worker solo para recursos estáticos) y marco común de las dos apps",
+  "exports": {
+    ".": "./src/index.ts",
+    "./register": "./src/use-pwa-update.ts",
+    "./vite": "./src/vite-config.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@tavelyo/design-system": "*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.7"
+  }
+}

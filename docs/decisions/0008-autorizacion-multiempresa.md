@@ -32,6 +32,15 @@ El aislamiento entre empresas y sucursales es el requisito de seguridad más cr�
 - Comprobación en CI de que ningún conector expone `_delete`/`_deleteMany` sobre entidades con historia (las FK obligatorias de SQL Connect borran en cascada).
 - Lista de verificación de revisión de código para `.gql`.
 
+## Implementación (Fase 1, 2026-11-13)
+
+- Esquema y conector `tavelyo` en `dataconnect/`, con el patrón de la decisión en todas las operaciones de empresa: membresía activa por `auth.uid`, empresa activa, permiso consultado en `RolePermission` (`rolePermissions_on_role(...) @check(expr: "this.size() > 0")`), rango comparado dentro del mismo paso (`response.query.membership.role.rank`), pertenencia de los recursos a la empresa y `AuditEvent` en la misma transacción.
+- Limitaciones verificadas en el emulador: una mutación no admite dos pasos `query` (se agrupan en uno) y un filtro no mezcla `_or` con campos directos (se envuelve en `_and`).
+- Controles de proceso: `dataconnect/tests/connector-rules.test.ts` (en `npm run check`) exige `@auth`, comprobación de membresía salvo operaciones sobre uno mismo, `@transaction` + `@redact` + `AuditEvent` en mutaciones, ningún `_delete` fuera de la lista blanca (`UnassignMemberBranch`) y ninguna creación de empresas, sucursales, roles o permisos desde el conector. `dataconnect/tests/authorization.int.test.ts` (en `npm run test:integration`) prueba cada operación con dos empresas e IDs alterados: 33/33. Una prueba de mutación (quitar la comprobación de membresía de `TenantMembers`) hace fallar 4 pruebas, así que los controles detectan la regresión.
+- Punto 8 (cliente): el SDK generado no tiene `clientCache` y las consultas usan `QueryFetchPolicy.SERVER_ONLY`, así que no hay caché de datos que vaciar; el estado de la interfaz se desmonta al cambiar de contexto (`key` por empresa y sucursal) y al cerrar sesión (`key` por usuario).
+- Punto 4 (2026-11-14): la función `revokeMember` del backend revoca los *refresh tokens* cuando no quedan membresías activas (`permissions.md` §5).
+- Punto 7 (2026-11-14): en `firebase-admin` 14.5.0 la suplantación es `executeMutation(nombre, variables, { impersonate: { authClaims } })` (el spike usaba la API REST equivalente, `impersonateMutation`). `revokeMember` la usa con las afirmaciones del ID token verificado; el aprovisionamiento es una tarea de sistema con `executeGraphql`, documento fijo con variables y comprobación propia del operador. `backend/tests/backend.int.test.ts`: 23/23 contra los emuladores, con dos empresas e IDs alterados. Pruebas de mutación: sin la suplantación fallan 4 pruebas; sin la comprobación del operador fallan 3.
+
 ## Verificación pendiente
 
 - IAM real de `executeGraphql` e `impersonate*` en un proyecto de desarrollo: el emulador no aplica IAM.

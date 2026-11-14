@@ -1,0 +1,345 @@
+/* Componentes base. Solo usan propiedades --tv-*; la prueba de tokens rechaza HEX y px sueltos. */
+
+/* ---------- Botón ---------- */
+.tv-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tv-space-2);
+  min-width: var(--tv-touch-min);
+  min-height: var(--tv-touch-min);
+  padding: var(--tv-space-2) var(--tv-space-4);
+  border: var(--tv-stroke-control) solid transparent;
+  border-radius: var(--tv-radius-control);
+  font: inherit;
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+  font-weight: var(--tv-type-label-weight);
+  cursor: pointer;
+  transition: background-color var(--tv-motion-fast) ease-out;
+}
+
+.tv-button--primary {
+  background: var(--tv-color-action-primary);
+  color: var(--tv-color-text-on-action);
+}
+.tv-button--primary:hover {
+  background: var(--tv-color-action-primary-hover);
+}
+.tv-button--primary:active {
+  background: var(--tv-color-action-primary-pressed);
+}
+
+.tv-button--secondary {
+  background: var(--tv-color-action-secondary);
+  color: var(--tv-color-text-primary);
+  border-color: var(--tv-color-border-control);
+}
+.tv-button--secondary:hover {
+  background: var(--tv-color-action-secondary-hover);
+}
+.tv-button--secondary:active {
+  background: var(--tv-color-action-secondary-pressed);
+}
+
+.tv-button--destructive {
+  background: var(--tv-color-status-error);
+  color: var(--tv-color-text-on-action);
+}
+
+.tv-button:disabled,
+.tv-button[aria-disabled='true'] {
+  background: var(--tv-color-surface-disabled);
+  color: var(--tv-color-text-disabled);
+  border-color: transparent;
+  cursor: not-allowed;
+}
+
+.tv-spinner {
+  width: var(--tv-size-icon);
+  height: var(--tv-size-icon);
+  border: var(--tv-stroke-control) solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--tv-radius-pill);
+  animation: tv-spin var(--tv-motion-spin) linear infinite;
+}
+
+@keyframes tv-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Campo de texto ---------- */
+.tv-field {
+  display: grid;
+  gap: var(--tv-space-1);
+}
+
+.tv-field__label {
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+  font-weight: var(--tv-type-label-weight);
+}
+
+.tv-field__input {
+  min-height: var(--tv-touch-min);
+  padding: var(--tv-space-2) var(--tv-space-3);
+  border: var(--tv-stroke-hairline) solid var(--tv-color-border-control);
+  border-radius: var(--tv-radius-control);
+  background: var(--tv-color-surface-card);
+  color: var(--tv-color-text-primary);
+  font: inherit;
+}
+
+.tv-field__input[aria-invalid='true'] {
+  border: var(--tv-stroke-control) solid var(--tv-color-status-error);
+}
+
+.tv-field__hint {
+  color: var(--tv-color-text-secondary);
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+}
+
+.tv-field__error {
+  color: var(--tv-color-status-error);
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+  font-weight: var(--tv-type-label-weight);
+}
+
+/* ---------- Casilla de verificación ---------- */
+.tv-check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--tv-space-2);
+  align-items: center;
+}
+
+/* Casilla nativa con el color de acción (3:1 sobre las superficies claras). */
+.tv-check__input {
+  inline-size: var(--tv-size-icon);
+  block-size: var(--tv-size-icon);
+  margin: 0;
+  accent-color: var(--tv-color-action-primary);
+}
+
+.tv-check__label {
+  display: flex;
+  align-items: center;
+  min-height: var(--tv-touch-min);
+  cursor: pointer;
+}
+
+.tv-check__hint {
+  grid-column: 2;
+  color: var(--tv-color-text-secondary);
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+}
+
+/* ---------- Chip de estado ---------- */
+.tv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tv-space-1);
+  padding: var(--tv-space-1) var(--tv-space-3);
+  border: var(--tv-stroke-hairline) solid currentColor;
+  border-radius: var(--tv-radius-pill);
+  background: var(--tv-color-surface-card);
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+  font-weight: var(--tv-type-label-weight);
+}
+.tv-chip--neutral {
+  color: var(--tv-color-text-primary);
+}
+.tv-chip--success {
+  color: var(--tv-color-status-success);
+}
+.tv-chip--warning {
+  color: var(--tv-color-status-warning);
+}
+.tv-chip--error {
+  color: var(--tv-color-status-error);
+}
+.tv-chip--info {
+  color: var(--tv-color-status-info);
+}
+
+/* ---------- Tarjeta ---------- */
+.tv-card {
+  display: grid;
+  gap: var(--tv-space-3);
+  padding: var(--tv-space-4);
+  border: var(--tv-stroke-hairline) solid var(--tv-color-border-subtle);
+  border-radius: var(--tv-radius-card);
+  background: var(--tv-color-surface-card);
+  box-shadow: var(--tv-elevation-card);
+}
+
+/* ---------- Diálogo de confirmación ---------- */
+.tv-dialog {
+  width: min(100% - var(--tv-space-6), var(--tv-size-dialog-max-width));
+  padding: var(--tv-space-5);
+  border: none;
+  border-radius: var(--tv-radius-container);
+  background: var(--tv-color-surface-card);
+  color: var(--tv-color-text-primary);
+  box-shadow: var(--tv-elevation-overlay);
+}
+.tv-dialog::backdrop {
+  background: color-mix(in srgb, var(--tv-color-surface-inverse) 48%, transparent);
+}
+.tv-dialog__body {
+  display: grid;
+  gap: var(--tv-space-3);
+}
+.tv-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--tv-space-3);
+  margin-top: var(--tv-space-5);
+}
+
+/* ---------- Avisos (conexión y nueva versión) ---------- */
+.tv-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tv-space-3);
+  padding: var(--tv-space-3) var(--tv-space-4);
+  background: var(--tv-color-surface-inverse);
+  color: var(--tv-color-text-on-inverse);
+}
+.tv-notice__text {
+  flex: 1 1 auto;
+}
+
+/* ---------- Estados de carga, error y vacío ---------- */
+.tv-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--tv-space-3);
+  padding: var(--tv-space-6) var(--tv-space-4);
+  text-align: center;
+}
+.tv-state__description {
+  color: var(--tv-color-text-secondary);
+}
+
+/* ---------- Marco de las apps ---------- */
+.tv-skip-link {
+  position: absolute;
+  left: var(--tv-space-3);
+  top: var(--tv-space-3);
+  z-index: 10;
+  padding: var(--tv-space-2) var(--tv-space-4);
+  border-radius: var(--tv-radius-control);
+  background: var(--tv-color-surface-card);
+  color: var(--tv-color-text-primary);
+  transform: translateY(-200%);
+}
+.tv-skip-link:focus-visible {
+  transform: none;
+}
+
+.tv-app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tv-space-3);
+  padding: var(--tv-space-3) var(--tv-space-4);
+  background: var(--tv-color-surface-card);
+  border-bottom: var(--tv-stroke-hairline) solid var(--tv-color-border-subtle);
+}
+.tv-app-header__logo {
+  display: block;
+  height: var(--tv-size-logo-header);
+  width: auto;
+}
+.tv-app-header__label {
+  color: var(--tv-color-text-secondary);
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+  font-weight: var(--tv-type-label-weight);
+}
+
+.tv-app-main {
+  width: 100%;
+  max-width: var(--tv-size-content-max-width);
+  margin: 0 auto;
+  padding: var(--tv-space-5) var(--tv-space-4);
+}
+.tv-app-main:focus {
+  outline: none;
+}
+
+/* ---------- Catálogo visual ---------- */
+.tv-catalog {
+  display: grid;
+  gap: var(--tv-space-6);
+}
+.tv-catalog__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--tv-space-3);
+}
+.tv-catalog__swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+  gap: var(--tv-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tv-catalog__swatch {
+  height: var(--tv-touch-min);
+  border: var(--tv-stroke-hairline) solid var(--tv-color-border-subtle);
+  border-radius: var(--tv-radius-control);
+}
+.tv-catalog__stack {
+  display: grid;
+  gap: var(--tv-space-3);
+  max-width: var(--tv-size-dialog-max-width);
+}
+
+/* ---------- Formularios ---------- */
+.tv-form {
+  display: grid;
+  gap: var(--tv-space-4);
+}
+.tv-form__error {
+  color: var(--tv-color-status-error);
+  font-weight: var(--tv-type-label-weight);
+}
+.tv-form__notice {
+  color: var(--tv-color-text-primary);
+}
+
+/* ---------- Barra de contexto (empresa y sucursal) ---------- */
+.tv-context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tv-space-3);
+  margin-left: auto;
+}
+.tv-context-bar__text {
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+}
+.tv-choice-list {
+  display: grid;
+  gap: var(--tv-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tv-choice-list .tv-button {
+  width: 100%;
+  justify-content: flex-start;
+}
