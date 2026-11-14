@@ -45,15 +45,16 @@ jobs:
         run: |
           npx --yes ${{ env.FIREBASE_TOOLS }} dataconnect:sdk:generate --project demo-tavelyo
           git diff --exit-code -- packages/data-access/dataconnect-generated
-      - name: Compilación de las dos PWA
+      - name: Compilación de las dos PWA y del backend
         run: |
           npm run build -w @tavelyo/menu-web
           npm run build -w @tavelyo/operations
+          npm run build -w @tavelyo/backend
       - name: Búsqueda de secretos (repositorio y builds)
         run: npm run check:secrets
 
   integracion:
-    name: Autorización y pasarelas contra emuladores
+    name: Autorización de conectores y backend contra emuladores
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

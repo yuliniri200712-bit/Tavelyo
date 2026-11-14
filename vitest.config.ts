@@ -8,6 +8,7 @@ export default defineConfig({
       'packages/**/src/**/*.test.{ts,tsx}',
       'apps/**/src/**/*.test.{ts,tsx}',
       'tools/**/*.test.ts',
+      'backend/src/**/*.test.ts',
       'dataconnect/tests/**/*.test.ts',
     ],
     exclude: ['**/node_modules/**', '**/*.int.test.ts'],

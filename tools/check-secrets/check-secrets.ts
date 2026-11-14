@@ -1,5 +1,5 @@
 // Búsqueda de secretos (Fase 1, bloque 3). Revisa los archivos versionados y, si existen, los
-// builds de las PWA (código que llega al navegador). Uso: node tools/check-secrets/check-secrets.ts
+// builds de las PWA (código que llega al navegador) y del backend. Uso: node tools/check-secrets/check-secrets.ts
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { extname, join } from 'node:path';
@@ -33,7 +33,7 @@ function walk(dir: string): string[] {
 }
 
 function buildFiles(): string[] {
-  return ['apps/menu-web/dist', 'apps/operations/dist']
+  return ['apps/menu-web/dist', 'apps/operations/dist', 'backend/lib']
     .filter((dir) => existsSync(dir))
     .flatMap(walk)
     .filter((file) => !BINARY.has(extname(file).toLowerCase()));

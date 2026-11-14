@@ -53,6 +53,45 @@ Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo 
 
 Verificado con la API pública de GitHub (el repositorio es público desde el 2026-11-14).
 
+## 2026-11-14 — Backend mínimo (Cloud Functions)
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Conjunto completo | `npm run check` | ✅ 22 archivos, **303 pruebas** (39 nuevas del backend) |
+| Integración | `npm run test:integration` (compila el backend y arranca Auth, SQL Connect y Functions) | ✅ 3 archivos, **62 pruebas**: 33 de conectores, 6 de pasarelas y **23 del backend** |
+| Navegadores (regresión) | `npm run test:e2e` y `npm run test:e2e:emulators` | ✅ 71 superadas y 4 omitidas (Tab en Safari); recorrido del personal 2/2. Igual que antes |
+| Auditoría y secretos | `npm audit` · `npm run check:secrets` (ahora también revisa `backend/lib`) | ✅ 0 vulnerabilidades · sin secretos |
+
+Unitarias (`backend/src`, con dobles de prueba): validación de entrada (UUID con y sin guiones, uid, longitudes, campos no admitidos, inyección en IDs, moneda admitida y explícita, zona horaria IANA, correo); `revokeMember` no consulta otras empresas ni toca sesiones si el conector rechaza; `provisionTenant` comprueba al operador antes de validar o crear nada; regla de sesión revocada con precisión de segundos; los errores inesperados de SQL Connect se lanzan y no se disfrazan de rechazo.
+
+Integración (`backend/tests/backend.int.test.ts`, funciones reales por HTTP con el protocolo callable):
+
+| Caso | Resultado |
+|---|---|
+| Sin sesión, en las dos funciones | ✅ `UNAUTHENTICATED` |
+| Entrada no válida (empresa que no es UUID, campos no admitidos, GraphQL en el uid) | ✅ `INVALID_ARGUMENT` |
+| Propietario de B revoca a un miembro de A con el ID de A, con el de B o con uno inventado | ✅ `PERMISSION_DENIED`; la membresía sigue activa y la sesión intacta |
+| Cajero (sin `staff.invite`), persona sin membresía y operador de plataforma revocan en A | ✅ Rechazados |
+| Administrador revoca al propietario; propietario se revoca a sí mismo | ✅ Rechazados (rango) |
+| Propietario revoca a un mesero solo de A | ✅ Membresía `REVOKED`, sesiones revocadas, su ID token vigente ya no ve la empresa y la auditoría tiene `membership.revoke` y `auth.sessions_revoked` |
+| Administrador de sucursal revoca a un mesero | ✅ Permitido |
+| Revocar a quien también es miembro de B | ✅ Conserva sesión y acceso solo a B |
+| Revocar dos veces | ✅ La segunda es rechazada |
+| Aprovisionar: propietario o usuario sin la afirmación; afirmación metida en un token (token personalizado) pero no guardada en la cuenta | ✅ Rechazados |
+| Operador al que se retira la afirmación (mismo token) o con las sesiones revocadas | ✅ Rechazados de inmediato |
+| Operador con moneda no admitida, sin zona horaria, correo no válido o estado elegido por el cliente | ✅ `INVALID_ARGUMENT` |
+| Operador crea empresa con correo nuevo | ✅ Empresa, sucursal, membresía `tenant_owner` creada por el operador y auditoría `tenant.provision`; la propietaria define su contraseña con el restablecimiento, entra y solo ve su empresa; ni el operador ni A la ven |
+| Operador crea empresa para una cuenta existente | ✅ La reutiliza y no cambia su nombre de perfil |
+
+Pruebas de mutación: sin la suplantación en `revokeMember` (la mutación corre como administrador) fallan 4 pruebas; sin la comprobación de la afirmación del operador fallan 3. Se restauró el código y la suite volvió a 62/62.
+
+Hallazgos y limitaciones:
+
+- SQL Connect devuelve los UUID sin guiones; la primera ejecución falló (10 pruebas) porque la validación solo aceptaba la forma con guiones. Se aceptan las dos y el aprovisionamiento devuelve el formato de SQL Connect.
+- El emulador de Auth (CLI 15.30) no aplica la revocación al canjear *refresh tokens* (`grantToken` no consulta `validSince`). La prueba verifica la revocación con `verifyIdToken(token, true)`, el criterio del Admin SDK en producción. En producción Firebase Auth rechaza el canje tras `revokeRefreshTokens`; se comprobará en el entorno real.
+- El emulador no aplica IAM: queda pendiente verificar en `tavelyo-e2b57` quién puede invocar `executeGraphql` y la suplantación.
+- Al apagar los emuladores aparece `ECONNRESET` del emulador de SQL Connect; el comando termina con código 0.
+
 ## 2026-11-13 — Búsqueda de secretos
 
 `npm run check:secrets` (`tools/check-secrets`, sin dependencias): revisa los archivos versionados y los builds de las PWA con patrones de claves privadas PEM, cuentas de servicio de Google, claves de API de Google/Firebase, claves de AWS, claves secretas de pasarela (`sk_live_`/`rk_live_`), tokens de GitHub y Slack y cadenas de conexión de base de datos con contraseña. Resultado: ✅ sin secretos en 216 archivos. 14 pruebas comprueban que detecta cada patrón (con muestras construidas por partes), que no marca la configuración de ejemplo y que no copia el secreto en el informe.

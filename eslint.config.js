@@ -7,6 +7,7 @@ export default tseslint.config(
     ignores: [
       '**/node_modules/**',
       '**/dist/**',
+      'backend/lib/**',
       '**/coverage/**',
       '**/dataconnect-generated/**',
       'dataconnect/.dataconnect/**',

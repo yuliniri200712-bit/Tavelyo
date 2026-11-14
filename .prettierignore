@@ -11,3 +11,6 @@ package-lock.json
 
 # Generado desde packages/design-system/src/tokens.ts
 packages/design-system/src/styles/tokens.css
+
+# Compilación del backend (vite build).
+backend/lib/

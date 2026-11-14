@@ -74,6 +74,13 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - Gestión del personal: `staff.invite` cubre agregar, listar y revocar; `role.assign` cubre cambiar el rol y asignar o quitar sucursales. Quien no es propietario solo asigna sucursales que tiene asignadas.
 - Pendiente de fases siguientes: invitar por correo (requiere el backend para buscar al usuario), reactivar una membresía revocada y roles personalizados por empresa.
 
+### Backend (Fase 1, 2026-11-14)
+
+- **`revokeMember`** (función callable): ejecuta la mutación `RevokeMember` del conector **suplantando a quien llama**, así que aplican sus reglas (membresía, `staff.invite`, rango, auditoría). Si a la persona revocada no le queda ninguna membresía activa, el backend revoca sus *refresh tokens* (cierra todas sus sesiones) y lo registra como `auth.sessions_revoked`. Si conserva otra membresía, mantiene la sesión y el acceso a esa otra empresa.
+- **`provisionTenant`** (función callable): crea empresa, primera sucursal, membresía `tenant_owner` y `AuditEvent` (`tenant.provision`) en una sola transacción. Moneda y zona horaria son obligatorias (no se infieren, D-01). Si el correo de la persona propietaria no tiene cuenta, se crea sin contraseña y ella la define con «¿Olvidaste tu contraseña?».
+- **Operador de plataforma:** afirmación personalizada `platform_operator: true` en Firebase Auth, que solo concede el Admin SDK. El backend la lee **del servidor de Auth en cada llamada** (`getUser`), no solo del token: retirarla o revocar las sesiones del operador surte efecto en la llamada siguiente, y una afirmación metida en un token pero no guardada en la cuenta se rechaza. El operador no obtiene membresía ni acceso a los datos de las empresas que crea.
+- Toda entrada se valida en el servidor y se rechazan campos no admitidos.
+
 ## 6. Pendiente
 
 - Topes concretos de descuento y reembolso por rol (configurables por empresa).

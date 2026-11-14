@@ -1,6 +1,6 @@
 # Progreso del proyecto
 
-Última actualización: 2026-11-13
+Última actualización: 2026-11-14
 
 ## Fase actual
 
@@ -19,7 +19,7 @@
 | 9. PWA base | 🔄 Las dos apps compilan como PWA: manifiesto con iconos del logotipo, *service worker* que solo precachea el build (sin `runtimeCaching`), actualización a elección de la persona, aviso sin conexión, enlace para saltar al contenido y catálogo en `operations` (`/catalogo`). Playwright en 5 navegadores de D-15: 71 superadas y 4 omitidas (Tab en Safari), incluido axe sin infracciones. Pendiente: prueba de actualización entre dos builds e instalación en dispositivos reales |
 | 2. Entornos | ✅ `.firebaserc` con `demo-tavelyo` por defecto y `tavelyo-e2b57` como `dev`; `.env.example` sin secretos; `parseFirebaseEnvironment` valida la configuración al arrancar (`architecture/entornos.md`) |
 | 5. Esquema inicial | ✅ `Tenant`, `Branch`, `UserProfile`, `Role`, `Permission`, `RolePermission`, `Membership`, `MembershipBranch`, `AuditEvent` con FK compuestas; catálogo de roles en `packages/contracts` sincronizado con `permissions.md` |
-| 7. Autorización (conectores) | ✅ Conector `tavelyo` con 11 operaciones bajo el patrón de ADR-0008; reglas de los `.gql` en CI y 33 pruebas de integración con dos empresas e IDs alterados. Pendiente: autorización del backend cuando exista |
+| 7. Autorización (conectores y backend) | ✅ Conector `tavelyo` con 11 operaciones bajo el patrón de ADR-0008; reglas de los `.gql` en CI y 33 pruebas de integración con dos empresas e IDs alterados. ✅ Backend mínimo en `backend/` (Cloud Functions con TypeScript, `firebase-functions` 7.4.0 y `firebase-admin` 14.5.0, aprobados el 2026-11-14): `revokeMember` revoca suplantando a quien llama y cierra las sesiones si no le quedan membresías; `provisionTenant` crea empresa, sucursal y propietario, solo para el operador de plataforma. 39 pruebas unitarias y 23 de integración contra el emulador de Functions. Solo emuladores: sin despliegue |
 | 6. Autenticación y contexto | ✅ Acceso con correo y contraseña (D-17), recuperación sin revelar si el correo existe, perfil mínimo, selector de empresa y sucursal, cambio de contexto que desmonta todo lo anterior, cierre de sesión siempre visible. Paquetes `features/identity` y `features/tenancy`; pasarelas en `data-access` con el SDK generado y sin caché de datos |
 | 3. CI | ✅ GitHub Actions (D-18), `.github/workflows/ci.yml`: formato, ESLint, tipos, unitarias, `npm audit`, esquema y SDK generado al día, compilación de las dos PWA, búsqueda de secretos (`npm run check:secrets`), integración con emuladores y Playwright (matriz D-15 y recorrido del personal). ✅ En verde en GitHub (ejecución #3, commit `41089aa`, 2026-11-14): calidad 1 min, integración 1 min, Playwright 4,5 min |
 
@@ -45,6 +45,8 @@ D-07 Cloud Functions con TypeScript · D-12 (fuente) Plus Jakarta Sans, OFL 1.1 
 
 ## Pendiente
 
+- Fase 1: bloqueo por inactividad en dispositivos compartidos; prueba de actualización de la PWA entre dos builds; instalación en dispositivos reales y revisión con lector de pantalla.
+- Antes del primer despliegue (requiere autorización): verificar IAM de `executeGraphql`/suplantación en `tavelyo-e2b57`, sembrar el catálogo de roles y permisos en el entorno real (hoy solo lo hacen las pruebas), herramienta para conceder la afirmación `platform_operator` y empaquetado del backend para Cloud Build.
 - Validación de formularios en el cliente (pendiente dentro de ADR-0010; se decide en Fase 1 si hace falta).
 - Decisiones de negocio D-01, D-02, D-04 a D-06 y D-09 a D-11 (`requirements.md` §6). No bloquean la Fase 1.
 

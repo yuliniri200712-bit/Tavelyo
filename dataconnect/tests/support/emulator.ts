@@ -3,7 +3,7 @@
 // Servidor: token «owner» del emulador y executeGraphql, como el Admin SDK.
 
 export const PROJECT_ID = 'demo-tavelyo';
-const AUTH_URL = 'http://127.0.0.1:9099';
+export const AUTH_URL = 'http://127.0.0.1:9099';
 const SERVICE_URL = `http://127.0.0.1:9399/v1/projects/${PROJECT_ID}/locations/us-central1/services/tavelyo`;
 const CONNECTOR = 'tavelyo';
 

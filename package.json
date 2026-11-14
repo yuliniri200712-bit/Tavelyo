@@ -9,7 +9,8 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "packages/features/*"
+    "packages/features/*",
+    "backend"
   ],
   "scripts": {
     "typecheck": "tsc -p tsconfig.json && npm run typecheck --workspaces --if-present",
@@ -19,7 +20,7 @@
     "test": "vitest run",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
     "test:e2e": "playwright test",
-    "test:integration": "npx --yes firebase-tools@15.30.2 emulators:exec --project demo-tavelyo --only auth,dataconnect \"vitest run --config vitest.integration.config.ts\"",
+    "test:integration": "npm run build -w backend && npx --yes firebase-tools@15.30.2 emulators:exec --project demo-tavelyo --only auth,dataconnect,functions \"vitest run --config vitest.integration.config.ts\"",
     "test:e2e:emulators": "npx --yes firebase-tools@15.30.2 emulators:exec --project demo-tavelyo --only auth,dataconnect \"playwright test --config playwright.emulators.config.ts\"",
     "check:secrets": "node tools/check-secrets/check-secrets.ts"
   },
