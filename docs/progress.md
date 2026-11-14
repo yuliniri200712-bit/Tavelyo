@@ -15,7 +15,7 @@
 | 1. Monorepo (npm workspaces, TypeScript 6.0.3, ESLint, Prettier, Vitest) | ✅ Base creada; `apps/` y los demás paquetes se crean en sus bloques |
 | 4. `core`: `Money`, `Result`, `UtcInstant` | ✅ 70 pruebas en verde (`testing/fase-1.md`) |
 | 8. `design-system` | 🔄 Fuente Plus Jakarta Sans 2.7.1 (OFL) incorporada; tokens y componentes pendientes |
-| 10. Logotipo | 🔄 Tres propuestas en `assets/branding/proposals/propuestas-logo.html`, pendientes de elección del propietario; mientras tanto, marcador textual |
+| 10. Logotipo | ✅ Propuesta A aprobada; maestro v1.0.0, variantes y PNG en `assets/branding/` (`brand/asset-manifest.md`). Pendiente: favicon simplificado de 16 px (requiere aprobación) |
 | 2, 3, 5, 6, 7, 9 | ⏳ Entornos, CI, esquema inicial, autenticación y selector de empresa, autorización, PWA base |
 
 ## Fase 0 — resumen de cierre
@@ -36,14 +36,14 @@ Hitos de la fase: cambio de plataforma a PWA con React + Vite + TypeScript (ADR-
 
 ## Decisiones resueltas (2026-11-13)
 
-D-07 Cloud Functions con TypeScript · D-12 (fuente) Plus Jakarta Sans, OFL 1.1 · D-13 spike ejecutado · **D-14 PWA con React + Vite + TypeScript, dos aplicaciones** · **D-15 navegadores:** Chrome (Android), Safari (iOS/iPadOS), Chrome/Edge y Safari de escritorio · **D-16 stack web (ADR-0010)** con Prettier.
+D-07 Cloud Functions con TypeScript · D-12 (fuente) Plus Jakarta Sans, OFL 1.1 · **D-12 (logotipo) propuesta A aprobada** · D-13 spike ejecutado · **D-14 PWA con React + Vite + TypeScript, dos aplicaciones** · **D-15 navegadores:** Chrome (Android), Safari (iOS/iPadOS), Chrome/Edge y Safari de escritorio · **D-16 stack web (ADR-0010)** con Prettier.
 
 ## Pendiente
 
-- **Logotipo (D-12):** elegir una de las tres propuestas (A, B o C) o pedir ajustes.
+- **Favicon de 16 px:** aprobar una variante simplificada del isotipo (las curvas no se distinguen a ese tamaño).
 - Validación de formularios en el cliente (pendiente dentro de ADR-0010; se decide en Fase 1 si hace falta).
 - Decisiones de negocio D-01, D-02, D-04 a D-06 y D-09 a D-11 (`requirements.md` §6). No bloquean la Fase 1.
 
 ## Bloqueos
 
-- Proyectos de Firebase de desarrollo y pruebas (los crea el propietario): hasta entonces, la Fase 1 se desarrolla y prueba con emuladores locales; el despliegue y la verificación de IAM quedan pendientes.
+- Ninguno. El proyecto de Firebase de desarrollo (`tavelyo-e2b57`) existe; las pruebas siguen en emuladores. Activar Cloud SQL o el plan Blaze, registrar apps web y desplegar requieren autorización expresa del propietario.
