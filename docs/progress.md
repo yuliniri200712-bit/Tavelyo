@@ -17,7 +17,8 @@
 | 8. `design-system` | ✅ Tokens (TypeScript como fuente única y `tokens.css` generado), fuente local, estilos base y componentes: `TavelyoButton`, `TextField`, `StatusChip`, `Card`, `ConfirmDialog`, avisos de conexión y de nueva versión, estados de carga/error/vacío. 38 pares de contraste comprobados en las pruebas. Pendiente: catálogo visual (con las apps) y verificación en navegador real (Playwright) |
 | 10. Logotipo | ✅ Propuesta A aprobada; maestro v1.0.0, variantes y PNG en `assets/branding/` (`brand/asset-manifest.md`). Pendiente: favicon simplificado de 16 px (requiere aprobación) |
 | 9. PWA base | 🔄 Las dos apps compilan como PWA: manifiesto con iconos del logotipo, *service worker* que solo precachea el build (sin `runtimeCaching`), actualización a elección de la persona, aviso sin conexión, enlace para saltar al contenido y catálogo en `operations` (`/catalogo`). Playwright en 5 navegadores de D-15: 71 superadas y 4 omitidas (Tab en Safari), incluido axe sin infracciones. Pendiente: prueba de actualización entre dos builds e instalación en dispositivos reales |
-| 2, 3, 5, 6, 7 | ⏳ Entornos, CI, esquema inicial, autenticación y selector de empresa, autorización |
+| 2. Entornos | ✅ `.firebaserc` con `demo-tavelyo` por defecto y `tavelyo-e2b57` como `dev`; `.env.example` sin secretos; `parseFirebaseEnvironment` valida la configuración al arrancar (`architecture/entornos.md`) |
+| 3, 5, 6, 7 | ⏳ CI, esquema inicial, autenticación y selector de empresa, autorización |
 
 ## Fase 0 — resumen de cierre
 

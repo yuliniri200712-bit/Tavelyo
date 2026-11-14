@@ -43,6 +43,10 @@ Cobertura de `design-system`:
 
 Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo extensiones estáticas, rutas `/__/` excluidas, actualización con aviso), manifiesto (iconos declarados existen con el tamaño real leído del PNG), marco común (logotipo con texto alternativo, salto al contenido, aviso sin conexión, aviso de nueva versión) y rutas de ambas apps (catálogo y página no encontrada).
 
+## 2026-11-13 — Entornos (`packages/data-access`)
+
+`npm run check`: ✅ 11 archivos, **169 pruebas**. Nuevas: `parseFirebaseEnvironment` acepta una configuración completa; `.env.example` es válido y apunta a los emuladores; informa de todas las variables que faltan a la vez; rechaza un proyecto *demo* sin emuladores, un indicador de emuladores ambiguo y variables `VITE_*` con nombre de secreto.
+
 ## 2026-11-13 — Navegadores (Playwright 1.64.1 + axe-core 4.14.0)
 
 Comando: `npm run test:e2e` (compila las dos apps y las sirve con `vite preview`). Matriz D-15: Chrome 157.0.8103.78 y Edge 157.0.4341.46 instalados (canales `chrome` y `msedge`), WebKit 27.2 de Playwright como Safari de escritorio, Chrome en Android emulado (Pixel 7) y Safari en iPhone emulado (iPhone 15).

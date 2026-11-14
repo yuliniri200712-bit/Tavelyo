@@ -13,6 +13,9 @@ const BRAND_ICONS_DIR = fileURLToPath(
   new URL('../../../assets/branding/app-icon', import.meta.url),
 );
 
+/** Un único `.env.local` en la raíz del repositorio sirve a las dos apps (ver `.env.example`). */
+const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
+
 /** Sustituye `%TAVELYO_THEME_COLOR%` en index.html por el token, sin HEX sueltos. */
 function themeColorPlugin(): Plugin {
   return {
@@ -26,6 +29,7 @@ export function tavelyoViteConfig(app: TavelyoAppConfig): UserConfig {
   return {
     plugins: [react(), themeColorPlugin(), VitePWA(pwaOptions(app))],
     publicDir: BRAND_ICONS_DIR,
+    envDir: REPO_ROOT,
     server: { port: app.port, strictPort: true },
     preview: { port: app.port + 1000, strictPort: true },
     build: { sourcemap: true },
