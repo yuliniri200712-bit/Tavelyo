@@ -1,0 +1,362 @@
+# Gestión de sectores y mesas (Fase 2). Requiere table.manage y la sucursal asignada (salvo el
+# propietario). Archivar en lugar de borrar: archived = true archiva y false restaura.
+# Toda variable usada en un filtro es obligatoria: una variable omitida anula su filtro.
+
+# Sectores y mesas de la sucursal, archivados incluidos, con el qrPublicId para imprimir el QR.
+query BranchLayout($tenantId: UUID!, $branchId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(where: { permission: { code: { eq: "table.manage" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: table.manage") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  sectors(
+    where: { tenantId: { eq: $tenantId }, branchId: { eq: $branchId } }
+    orderBy: [{ sort: ASC }, { name: ASC }]
+  ) {
+    id
+    name
+    sort
+    archivedAt
+    diningTables_on_sector(orderBy: [{ code: ASC }]) {
+      id
+      code
+      seats
+      qrPublicId
+      archivedAt
+    }
+  }
+}
+
+mutation CreateSector($tenantId: UUID!, $branchId: UUID!, $name: String!, $sort: Int!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "table.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: table.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    branch(id: $branchId)
+      @check(expr: "this != null", message: "Sucursal inexistente")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 60 && vars.sort >= 0"
+        message: "Datos del sector no válidos"
+      ) {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La sucursal no pertenece a la empresa")
+      status @check(expr: "this == 'ACTIVE'", message: "La sucursal no está activa")
+    }
+  }
+  sector_insert(data: { tenantId: $tenantId, branchId: $branchId, name: $name, sort: $sort })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "sector.create"
+      resourceType: "sector"
+      resourceId_expr: "response.sector_insert.id"
+    }
+  )
+}
+
+# Edita, archiva o restaura un sector. Solo se archiva si no le quedan mesas activas.
+mutation UpdateSector(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sectorId: UUID!
+  $name: String!
+  $sort: Int!
+  $archived: Boolean!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "table.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: table.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    sector(id: $sectorId)
+      @check(expr: "this != null", message: "Sector inexistente")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 60 && vars.sort >= 0"
+        message: "Datos del sector no válidos"
+      ) {
+      tenantId @check(expr: "this == vars.tenantId", message: "El sector no pertenece a la empresa")
+      branchId
+        @check(expr: "this == vars.branchId", message: "El sector no pertenece a la sucursal")
+      diningTables_on_sector(where: { archivedAt: { isNull: true } })
+        @check(
+          expr: "!vars.archived || this.size() == 0"
+          message: "Archiva primero las mesas del sector"
+        ) {
+        id
+      }
+    }
+  }
+  sector_update(
+    id: $sectorId
+    data: { name: $name, sort: $sort, archivedAt_expr: "vars.archived ? request.time : null" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation_expr: "vars.archived ? 'sector.archive' : 'sector.update'"
+      resourceType: "sector"
+      resourceId_expr: "vars.sectorId"
+    }
+  )
+}
+
+mutation CreateTable(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sectorId: UUID!
+  $code: String!
+  $seats: Int!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "table.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: table.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    sector(id: $sectorId)
+      @check(expr: "this != null", message: "Sector inexistente")
+      @check(
+        expr: "size(vars.code.trim()) >= 1 && size(vars.code) <= 20 && vars.seats >= 1 && vars.seats <= 50"
+        message: "Datos de la mesa no válidos"
+      ) {
+      tenantId @check(expr: "this == vars.tenantId", message: "El sector no pertenece a la empresa")
+      branchId
+        @check(expr: "this == vars.branchId", message: "El sector no pertenece a la sucursal")
+      archivedAt @check(expr: "this == null", message: "El sector está archivado")
+    }
+  }
+  diningTable_insert(
+    data: {
+      tenantId: $tenantId
+      branchId: $branchId
+      sectorId: $sectorId
+      code: $code
+      seats: $seats
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "dining_table.create"
+      resourceType: "dining_table"
+      resourceId_expr: "response.diningTable_insert.id"
+    }
+  )
+}
+
+# Edita, mueve de sector, archiva o restaura una mesa. No se archiva con la sesión abierta.
+mutation UpdateTable(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $tableId: UUID!
+  $sectorId: UUID!
+  $code: String!
+  $seats: Int!
+  $archived: Boolean!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "table.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: table.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    diningTable(id: $tableId)
+      @check(expr: "this != null", message: "Mesa inexistente")
+      @check(
+        expr: "size(vars.code.trim()) >= 1 && size(vars.code) <= 20 && vars.seats >= 1 && vars.seats <= 50"
+        message: "Datos de la mesa no válidos"
+      ) {
+      tenantId @check(expr: "this == vars.tenantId", message: "La mesa no pertenece a la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "La mesa no pertenece a la sucursal")
+      tableSessions_on_table(where: { status: { eq: OPEN } })
+        @check(
+          expr: "!vars.archived || this.size() == 0"
+          message: "Cierra la mesa antes de archivarla"
+        ) {
+        id
+      }
+    }
+    sector(id: $sectorId) @check(expr: "this != null", message: "Sector inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El sector no pertenece a la empresa")
+      branchId
+        @check(expr: "this == vars.branchId", message: "El sector no pertenece a la sucursal")
+      archivedAt @check(expr: "vars.archived || this == null", message: "El sector está archivado")
+    }
+  }
+  diningTable_update(
+    id: $tableId
+    data: {
+      sectorId: $sectorId
+      code: $code
+      seats: $seats
+      archivedAt_expr: "vars.archived ? request.time : null"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation_expr: "vars.archived ? 'dining_table.archive' : 'dining_table.update'"
+      resourceType: "dining_table"
+      resourceId_expr: "vars.tableId"
+    }
+  )
+}
+
+# Genera un qrPublicId nuevo: los QR impresos anteriores dejan de abrir la carta (ADR-0011). Los
+# participantes ya unidos conservan su sesión.
+mutation RotateTableQr($tenantId: UUID!, $branchId: UUID!, $tableId: UUID!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "table.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: table.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    diningTable(id: $tableId) @check(expr: "this != null", message: "Mesa inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "La mesa no pertenece a la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "La mesa no pertenece a la sucursal")
+    }
+  }
+  diningTable_update(id: $tableId, data: { qrPublicId_expr: "uuidV4()" })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "dining_table.rotate_qr"
+      resourceType: "dining_table"
+      resourceId_expr: "vars.tableId"
+    }
+  )
+}

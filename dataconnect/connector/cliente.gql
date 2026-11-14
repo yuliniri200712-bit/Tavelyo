@@ -3,9 +3,21 @@
 # comprueban que auth.uid es un participante vigente de una sesión abierta.
 
 # Carta de la sucursal de la mesa: productos no archivados, disponibles y con precio vigente. No
-# devuelve sesiones, pedidos ni datos del personal.
+# devuelve sesiones, pedidos ni datos del personal. Nada si la mesa o su sector están archivados,
+# la sucursal no está activa o la empresa está suspendida. El horario lo aplica la interfaz y lo
+# revalida quoteOrder en el servidor.
 query PublicMenu($qrPublicId: UUID!) @auth(level: PUBLIC) {
-  diningTables(where: { qrPublicId: { eq: $qrPublicId }, archivedAt: { isNull: true } }, limit: 1) {
+  diningTables(
+    where: {
+      qrPublicId: { eq: $qrPublicId }
+      archivedAt: { isNull: true }
+      sector: {
+        archivedAt: { isNull: true }
+        branch: { status: { eq: ACTIVE }, tenant: { status: { eq: ACTIVE } } }
+      }
+    }
+    limit: 1
+  ) {
     code
     sector {
       branch {

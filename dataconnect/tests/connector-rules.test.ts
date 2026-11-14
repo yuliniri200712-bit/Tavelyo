@@ -43,7 +43,17 @@ const PUBLIC_OPERATIONS = new Set(['PublicMenu']);
 /** Operaciones del cliente con sesión anónima: comprueban su participación por auth.uid. */
 const CUSTOMER_OPERATIONS = new Set(['MyParticipation']);
 /** Operaciones de sucursal del propietario (ADR-0011 §6). */
-const BRANCH_OPERATIONS = new Set<string>();
+const BRANCH_OPERATIONS = new Set(['CreateBranch', 'UpdateBranch']);
+/**
+ * Variables opcionales admitidas en un filtro. Una variable omitida o nula anula su filtro (el
+ * filtro devuelve todo), así que solo se admite donde la expresión de @check la descarta antes.
+ */
+const NULLABLE_FILTER_ALLOWLIST = new Set(['CreateProduct.taxRuleId', 'UpdateProduct.taxRuleId']);
+
+/** Tipo declarado de una variable en la cabecera de la operación. */
+function declaredType(header: string, variable: string): string | undefined {
+  return new RegExp(`\\$${variable}:\\s*([\\w\\[\\]!]+)`).exec(header)?.[1];
+}
 /** Borrados permitidos: relaciones sin historia propia, con AuditEvent en la misma transacción. */
 const DELETE_ALLOWLIST = new Set(['UnassignMemberBranch']);
 
@@ -60,6 +70,16 @@ describe('reglas de los conectores (ADR-0008 y ADR-0011)', () => {
 
     // 1. Toda operación declara @auth, y cada nivel distinto de USER solo en su lista blanca.
     expect(level, 'falta @auth').toBeDefined();
+
+    // 1b. Las variables de los filtros son obligatorias, salvo la lista blanca.
+    for (const match of op.body.matchAll(/\b(eq|ne|in|nin|gt|ge|lt|le): \$(\w+)/g)) {
+      const variable = match[2] ?? '';
+      if (NULLABLE_FILTER_ALLOWLIST.has(`${op.name}.${variable}`)) continue;
+      expect(
+        declaredType(op.header, variable),
+        `$${variable} en un filtro debe ser obligatoria`,
+      ).toMatch(/!$/);
+    }
     if (level === 'PUBLIC') {
       expect(PUBLIC_OPERATIONS.has(op.name), 'PUBLIC fuera de la lista blanca').toBe(true);
       expect(op.body).toMatch(/qrPublicId: \{ eq: \$qrPublicId \}/);

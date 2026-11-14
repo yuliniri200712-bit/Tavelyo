@@ -41,6 +41,14 @@ El aislamiento entre empresas y sucursales es el requisito de seguridad más cr�
 - Punto 4 (2026-11-14): la función `revokeMember` del backend revoca los *refresh tokens* cuando no quedan membresías activas (`permissions.md` §5).
 - Punto 7 (2026-11-14): en `firebase-admin` 14.5.0 la suplantación es `executeMutation(nombre, variables, { impersonate: { authClaims } })` (el spike usaba la API REST equivalente, `impersonateMutation`). `revokeMember` la usa con las afirmaciones del ID token verificado; el aprovisionamiento es una tarea de sistema con `executeGraphql`, documento fijo con variables y comprobación propia del operador. `backend/tests/backend.int.test.ts`: 23/23 contra los emuladores, con dos empresas e IDs alterados. Pruebas de mutación: sin la suplantación fallan 4 pruebas; sin la comprobación del operador fallan 3.
 
+## Implementación (Fase 2, 2026-11-14)
+
+- Conectores nuevos con el mismo patrón: `salon.gql` (vista del salón, participantes, abrir y cerrar mesa, expulsar), `mesas.gql` (sectores, mesas y rotación del QR), `carta.gql` (impuestos, categorías, productos, modificadores, disponibilidad y precios) y `sucursales.gql` (crear y editar sucursales). Además de la membresía y el permiso, cada operación de sucursal exige tenerla asignada (salvo el propietario) y comprueba que cada recurso pertenece a la empresa **y** a la sucursal declaradas: declarar la sucursal propia no sirve para tocar una mesa de otra.
+- **Hallazgo verificado en el emulador: una variable omitida o nula en un filtro `where` anula ese filtro** (el campo devuelve todo). Además, `vars.x == null` falla si la variable se omite; hay que usar `has(vars.x)`. Por eso una regla nueva de `connector-rules.test.ts` exige que toda variable usada en un filtro sea obligatoria (`!`), salvo una lista blanca donde la expresión de `@check` descarta antes la variable nula (`taxRuleId` en `CreateProduct`/`UpdateProduct`). Una operación de prueba con un filtro opcional hace fallar la regla.
+- También verificado: varios `@check` en un mismo campo, ternarios en `_expr` (`vars.archived ? request.time : null`), `uuidV4()` en una actualización (rotación del QR sin backend), referencias a pasos anteriores (`response.price_insert.id`) y que `_upsert` conserva los campos que no recibe.
+- En consultas, la comprobación de sucursal referencia `response.membership.role.code` (sin `query.`, que solo existe en mutaciones).
+- `dataconnect/tests/salon-carta.int.test.ts`: 25 pruebas con dos empresas, dos sucursales, seis roles y un cliente anónimo; con IDs alterados de la otra empresa, cada operación falla con su mensaje concreto.
+
 ## Verificación pendiente
 
 - IAM real de `executeGraphql` e `impersonate*` en un proyecto de desarrollo: el emulador no aplica IAM.

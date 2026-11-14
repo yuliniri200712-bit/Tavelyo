@@ -78,7 +78,7 @@ Pendiente para la Fase 3: **D-04** (si la preautorización es obligatoria antes 
    - cliente participante.
    Más pruebas con dos empresas, IDs alterados y sesiones cerradas.
 3. **Backend:**
-   - `joinTableSession`, `quoteOrder`, rotación del QR y expulsión de participantes;
+   - `joinTableSession` y `quoteOrder` (la rotación del QR y la expulsión de participantes se resolvieron en el conector, en el bloque 2);
    - adaptador de pago simulado;
    - límites de solicitudes.
 4. **Operaciones, administración:**

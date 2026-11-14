@@ -9,6 +9,7 @@
 | Bloque del plan | Estado |
 |---|---|
 | 1. Decisiones, ADR-0011 y esquema | ✅ ADR-0011 aceptada y **verificada en el emulador** (6 pruebas de capacidades: carta `PUBLIC` sin sesión y nada con un QR inventado; un cliente anónimo no alcanza operaciones `USER`; `NO_ACCESS` rechaza a cliente, personal y anónimo y solo lo ejecuta el Admin SDK; una sola sesión abierta por mesa; participante vencido o de una sesión cerrada sin acceso; la sesión siguiente queda aislada). Esquema de salón, carta y resumen de pedido. Reglas de conectores ampliadas con listas blancas para `PUBLIC`, `USER_ANON` y `NO_ACCESS` |
+| 2. Conectores y autorización | ✅ 25 operaciones nuevas en `salon.gql`, `mesas.gql`, `carta.gql` y `sucursales.gql` (permisos en `architecture/permissions.md` §5). La rotación del QR y la expulsión de participantes quedan resueltas en el conector, sin backend. La carta pública se oculta con la mesa o el sector archivados, la sucursal archivada o la empresa suspendida. 25 pruebas de integración con dos empresas, IDs alterados, sucursal no asignada, archivado, validación de datos, QR rotado, expulsión, sesión cerrada y auditoría. Hallazgo: una variable omitida en un filtro lo anula, y una regla nueva de CI lo impide (ADR-0008). `npm run check`: 364 pruebas; integración: 93 |
 
 **Fase 1 — Base: cerrada** con aprobación del propietario el 2026-11-14 e integrada en `main` (rama `fase-1-base`, plan [`plans/fase-1.md`](plans/fase-1.md)). Queda pendiente, sin bloquear, la revisión en un iPhone (instalación y VoiceOver).
 

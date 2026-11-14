@@ -14,38 +14,38 @@ If a user is not using a supported framework, they can use the generated SDK dir
 Here's an example of how to use it with the first 5 operations:
 
 ```js
-import { publicMenu, myParticipation, upsertMyProfile, addMember, changeMemberRole, revokeMember, assignMemberBranch, unassignMemberBranch, myProfile, myMemberships } from '@tavelyo/dataconnect-sdk';
+import { catalogAdmin, branchCatalog, createTaxRule, updateTaxRule, createCategory, updateCategory, createProduct, updateProduct, createModifierGroup, updateModifierGroup } from '@tavelyo/dataconnect-sdk';
 
 
-// Operation PublicMenu:  For variables, look at type PublicMenuVars in ../index.d.ts
-const { data } = await PublicMenu(dataConnect, publicMenuVars);
+// Operation CatalogAdmin:  For variables, look at type CatalogAdminVars in ../index.d.ts
+const { data } = await CatalogAdmin(dataConnect, catalogAdminVars);
 
-// Operation MyParticipation:  For variables, look at type MyParticipationVars in ../index.d.ts
-const { data } = await MyParticipation(dataConnect, myParticipationVars);
+// Operation BranchCatalog:  For variables, look at type BranchCatalogVars in ../index.d.ts
+const { data } = await BranchCatalog(dataConnect, branchCatalogVars);
 
-// Operation UpsertMyProfile:  For variables, look at type UpsertMyProfileVars in ../index.d.ts
-const { data } = await UpsertMyProfile(dataConnect, upsertMyProfileVars);
+// Operation CreateTaxRule:  For variables, look at type CreateTaxRuleVars in ../index.d.ts
+const { data } = await CreateTaxRule(dataConnect, createTaxRuleVars);
 
-// Operation AddMember:  For variables, look at type AddMemberVars in ../index.d.ts
-const { data } = await AddMember(dataConnect, addMemberVars);
+// Operation UpdateTaxRule:  For variables, look at type UpdateTaxRuleVars in ../index.d.ts
+const { data } = await UpdateTaxRule(dataConnect, updateTaxRuleVars);
 
-// Operation ChangeMemberRole:  For variables, look at type ChangeMemberRoleVars in ../index.d.ts
-const { data } = await ChangeMemberRole(dataConnect, changeMemberRoleVars);
+// Operation CreateCategory:  For variables, look at type CreateCategoryVars in ../index.d.ts
+const { data } = await CreateCategory(dataConnect, createCategoryVars);
 
-// Operation RevokeMember:  For variables, look at type RevokeMemberVars in ../index.d.ts
-const { data } = await RevokeMember(dataConnect, revokeMemberVars);
+// Operation UpdateCategory:  For variables, look at type UpdateCategoryVars in ../index.d.ts
+const { data } = await UpdateCategory(dataConnect, updateCategoryVars);
 
-// Operation AssignMemberBranch:  For variables, look at type AssignMemberBranchVars in ../index.d.ts
-const { data } = await AssignMemberBranch(dataConnect, assignMemberBranchVars);
+// Operation CreateProduct:  For variables, look at type CreateProductVars in ../index.d.ts
+const { data } = await CreateProduct(dataConnect, createProductVars);
 
-// Operation UnassignMemberBranch:  For variables, look at type UnassignMemberBranchVars in ../index.d.ts
-const { data } = await UnassignMemberBranch(dataConnect, unassignMemberBranchVars);
+// Operation UpdateProduct:  For variables, look at type UpdateProductVars in ../index.d.ts
+const { data } = await UpdateProduct(dataConnect, updateProductVars);
 
-// Operation MyProfile: 
-const { data } = await MyProfile(dataConnect);
+// Operation CreateModifierGroup:  For variables, look at type CreateModifierGroupVars in ../index.d.ts
+const { data } = await CreateModifierGroup(dataConnect, createModifierGroupVars);
 
-// Operation MyMemberships: 
-const { data } = await MyMemberships(dataConnect);
+// Operation UpdateModifierGroup:  For variables, look at type UpdateModifierGroupVars in ../index.d.ts
+const { data } = await UpdateModifierGroup(dataConnect, updateModifierGroupVars);
 
 
 ```
