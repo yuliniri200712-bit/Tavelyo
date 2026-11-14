@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" role="img" aria-label="Tavelyo">
-<!-- PROPUESTA (no aprobada): favicon simplificado de 16 px derivado del isotipo A. Una sola curva, abierta sobre el tablero para que se lea como conectividad; formas alineadas a la cuadrícula de 16 px. -->
-<title>Tavelyo</title>
-<rect width="16" height="16" rx="3.5" fill="#E54835"/>
-<path d="M3.5 8.5A4.5 4.5 0 0 1 12.5 8.5" fill="none" stroke="#FFF5E9" stroke-width="1.5" stroke-linecap="round"/>
-<rect x="2" y="8.5" width="12" height="2" rx="1" fill="#FFF5E9"/>
-<rect x="6.75" y="9.5" width="2.5" height="5" rx="1.25" fill="#FFF5E9"/>
-</svg>

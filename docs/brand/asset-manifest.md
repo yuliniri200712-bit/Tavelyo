@@ -32,7 +32,7 @@ El logotipo maestro está **aprobado** y se guarda en `assets/branding/` (ver «
 
 Contraste de los gráficos (mínimo 3:1): tomate sobre crema 3,67; tomate sobre espresso 3,73; crema sobre tomate 3,67; paprika sobre espresso 5,84. La paprika sobre crema (2,34) solo se usa en las curvas secundarias, nunca en la forma que identifica la T; por eso el icono de aplicación usa el isotipo entero en crema.
 
-Revisión visual a 24 px de isotipo y a 120 px de ancho del horizontal: las curvas se distinguen. **A 16 px las curvas casi desaparecen**: el favicon de 16 px necesita una variante simplificada que el propietario apruebe expresamente (IV §3); mientras tanto se publica `favicon.svg` y los PNG de 32 y 48 px.
+Revisión visual a 24 px de isotipo y a 120 px de ancho del horizontal: las curvas se distinguen. A 16 px las curvas casi desaparecen. Se preparó un favicon simplificado (una sola curva) y **el propietario decidió conservar el actual** (2026-11-14): `favicon.svg` y los PNG de 32 y 48 px, derivados del icono de aplicación, se usan en todos los tamaños.
 
 La página de propuestas (`proposals/propuestas-logo.html`) se conserva como registro de la elección; B y C quedan descartadas.
 
@@ -40,7 +40,6 @@ La página de propuestas (`proposals/propuestas-logo.html`) se conserva como reg
 
 | Recurso | Ruta prevista | Estado |
 |---|---|---|
-| Favicon simplificado de 16 px | Propuesta: `assets/branding/proposals/favicon-16-propuesta.svg` (comparación: `favicon-16-comparacion.png`) | ⏳ **Pendiente de aprobación del propietario.** Una sola curva, abierta sobre el tablero, y formas alineadas a la cuadrícula de 16 px; crema sobre tomate (3,67:1). Tras aprobarse, se exporta como `favicon-16.png` y se enlaza en las dos apps |
 | Icono de notificación | — | ⏳ Variante de una tinta en la fase de notificaciones |
 | Pantalla de inicio (*splash*) | — | ⏳ En iOS se genera desde el manifiesto y `apple-touch-icon`; recursos propios si se necesitan |
 | Fuente Plus Jakarta Sans | `packages/design-system/assets/fonts/` | ✅ **Confirmada** por el propietario (2026-11-13). Origen: repositorio oficial `tokotype/PlusJakartaSans`, versión 2.7.1. Licencia: SIL Open Font License 1.1 (se copia `OFL.txt` junto a los archivos). Se sirve desde la propia app, sin CDN |
