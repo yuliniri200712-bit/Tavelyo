@@ -1,0 +1,19 @@
+{
+  "name": "@tavelyo/design-system",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tokens de marca, funcionales y semánticos (CSS + TypeScript), componentes React base y catálogo visual",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles/index.css"
+  },
+  "scripts": {
+    "tokens": "node scripts/build-tokens-css.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  }
+}

@@ -63,6 +63,10 @@ Al crear el monorepo se fijaron versiones exactas con al menos dos semanas de pu
 
 `npm audit` informa 8 avisos **moderados** de `minimatch` (posible denegación de servicio con patrones *glob*) dentro de ESLint y `typescript-eslint`. Solo afectan a herramientas de desarrollo y los patrones los define el proyecto. Se acepta temporalmente; se revisa al actualizar ESLint (≥ 10.15.0) cuando cumpla dos semanas.
 
+### Complementos de prueba y tipos (Fase 1, 2026-11-13)
+
+Para ejecutar las pruebas de componentes aprobadas (Vitest + Testing Library) hacen falta piezas que la tabla no nombraba. Se instalan como dependencias de desarrollo, sin llegar al navegador: `jsdom` 30.1.3 (entorno DOM de Vitest; MIT), `@testing-library/dom` 10.4.2 (*peer* obligatorio de `@testing-library/react`; MIT), `@types/react` y `@types/react-dom` 19.3.0 y `@types/node` 24.19.2 (solo tipos; MIT). React y React DOM: **19.3.1**. Con `jsdom` 30 el mínimo de Node.js pasa a 22.22.2 (o 24.15.0).
+
 ## Verificación pendiente
 
 - Repetir la compatibilidad exacta de versiones al crear el monorepo en Fase 1 y fijar versiones con al menos dos semanas de publicadas.

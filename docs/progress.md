@@ -14,7 +14,7 @@
 |---|---|
 | 1. Monorepo (npm workspaces, TypeScript 6.0.3, ESLint, Prettier, Vitest) | ✅ Base creada; `apps/` y los demás paquetes se crean en sus bloques |
 | 4. `core`: `Money`, `Result`, `UtcInstant` | ✅ 70 pruebas en verde (`testing/fase-1.md`) |
-| 8. `design-system` | 🔄 Fuente Plus Jakarta Sans 2.7.1 (OFL) incorporada; tokens y componentes pendientes |
+| 8. `design-system` | ✅ Tokens (TypeScript como fuente única y `tokens.css` generado), fuente local, estilos base y componentes: `TavelyoButton`, `TextField`, `StatusChip`, `Card`, `ConfirmDialog`, avisos de conexión y de nueva versión, estados de carga/error/vacío. 38 pares de contraste comprobados en las pruebas. Pendiente: catálogo visual (con las apps) y verificación en navegador real (Playwright) |
 | 10. Logotipo | ✅ Propuesta A aprobada; maestro v1.0.0, variantes y PNG en `assets/branding/` (`brand/asset-manifest.md`). Pendiente: favicon simplificado de 16 px (requiere aprobación) |
 | 2, 3, 5, 6, 7, 9 | ⏳ Entornos, CI, esquema inicial, autenticación y selector de empresa, autorización, PWA base |
 

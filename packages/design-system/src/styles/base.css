@@ -1,0 +1,84 @@
+/* Estilos base del tema claro. Solo usan propiedades --tv-* de tokens.css. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--tv-font-family-sans);
+  color: var(--tv-color-text-primary);
+  background: var(--tv-color-surface-page);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-size: var(--tv-type-body-size);
+  line-height: var(--tv-type-body-line-height);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+
+h1 {
+  font-size: var(--tv-type-h1-size);
+  line-height: var(--tv-type-h1-line-height);
+  font-weight: var(--tv-type-h1-weight);
+}
+
+h2 {
+  font-size: var(--tv-type-h2-size);
+  line-height: var(--tv-type-h2-line-height);
+  font-weight: var(--tv-type-h2-weight);
+}
+
+h3 {
+  font-size: var(--tv-type-h3-size);
+  line-height: var(--tv-type-h3-line-height);
+  font-weight: var(--tv-type-h3-weight);
+}
+
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: var(--tv-stroke-focus) solid var(--tv-color-focus-ring);
+  outline-offset: var(--tv-stroke-focus-offset);
+}
+
+.tv-inverse :focus-visible {
+  outline-color: var(--tv-color-focus-ring-on-inverse);
+}
+
+/* Importes, tiempos y totales con cifras tabulares (IV §5). */
+.tv-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.tv-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
