@@ -53,6 +53,28 @@ Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo 
 
 Verificado con la API pública de GitHub (el repositorio es público desde el 2026-11-14).
 
+## 2026-11-14 — Dispositivo real Android
+
+Dispositivo del propietario: **Motorola edge 50 fusion, Android 16, Chrome 157.0.8103.48**. Conexión por cable USB con `adb reverse` (puertos 6173, 6174, 9099 y 9399): el teléfono ve las apps en `localhost`, que es un origen seguro, así que el *service worker* y la instalación funcionan sin publicar nada. Datos de prueba en los emuladores de Auth y SQL Connect del equipo (dos empresas; mesero en ambas). Builds de producción con `vite preview`.
+
+| Bloque | Qué se hizo | Resultado |
+|---|---|---|
+| 1. Instalación de `operations` | Menú de Chrome → «Instalar app»; abrir desde el icono | ✅ Android generó una **WebAPK** (`org.chromium.webapk…`); icono del logotipo; se abre a pantalla completa (`display-mode: standalone` comprobado por depuración remota) |
+| 2. Acceso y contexto | Mesero con «Equipo compartido» marcada; La Fonda → Centro; cambiar a El Puerto → Malecón; cerrar sesión | ✅ Según el propietario, «todo se ve perfecto y funciona perfecto»: teclado sin tapar campos, textos legibles y áreas táctiles cómodas |
+| 3. Sin conexión | Se quitan los puertos del servidor y del emulador (`adb reverse --remove`) y se activa el modo avión; cerrar y reabrir la app | ✅ Arranca desde la caché con el aviso de sin conexión; no deja entrar |
+| 4. Actualización | Se publica la versión `telefono-2` en el mismo origen; cerrar y reabrir; «Más tarde», reabrir y «Actualizar» | ✅ Aviso, «Más tarde» respetado y actualización al pulsar. Por depuración remota: versión `telefono-2`, controlada por el *service worker*, en modo app, sin aviso pendiente |
+| 5. Lector de pantalla | TalkBack en la pantalla de acceso y en el selector de empresa | ✅ Según el propietario, «funciona a la perfección» (encabezado, campos con nombre, casilla con estado y ayuda, botones, error anunciado, opciones de empresa) |
+| 6. Instalación de `menu-web` | Menú de Chrome → «Instalar app» | ✅ Segunda WebAPK instalada (comprobado con `adb`): las dos PWA se instalan |
+| 7. Cierre por inactividad | Primer intento con 15 minutos reales; después, diagnóstico con una versión local de 2 minutos (aviso a los 90 s) y un monitor por depuración remota cada 5 s | ⚠️ En el primer intento el propietario no vio los avisos y la sesión seguía abierta, con actividad registrada 25 s antes de la inspección; no se pudo reconstruir qué pasó. ✅ Diagnóstico: con la pantalla encendida, aviso a los 94 s sin uso y cierre a los 120 s; con la pantalla apagada, Android congela la app (`freeze` al minuto) y al encenderla (`resume`) cierra la sesión al instante con el mensaje; al cerrar la app desde recientes con «Equipo compartido» marcada, pide entrar de nuevo |
+
+Diagnóstico de inactividad: la versión de 2 minutos solo cambia los valores pasados a `InactivityGuard` (`policy`); se compiló sin guardar el cambio en el repositorio. La lógica es la misma que en producción y los 15 minutos están cubiertos por pruebas unitarias y por Playwright con reloj simulado. Con la pantalla apagada no se puede mostrar el aviso «¿Sigues ahí?»: Android congela la página; la sesión se cierra al volver. Recomendación: repetir una vez con 15 minutos reales cuando haya un entorno de desarrollo publicado.
+
+Hallazgo de entorno: `vite preview` escuchaba solo en IPv6 (`::1`) y `adb reverse` conecta por IPv4, así que el primer intento dio `ERR_EMPTY_RESPONSE`. Se arrancó con `--host 127.0.0.1`. No afecta a la app ni a la CI.
+
+Al terminar se quitaron los puertos (`adb reverse --remove-all`) y se detuvieron servidores y emuladores. Las apps instaladas apuntan a `localhost` y no funcionan sin el cable: se recomendó al propietario desinstalarlas.
+
+Pendiente: VoiceOver e instalación en un iPhone (el propietario no tenía uno a mano).
+
 ## 2026-11-14 — Equipos compartidos, inactividad y actualización de la PWA
 
 Decisiones del propietario: D-19 (cerrar la sesión tras 15 minutos sin uso, con aviso en el último minuto) y D-20 (casilla «Equipo compartido» marcada por defecto).
