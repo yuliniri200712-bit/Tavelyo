@@ -141,18 +141,21 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-18 | Integración continua | **GitHub Actions** (2026-11-13) | `.github/workflows/` |
 | D-19 | Inactividad del personal | **Cerrar la sesión tras 15 minutos sin uso**, con aviso «¿Sigues ahí?» en el último minuto (2026-11-14). La actividad en otra pestaña de la misma persona cuenta | `features/identity` (`InactivityGuard`); PM §8 |
 | D-20 | Equipos compartidos de la sucursal | **Casilla «Equipo compartido» al entrar, marcada por defecto** (2026-11-14): la sesión vive solo en esa pestaña y se borra al cerrarla. Desmarcada (teléfono propio), la sesión se recuerda. El cierre por inactividad aplica siempre | `features/identity`, `data-access`; ADR-0009 |
-| D-01 (país y moneda) | País inicial y moneda | **Colombia, peso colombiano (COP)** (2026-11-14). Zona horaria de referencia `America/Bogota`. Sigue pendiente si los precios incluyen impuestos (ver D-01b) | `core` ya admite COP (ISO 4217, 2 decimales); el aprovisionamiento sigue exigiendo moneda y zona horaria explícitas por empresa |
+| D-01 (país y moneda) | País inicial y moneda | **Colombia, peso colombiano (COP)** (2026-11-14). Zona horaria de referencia `America/Bogota`. Impuestos: ver D-01b | `core` ya admite COP (ISO 4217, 2 decimales); el aprovisionamiento sigue exigiendo moneda y zona horaria explícitas por empresa |
+| D-01b | Precios e impuestos | **Los precios de la carta incluyen impuestos** (2026-11-14); la cuenta desglosa el impuesto contenido. Cada empresa configura su tasa (impoconsumo, IVA o ninguna) con su contador | `core` (impuesto contenido), `TaxRule` por empresa; `plans/fase-2.md` |
+| D-21 | Quién abre la mesa | **El mesero** (2026-11-14). El QR muestra siempre la carta; para pedir, la mesa debe estar abierta | Sesión de mesa (ADR-0011, propuesta) |
+| D-22 | Fotos de los platos | **Más adelante** (2026-11-14). Requieren aprobar Cloud Storage | Fuera de la Fase 2 |
+| D-06 (carrito) | Carrito en mesa compartida | **Un carrito por persona**, privado (2026-11-14). Quién ve y paga qué en la cuenta sigue pendiente | `plans/fase-2.md` |
 | D-16 | Bibliotecas y herramientas del stack web, y Firebase Hosting | **Aceptadas** según ADR-0010; formateador **Prettier** (2026-11-13); validación de formularios se decide en Fase 1 | ADR-0010 aceptado |
 
 ### Pendientes
 
 | ID | Decisión | Bloquea |
 |---|---|---|
-| D-01b | Si los precios de la carta incluyen impuestos y qué impuestos aplican al restaurante en Colombia. Relacionado: COP tiene 2 decimales en ISO 4217, pero en la práctica no se usan centavos; la presentación y el redondeo se deciden con el modelo de impuestos | Modelo de impuestos, Fase 2 |
 | D-02 | Pasarela de pago (debe admitir autorización y captura separadas en Colombia). **El propietario está buscando proveedor** (2026-11-14) | Fase 4; ADR-0006 |
 | D-04 | Política de garantía: ¿preautorización obligatoria antes de enviar a cocina? Excepciones (efectivo, atención por mesero) | Flujo de pedido de Fase 2–3 |
 | D-05 | Propinas: momento, cálculo y si se capturan con la cuenta | Modelo de cuenta |
-| D-06 | Sesión de mesa compartida: quién ve y quién paga qué | RF-SA-02, división de cuentas |
+| D-06 | Sesión de mesa compartida: quién ve y quién paga qué en la cuenta (el carrito ya es por persona) | División de cuentas, Fases 3–4 |
 | D-09 | Carga objetivo por sucursal, latencia aceptable y presupuesto mensual | RNF-12, dimensionamiento de Cloud SQL |
 | D-10 | Jurisdicción de datos personales (Colombia, por D-01), retención y anonimización | Modelo de datos personales |
 | D-11 | RPO/RTO para copias y restauración | Fase 6 |

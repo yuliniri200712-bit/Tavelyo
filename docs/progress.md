@@ -4,7 +4,7 @@
 
 ## Fase actual
 
-**Ninguna fase en curso.** La Fase 2 no se empieza hasta que el propietario la autorice.
+**Fase 2 — Salón y carta: plan propuesto** (2026-11-14), pendiente de aprobación: [`plans/fase-2.md`](plans/fase-2.md). Decisiones tomadas para el plan: D-01b, D-21, D-22 y D-06 (carrito). No se implementa nada hasta aprobar el plan.
 
 **Fase 1 — Base: cerrada** con aprobación del propietario el 2026-11-14 e integrada en `main` (rama `fase-1-base`, plan [`plans/fase-1.md`](plans/fase-1.md)). Queda pendiente, sin bloquear, la revisión en un iPhone (instalación y VoiceOver).
 
