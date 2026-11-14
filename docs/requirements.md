@@ -139,6 +139,8 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-15 | Navegadores soportados | **Móvil:** Chrome en Android; Safari en iPhone y iPad (en iOS/iPadOS todos los navegadores usan WebKit). **Escritorio:** Chrome y Edge (Windows y macOS) y Safari (macOS). Versiones: las dos últimas mayores de cada uno | Matriz de pruebas con Playwright (Chromium y WebKit) más revisión en dispositivos reales |
 | D-17 | Acceso del personal | **Correo y contraseña** con Firebase Auth (2026-11-13), con recuperación de contraseña por correo. Sin acceso con Google por ahora | `features/identity`; autenticación reforzada para propietarios pendiente (PM §8) |
 | D-18 | Integración continua | **GitHub Actions** (2026-11-13) | `.github/workflows/` |
+| D-19 | Inactividad del personal | **Cerrar la sesión tras 15 minutos sin uso**, con aviso «¿Sigues ahí?» en el último minuto (2026-11-14). La actividad en otra pestaña de la misma persona cuenta | `features/identity` (`InactivityGuard`); PM §8 |
+| D-20 | Equipos compartidos de la sucursal | **Casilla «Equipo compartido» al entrar, marcada por defecto** (2026-11-14): la sesión vive solo en esa pestaña y se borra al cerrarla. Desmarcada (teléfono propio), la sesión se recuerda. El cierre por inactividad aplica siempre | `features/identity`, `data-access`; ADR-0009 |
 | D-16 | Bibliotecas y herramientas del stack web, y Firebase Hosting | **Aceptadas** según ADR-0010; formateador **Prettier** (2026-11-13); validación de formularios se decide en Fase 1 | ADR-0010 aceptado |
 
 ### Pendientes

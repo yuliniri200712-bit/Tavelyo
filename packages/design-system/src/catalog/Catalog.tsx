@@ -6,6 +6,7 @@ import { EmptyState, ErrorState, LoadingState } from '../components/States.tsx';
 import { StatusChip } from '../components/StatusChip.tsx';
 import { TavelyoButton } from '../components/TavelyoButton.tsx';
 import { TextField } from '../components/TextField.tsx';
+import { CheckboxField } from '../components/CheckboxField.tsx';
 import { cssVariables, kebab } from '../css-variables.ts';
 import { typeScale } from '../tokens.ts';
 
@@ -69,6 +70,11 @@ export function DesignSystemCatalog() {
           type="email"
           defaultValue="mesero@"
           error="Escribe un correo completo, por ejemplo nombre@restaurante.com."
+        />
+        <CheckboxField
+          label="Equipo compartido"
+          hint="La sesión se borra al cerrar esta pestaña o la app."
+          defaultChecked
         />
       </section>
 

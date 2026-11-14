@@ -53,6 +53,25 @@ Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo 
 
 Verificado con la API pública de GitHub (el repositorio es público desde el 2026-11-14).
 
+## 2026-11-14 — Equipos compartidos, inactividad y actualización de la PWA
+
+Decisiones del propietario: D-19 (cerrar la sesión tras 15 minutos sin uso, con aviso en el último minuto) y D-20 (casilla «Equipo compartido» marcada por defecto).
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Unitarias y componentes | `npm run check` | ✅ 25 archivos, **333 pruebas** (antes 303). Nuevas: fases de inactividad en sus límites (14 min, 15 min, suspensión de horas), actividad compartida entre pestañas, `InactivityGuard` con reloj simulado (aviso con cuenta atrás, reinicio por interacción, durante el aviso solo cuenta «Seguir trabajando», actividad de otra pestaña, vuelta de suspensión, sesión recordada pero caducada, sin rastro tras cerrar sesión), `CheckboxField`, casilla y aviso en el acceso, `TAVELYO_BUILD_ID` validado (rechaza HTML) |
+| Equipos compartidos e inactividad en navegador | `npm run test:e2e:emulators` (`e2e/emulators/shared-device.spec.ts`) | ✅ Chrome y Safari de iPhone: con la casilla marcada, recargar conserva la sesión y otra pestaña empieza sin ella; desmarcada, otra pestaña la comparte. Con el reloj de Playwright: aviso modal en el minuto 14 con foco en «Seguir trabajando» y axe sin infracciones; seguir reinicia el plazo; sin respuesta se cierra la sesión y el acceso lo explica |
+| Actualización entre dos builds | `npm run test:e2e` (`e2e/pwa-update.spec.ts`) | ✅ 10/10 en los 5 navegadores: la versión B se avisa y no se aplica sola; «Actualizar» instala B; «Más tarde» mantiene A, también al recargar, y el aviso vuelve |
+| Regresión | `npm run test:integration` · `npm run test:e2e` · `npm run test:e2e:emulators` | ✅ 62/62 · 81 superadas y 4 omitidas (Tab en Safari) · 6/6 |
+
+Cómo se prueba la actualización: antes de las pruebas se compilan dos versiones de `operations` (`prueba-a` y `prueba-b`) fuera del repositorio. Un servidor estático propio (`e2e/support/static-server.ts`, sin dependencias) sirve A y, a mitad de la prueba, pasa a servir B en el mismo origen, como un despliegue.
+
+Pruebas de mutación: si se ignora la casilla (sesión siempre recordada), falla la prueba de la pestaña; con `skipWaiting` y `clientsClaim` activados (actualización forzada), fallan las 2 de actualización. Se restauró el código.
+
+Hallazgos durante el trabajo: la preparación global alteraba `process.env` mientras arrancaba el servidor de Playwright, así que cada versión se compila ahora en un proceso aparte; leer la versión con `evaluate` fallaba durante la recarga y se cambió por una aserción que reintenta; una barra invertida perdida al escribir el archivo dejó mal la expresión de `TAVELYO_BUILD_ID` y la detectaron las pruebas unitarias.
+
+Pendiente: instalación en dispositivos reales y revisión con lector de pantalla.
+
 ## 2026-11-14 — Backend mínimo (Cloud Functions)
 
 | Comprobación | Comando | Resultado |
@@ -114,7 +133,7 @@ Cobertura nueva:
 - Rutas de `operations`: sin sesión llevan al acceso; con sesión piden empresa; cambiar de empresa quita el contenido anterior; cerrar sesión vuelve al acceso sin datos visibles.
 - Recorrido en navegador: acceso accesible (axe), error genérico, selección, cambio de empresa y sucursal, revocación en el servidor reflejada al recargar y cierre de sesión que persiste tras recargar.
 
-Pendiente: bloqueo por inactividad y política de dispositivos compartidos (PM §8); la sesión usa la persistencia local por defecto de Firebase Auth y el cierre de sesión es siempre visible.
+~~Pendiente: bloqueo por inactividad y política de dispositivos compartidos (PM §8).~~ Resuelto el 2026-11-14 (D-19, D-20; ver la entrada «Equipos compartidos, inactividad y actualización de la PWA»).
 
 ## 2026-11-13 — Esquema inicial y autorización (SQL Connect)
 

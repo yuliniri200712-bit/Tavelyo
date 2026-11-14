@@ -54,3 +54,8 @@ El spike D-13 ya había mostrado dos problemas del cliente Dart: el SDK generado
 - SDK web de SQL Connect: `Int64`, suscripciones y errores (repetir el spike).
 - Comportamiento de instalación, *service worker* y notificaciones en los navegadores que fije D-03.
 - Tamaño de carga de `menu-web` en Fase 2.
+
+## Implementación (Fase 1, 2026-11-14)
+
+- **Sesión por pestaña en equipos compartidos:** casilla «Equipo compartido» en el acceso, marcada por defecto (D-20). Marcada, `setPersistence(browserSessionPersistence)`: recargar conserva la sesión, pero otra pestaña o la app reabierta empiezan sin ella. Desmarcada, `browserLocalPersistence`. Cierre por inactividad a los 15 minutos con aviso (D-19).
+- **Actualización controlada:** probada entre dos builds reales en los 5 navegadores de D-15 (`e2e/pwa-update.spec.ts`). Cada build lleva su versión en `<meta name="tavelyo-build">` desde `TAVELYO_BUILD_ID` (validada; «local» si falta).

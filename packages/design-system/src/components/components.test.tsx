@@ -2,6 +2,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { Card } from './Card.tsx';
+import { CheckboxField } from './CheckboxField.tsx';
 import { ConfirmDialog } from './ConfirmDialog.tsx';
 import { ConnectionNotice, UpdateNotice, useOnlineStatus } from './Notices.tsx';
 import { EmptyState, ErrorState, LoadingState } from './States.tsx';
@@ -74,6 +75,28 @@ describe('TextField', () => {
     expect(input.getAttribute('aria-invalid')).toBe('true');
     const errorId = screen.getByText('Escribe un correo válido').id;
     expect(input.getAttribute('aria-describedby')?.split(' ')).toContain(errorId);
+  });
+});
+
+describe('CheckboxField', () => {
+  it('etiqueta y ayuda asociadas; se marca con la etiqueta y con el teclado', async () => {
+    render(<CheckboxField label="Equipo compartido" hint="La sesión se borra al cerrar." />);
+    const box = screen.getByRole('checkbox', { name: 'Equipo compartido' });
+    expect(screen.getByText('La sesión se borra al cerrar.').id).toBe(
+      box.getAttribute('aria-describedby'),
+    );
+    expect((box as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(screen.getByText('Equipo compartido'));
+    expect((box as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('respeta el valor controlado', () => {
+    const onChange = vi.fn();
+    render(<CheckboxField label="Equipo compartido" checked onChange={onChange} />);
+    const box = screen.getByRole('checkbox', { name: 'Equipo compartido' });
+    expect((box as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(box);
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 });
 

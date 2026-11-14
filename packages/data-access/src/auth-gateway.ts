@@ -1,6 +1,9 @@
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  setPersistence,
   signInWithEmailAndPassword,
   signOut,
   type Auth,
@@ -35,8 +38,13 @@ function toStaffUser(user: User): StaffUser {
 
 export function createFirebaseAuthGateway(auth: Auth): AuthGateway {
   return {
-    async signIn(email, password) {
+    async signIn(email, password, { sharedDevice }) {
       try {
+        // Equipo compartido: la sesión vive solo en esta pestaña (D-20, ADR-0009).
+        await setPersistence(
+          auth,
+          sharedDevice ? browserSessionPersistence : browserLocalPersistence,
+        );
         const credential = await signInWithEmailAndPassword(auth, email, password);
         return ok(toStaffUser(credential.user));
       } catch (error) {

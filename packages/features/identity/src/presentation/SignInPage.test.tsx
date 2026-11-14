@@ -65,8 +65,58 @@ describe('SignInPage', () => {
     fill('Contraseña', 'secreta-123');
     fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
     expect((await screen.findByLabelText('estado')).textContent).toBe('signed-in');
-    expect(auth.signIn).toHaveBeenCalledWith('ana@lafonda.co', 'secreta-123');
+    expect(auth.signIn).toHaveBeenCalledWith('ana@lafonda.co', 'secreta-123', {
+      sharedDevice: true,
+    });
     expect(profiles.ensureProfile).toHaveBeenCalledWith('ana');
+  });
+
+  it('«Equipo compartido» viene marcada; desmarcada, la sesión se recuerda', async () => {
+    const auth = fakeAuth();
+    renderPage(auth);
+    const shared = screen.getByRole('checkbox', { name: 'Equipo compartido' }) as HTMLInputElement;
+    expect(shared.checked).toBe(true);
+    expect(shared.getAttribute('aria-describedby')).toBeTruthy();
+    fireEvent.click(shared);
+    fill('Correo', 'ana@lafonda.co');
+    fill('Contraseña', 'secreta-123');
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+    expect((await screen.findByLabelText('estado')).textContent).toBe('signed-in');
+    expect(auth.signIn).toHaveBeenCalledWith('ana@lafonda.co', 'secreta-123', {
+      sharedDevice: false,
+    });
+  });
+
+  it('explica el cierre por inactividad, y no un cierre pedido por la persona', async () => {
+    const auth = fakeAuth();
+    function SignOutButtons() {
+      const { signIn, signOut } = useSession();
+      return (
+        <>
+          <button onClick={() => void signIn('ana@lafonda.co', 'x', { sharedDevice: true })}>
+            entrar
+          </button>
+          <button onClick={() => void signOut('inactivity')}>caducar</button>
+          <button onClick={() => void signOut()}>salir</button>
+        </>
+      );
+    }
+    render(
+      <SessionProvider auth={auth} profiles={{ ensureProfile: vi.fn(async () => ok(undefined)) }}>
+        <SignInPage />
+        <SignOutButtons />
+      </SessionProvider>,
+    );
+    expect(screen.queryByText(/sin uso/)).toBeNull();
+    fireEvent.click(screen.getByText('entrar'));
+    fireEvent.click(await screen.findByText('caducar'));
+    expect(
+      (await screen.findByText(/Cerramos tu sesión tras 15 minutos sin uso/)).getAttribute('role'),
+    ).toBe('status');
+    fireEvent.click(screen.getByText('entrar'));
+    fireEvent.click(await screen.findByText('salir'));
+    await screen.findByRole('button', { name: 'Entrar' });
+    expect(screen.queryByText(/sin uso/)).toBeNull();
   });
 
   it('con credenciales incorrectas da un mensaje que no revela si el correo existe', async () => {

@@ -10,7 +10,7 @@ Esta matriz no sustituye la verificación en pantalla: en Fase 1 se repetirá pa
 
 Fuente: `packages/design-system/src/contrast-pairs.ts`. La prueba `tokens.test.ts` falla si un par baja de su mínimo, así que la tabla no puede quedar desactualizada sin que CI lo detecte. Generada el 2026-11-13.
 
-Colores funcionales nuevos, medidos antes de adoptarlos: `text.secondary #6B5650`, `border.control #8A766F`, `action.primaryHover #A62F22`, `action.primaryPressed #9A2B1F`, `surface.disabled #F0E4DA` con `text.disabled #7D6A63` (los controles deshabilitados están exentos del criterio 1.4.3; se exige 3:1), `border.subtle #EBD9CC` (solo decorativo, no informa nada). El anillo de foco es espresso sobre superficies claras y crema sobre espresso.
+Colores funcionales nuevos, medidos antes de adoptarlos: `text.secondary #6B5650`, `border.control #8A766F`, `action.primaryHover #A62F22`, `action.primaryPressed #9A2B1F`, `surface.disabled #F0E4DA` con `text.disabled #7D6A63` (los controles deshabilitados están exentos del criterio 1.4.3; se exige 3:1), `border.subtle #EBD9CC` (solo decorativo, no informa nada). El anillo de foco es espresso sobre superficies claras y crema sobre espresso. La casilla de verificación (`CheckboxField`, 2026-11-14) es nativa con `accent-color: action.primary`: su marca usa el par «action.primary (límite del botón)», ≥ 4,81:1 sobre las tres superficies claras.
 
 | Uso | Primer plano | Fondo | Relación | Mínimo | Resultado |
 |---|---|---|---|---|---|

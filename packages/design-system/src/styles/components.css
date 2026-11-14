@@ -109,6 +109,36 @@
   font-weight: var(--tv-type-label-weight);
 }
 
+/* ---------- Casilla de verificación ---------- */
+.tv-check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--tv-space-2);
+  align-items: center;
+}
+
+/* Casilla nativa con el color de acción (3:1 sobre las superficies claras). */
+.tv-check__input {
+  inline-size: var(--tv-size-icon);
+  block-size: var(--tv-size-icon);
+  margin: 0;
+  accent-color: var(--tv-color-action-primary);
+}
+
+.tv-check__label {
+  display: flex;
+  align-items: center;
+  min-height: var(--tv-touch-min);
+  cursor: pointer;
+}
+
+.tv-check__hint {
+  grid-column: 2;
+  color: var(--tv-color-text-secondary);
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+}
+
 /* ---------- Chip de estado ---------- */
 .tv-chip {
   display: inline-flex;

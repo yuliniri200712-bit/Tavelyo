@@ -8,6 +8,7 @@ export {
   type TavelyoButtonProps,
 } from './components/TavelyoButton.tsx';
 export { TextField, type TextFieldProps } from './components/TextField.tsx';
+export { CheckboxField, type CheckboxFieldProps } from './components/CheckboxField.tsx';
 export { StatusChip, type StatusChipProps, type StatusTone } from './components/StatusChip.tsx';
 export { Card, type CardProps } from './components/Card.tsx';
 export { ConfirmDialog, type ConfirmDialogProps } from './components/ConfirmDialog.tsx';

@@ -52,7 +52,7 @@ afterAll(async () => {
 describe('pasarelas de data-access contra los emuladores', () => {
   it('una contraseña incorrecta da invalid-credentials', async () => {
     const auth = createFirebaseAuthGateway(client.auth);
-    expect(await auth.signIn(waiter.email, 'incorrecta')).toEqual({
+    expect(await auth.signIn(waiter.email, 'incorrecta', { sharedDevice: true })).toEqual({
       ok: false,
       error: 'invalid-credentials',
     });
@@ -60,7 +60,7 @@ describe('pasarelas de data-access contra los emuladores', () => {
 
   it('un correo inexistente responde igual que uno registrado (sin enumeración)', async () => {
     const auth = createFirebaseAuthGateway(client.auth);
-    expect(await auth.signIn('nadie@example.test', 'x')).toEqual({
+    expect(await auth.signIn('nadie@example.test', 'x', { sharedDevice: true })).toEqual({
       ok: false,
       error: 'invalid-credentials',
     });
@@ -72,7 +72,7 @@ describe('pasarelas de data-access contra los emuladores', () => {
 
   it('inicia sesión, crea el perfil y, sin membresías, no ve empresas', async () => {
     const auth = createFirebaseAuthGateway(client.auth);
-    const signedIn = await auth.signIn(waiter.email, TEST_PASSWORD);
+    const signedIn = await auth.signIn(waiter.email, TEST_PASSWORD, { sharedDevice: true });
     expect(signedIn.ok && signedIn.value.uid).toBe(waiter.uid);
     expect(
       (await createProfileGateway(client.dataConnect).ensureProfile('Mesero de prueba')).ok,

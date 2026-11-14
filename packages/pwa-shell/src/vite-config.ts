@@ -16,18 +16,36 @@ const BRAND_ICONS_DIR = fileURLToPath(
 /** Un único `.env.local` en la raíz del repositorio sirve a las dos apps (ver `.env.example`). */
 const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 
-/** Sustituye `%TAVELYO_THEME_COLOR%` en index.html por el token, sin HEX sueltos. */
-function themeColorPlugin(): Plugin {
+const BUILD_ID = /^[\w.-]{1,64}$/;
+
+/**
+ * Identificador de la versión publicada (p. ej. el commit), en TAVELYO_BUILD_ID; «local» si no
+ * se indica o está vacía. Va en index.html, así que cada versión distinta genera un service worker nuevo.
+ */
+export function buildId(env: NodeJS.ProcessEnv = process.env): string {
+  // Vacía equivale a no indicada (habitual en CI).
+  const value = env['TAVELYO_BUILD_ID'] || 'local';
+  if (!BUILD_ID.test(value)) {
+    throw new Error('TAVELYO_BUILD_ID solo admite letras, cifras, «.», «_» y «-» (máx. 64).');
+  }
+  return value;
+}
+
+/** Sustituye en index.html el color del tema (token, sin HEX sueltos) y la versión. */
+function indexHtmlPlugin(): Plugin {
   return {
-    name: 'tavelyo-theme-color',
-    transformIndexHtml: (html) => html.replaceAll('%TAVELYO_THEME_COLOR%', THEME_COLOR),
+    name: 'tavelyo-index-html',
+    transformIndexHtml: (html) =>
+      html
+        .replaceAll('%TAVELYO_THEME_COLOR%', THEME_COLOR)
+        .replaceAll('%TAVELYO_BUILD_ID%', buildId()),
   };
 }
 
 /** Configuración de Vite común a `menu-web` y `operations`. */
 export function tavelyoViteConfig(app: TavelyoAppConfig): UserConfig {
   return {
-    plugins: [react(), themeColorPlugin(), VitePWA(pwaOptions(app))],
+    plugins: [react(), indexHtmlPlugin(), VitePWA(pwaOptions(app))],
     publicDir: BRAND_ICONS_DIR,
     envDir: REPO_ROOT,
     server: { port: app.port, strictPort: true },

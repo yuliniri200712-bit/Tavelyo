@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Card, TavelyoButton, TextField } from '@tavelyo/design-system';
+import { Card, CheckboxField, TavelyoButton, TextField } from '@tavelyo/design-system';
 import {
   AUTH_ERROR_MESSAGES,
   validateCredentials,
@@ -12,8 +12,11 @@ type Mode = 'sign-in' | 'reset';
 
 /** Acceso del personal con correo y contraseña (D-17). */
 export function SignInPage() {
-  const { signIn, sendPasswordReset } = useSession();
+  const { session, signIn, sendPasswordReset } = useSession();
   const [mode, setMode] = useState<Mode>('sign-in');
+  // Marcada por defecto: es la opción segura en la caja o la tablet de la sucursal (D-20).
+  const [sharedDevice, setSharedDevice] = useState(true);
+  const signedOutByInactivity = session.status === 'signed-out' && session.reason === 'inactivity';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldErrors, setFieldErrors] = useState<CredentialErrors>({});
@@ -31,7 +34,9 @@ export function SignInPage() {
     }
     setFieldErrors({});
     setBusy(true);
-    const result = await signIn(credentials.value.email, credentials.value.password);
+    const result = await signIn(credentials.value.email, credentials.value.password, {
+      sharedDevice,
+    });
     setBusy(false);
     if (!result.ok) {
       setFormError(AUTH_ERROR_MESSAGES[result.error]);
@@ -72,6 +77,11 @@ export function SignInPage() {
       title={mode === 'sign-in' ? 'Acceso del personal' : 'Recuperar contraseña'}
       headingLevel={2}
     >
+      {signedOutByInactivity && mode === 'sign-in' ? (
+        <p className="tv-form__notice" role="status">
+          Cerramos tu sesión tras 15 minutos sin uso. Vuelve a entrar para continuar.
+        </p>
+      ) : null}
       <form
         className="tv-form"
         noValidate
@@ -94,6 +104,14 @@ export function SignInPage() {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             {...(fieldErrors.password ? { error: fieldErrors.password } : {})}
+          />
+        ) : null}
+        {mode === 'sign-in' ? (
+          <CheckboxField
+            label="Equipo compartido"
+            hint="La sesión se borra al cerrar esta pestaña o la app. Desmárcala solo en tu propio teléfono."
+            checked={sharedDevice}
+            onChange={(event) => setSharedDevice(event.target.checked)}
           />
         ) : null}
         {formError ? (
