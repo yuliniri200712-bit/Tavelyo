@@ -16,6 +16,14 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.strict,
   {
+    // Archivos CommonJS (p. ej. tools/deepmerge-safe).
+    files: ['**/*.cjs'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: { module: 'writable', require: 'readonly' },
+    },
+  },
+  {
     rules: {
       // Los módulos se comunican por su API pública, nunca por sus internos (ADR-0010).
       'no-restricted-imports': [

@@ -1,0 +1,15 @@
+{
+  "name": "deepmerge",
+  "version": "4.3.1-tavelyo.1",
+  "private": true,
+  "description": "Sustituto local de deepmerge 4.3.1 sin la contaminación de prototipo GHSA-gcqx-w48m-w2h4 (solo herramientas de compilación)",
+  "license": "MIT",
+  "main": "index.cjs",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.cjs"
+    }
+  },
+  "types": "index.d.ts"
+}

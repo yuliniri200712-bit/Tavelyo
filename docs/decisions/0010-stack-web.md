@@ -76,6 +76,18 @@ Con `vite-plugin-pwa`, `npm audit` sube a **13 avisos (2 bajos, 11 moderados)**.
 
 Playwright: `@playwright/test` **1.64.1** y `@axe-core/playwright` **4.14.0** (la 1.65.1 es del 2026-11-13). Se fija también `playwright-core` 1.64.1 como dependencia de desarrollo para que `@axe-core/playwright` use la misma versión que `@playwright/test` (sin ello npm instalaba 1.65.1 y los tipos no coincidían).
 
+### Avisos de `npm audit` resueltos (2026-11-13)
+
+A petición del propietario se eliminan los 13 avisos. `npm audit fix --force` no sirve: bajaría `vite-plugin-pwa` a 1.1.0 y `typescript-eslint` a 8.36.0. En su lugar, `overrides` en el `package.json` raíz:
+
+| Paquete | Aviso | Solución |
+|---|---|---|
+| `minimatch` 10.2.6 (ESLint, `typescript-eslint`, `glob`) | GHSA-g3hv-75wg-m249 (< 11.0.1) | Forzado a **11.0.3** (2026-10-28) solo para versiones afectadas; `minimatch` 5.x de `filelist` no está afectado y no se toca |
+| `glob` 11.1.0 (`workbox-build`) | GHSA-3g3m-2fjr-6pw4 (≤ 14.0.1) | Forzado a **14.0.3** (2026-10-28). `workbox-build` solo usa `globSync`, que existe igual en la 14 |
+| `deepmerge` 4.3.1 (`@rollup/plugin-node-resolve`, dentro de `workbox-build`) | GHSA-gcqx-w48m-w2h4 (≤ 4.3.1, **sin versión corregida**; sin publicaciones desde 2023) | Sustituido por `tools/deepmerge-safe`: misma API y lógica que el original (MIT, licencia incluida), sin copiar `__proto__`, `constructor` ni `prototype` y definiendo propiedades con `defineProperty`. Probado (5 pruebas, incluida la contaminación de prototipo). Solo se usa al compilar el *service worker* |
+
+Resultado: `npm audit` → **0 vulnerabilidades**. Verificado con `npm run check` (174 pruebas), compilación de las dos PWA (mismas 22 entradas precacheadas que antes) y Playwright en los 5 navegadores (71 superadas, 4 omitidas, igual que antes). Revisar los `overrides` al actualizar ESLint, `typescript-eslint` o `vite-plugin-pwa`: cuando sus dependencias incluyan versiones corregidas, se eliminan.
+
 ## Verificación pendiente
 
 - Repetir la compatibilidad exacta de versiones al crear el monorepo en Fase 1 y fijar versiones con al menos dos semanas de publicadas.

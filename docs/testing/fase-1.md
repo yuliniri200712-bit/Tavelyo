@@ -43,6 +43,15 @@ Cobertura de `design-system`:
 
 Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo extensiones estáticas, rutas `/__/` excluidas, actualización con aviso), manifiesto (iconos declarados existen con el tamaño real leído del PNG), marco común (logotipo con texto alternativo, salto al contenido, aviso sin conexión, aviso de nueva versión) y rutas de ambas apps (catálogo y página no encontrada).
 
+## 2026-11-13 — Corrección de vulnerabilidades de dependencias
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Auditoría | `npm audit` | ✅ 0 vulnerabilidades (antes 13: 2 bajas, 11 moderadas) |
+| Conjunto completo | `npm run check` | ✅ 12 archivos, **174 pruebas** (5 nuevas de `tools/deepmerge-safe`) |
+| Compilación de las PWA | `npm run build` de cada app | ✅ 22 entradas precacheadas en cada una, igual que antes |
+| Navegadores | `npm run test:e2e` | ✅ 71 superadas, 4 omitidas (Tab en Safari), igual que antes |
+
 ## 2026-11-13 — Entornos (`packages/data-access`)
 
 `npm run check`: ✅ 11 archivos, **169 pruebas**. Nuevas: `parseFirebaseEnvironment` acepta una configuración completa; `.env.example` es válido y apunta a los emuladores; informa de todas las variables que faltan a la vez; rechaza un proyecto *demo* sin emuladores, un indicador de emuladores ambiguo y variables `VITE_*` con nombre de secreto.
