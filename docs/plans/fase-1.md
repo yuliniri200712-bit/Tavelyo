@@ -1,6 +1,6 @@
 # Plan de Fase 1 — Base
 
-Estado: **autorizada por el propietario el 2026-11-13.** Rama de trabajo: `fase-1-base`.
+Estado: **cerrada** con aprobación del propietario el 2026-11-14 e integrada en `main` (autorizada el 2026-11-13). Rama de trabajo: `fase-1-base`. Resultados: `progress.md` y `testing/fase-1.md`. Pendiente no bloqueante: revisión en iPhone.
 
 ## 1. Objetivo
 

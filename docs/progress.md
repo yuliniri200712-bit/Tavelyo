@@ -4,7 +4,9 @@
 
 ## Fase actual
 
-**Fase 1 — Base.** Autorizada por el propietario el 2026-11-13. Rama: `fase-1-base`. Plan: [`plans/fase-1.md`](plans/fase-1.md).
+**Ninguna fase en curso.** La Fase 2 no se empieza hasta que el propietario la autorice.
+
+**Fase 1 — Base: cerrada** con aprobación del propietario el 2026-11-14 e integrada en `main` (rama `fase-1-base`, plan [`plans/fase-1.md`](plans/fase-1.md)). Queda pendiente, sin bloquear, la revisión en un iPhone (instalación y VoiceOver).
 
 **Fase 0 — Análisis: cerrada** con aprobación del propietario el 2026-11-13 e integrada en `main`.
 
@@ -45,11 +47,11 @@ D-07 Cloud Functions con TypeScript · D-12 (fuente) Plus Jakarta Sans, OFL 1.1 
 
 ## Pendiente
 
-- Fase 1: cierre de la fase (resumen y aprobación del propietario). Queda sin probar el iPhone (instalación y VoiceOver) por no tener uno a mano; se propone hacerlo cuando esté disponible.
+- iPhone: instalación de las dos PWA y revisión con VoiceOver cuando el propietario tenga uno a mano (pendiente de la Fase 1, aprobado como no bloqueante).
 - Fases con cobros o comandas: decidir cómo se comporta el cierre por inactividad a mitad de una operación (hoy no hay ninguna) y si las pantallas de cocina quedan exentas.
 - Antes del primer despliegue (requiere autorización): verificar IAM de `executeGraphql`/suplantación en `tavelyo-e2b57`, sembrar el catálogo de roles y permisos en el entorno real (hoy solo lo hacen las pruebas), herramienta para conceder la afirmación `platform_operator` y empaquetado del backend para Cloud Build.
 - Validación de formularios en el cliente (pendiente dentro de ADR-0010; se decide en Fase 1 si hace falta).
-- Decisiones de negocio D-01, D-02, D-04 a D-06 y D-09 a D-11 (`requirements.md` §6). No bloquean la Fase 1.
+- Decisiones de negocio: D-01 resuelta en parte (Colombia, COP; falta D-01b, impuestos), D-02 (pasarela: el propietario busca proveedor), D-04 a D-06 y D-09 a D-11 (`requirements.md` §6).
 
 ## Bloqueos
 
