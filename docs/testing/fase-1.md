@@ -45,7 +45,7 @@ Pruebas nuevas: configuración del *service worker* (sin `runtimeCaching`, solo 
 
 ## 2026-11-13 — Navegadores (Playwright 1.64.1 + axe-core 4.14.0)
 
-Comando: `npm run test:e2e` (compila las dos apps y las sirve con `vite preview`). Matriz D-15: Chrome 1xx y Edge instalados (canales `chrome` y `msedge`), WebKit 27.2 de Playwright como Safari de escritorio, Chrome en Android emulado (Pixel 7) y Safari en iPhone emulado (iPhone 15).
+Comando: `npm run test:e2e` (compila las dos apps y las sirve con `vite preview`). Matriz D-15: Chrome 157.0.8103.78 y Edge 157.0.4341.46 instalados (canales `chrome` y `msedge`), WebKit 27.2 de Playwright como Safari de escritorio, Chrome en Android emulado (Pixel 7) y Safari en iPhone emulado (iPhone 15).
 
 | Prueba (en cada app) | Resultado |
 |---|---|
