@@ -1,4 +1,9 @@
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https';
+import type {
+  AuthorizeQuoteResponse,
+  JoinTableSessionResponse,
+  QuoteOrderResponse,
+} from '@tavelyo/contracts';
 import type { RevokeMemberResult } from '../members/revoke-member.ts';
 import type { ProvisionTenantResult } from '../provisioning/provision-tenant.ts';
 import { failure, type Actor, type Outcome } from '../shared/outcome.ts';
@@ -8,6 +13,9 @@ type UseCase<T> = (actor: Actor, data: unknown) => Promise<Outcome<T>>;
 export interface UseCases {
   readonly revokeMember: UseCase<RevokeMemberResult>;
   readonly provisionTenant: UseCase<ProvisionTenantResult>;
+  readonly joinTableSession: UseCase<JoinTableSessionResponse>;
+  readonly quoteOrder: UseCase<QuoteOrderResponse>;
+  readonly authorizeQuote: UseCase<AuthorizeQuoteResponse>;
 }
 
 /** Quien llama, si Cloud Functions verificó su ID token; null si no hay sesión. */
@@ -44,5 +52,9 @@ export function createCallables(useCases: UseCases) {
   return {
     revokeMember: onCall(OPTIONS, (request) => handle(request, useCases.revokeMember)),
     provisionTenant: onCall(OPTIONS, (request) => handle(request, useCases.provisionTenant)),
+    // Del cliente en la mesa: exigen sesión de Firebase Auth, también anónima (ADR-0011).
+    joinTableSession: onCall(OPTIONS, (request) => handle(request, useCases.joinTableSession)),
+    quoteOrder: onCall(OPTIONS, (request) => handle(request, useCases.quoteOrder)),
+    authorizeQuote: onCall(OPTIONS, (request) => handle(request, useCases.authorizeQuote)),
   };
 }

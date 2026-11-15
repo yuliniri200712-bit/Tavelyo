@@ -20,6 +20,7 @@ import {
   provisionTenant,
   seedAuthorizationCatalog,
 } from './support/provisioning.ts';
+import { buildFixture, qrOf, type Fixture, type LayoutData } from './support/catalog-fixture.ts';
 
 type Vars = Record<string, unknown>;
 type Kind = 'query' | 'mutation';
@@ -32,20 +33,6 @@ interface Users {
   kitchenA: TestUser;
   cashierA: TestUser;
   ownerB: TestUser;
-}
-
-/** Datos de una empresa creados con las propias operaciones del conector. */
-interface Fixture {
-  readonly tenantId: string;
-  readonly branchId: string;
-  readonly taxRuleId: string;
-  readonly categoryId: string;
-  readonly productId: string;
-  readonly groupId: string;
-  readonly optionId: string;
-  readonly sectorId: string;
-  readonly tableId: string;
-  readonly qrPublicId: string;
 }
 
 let u: Users;
@@ -85,111 +72,6 @@ async function expectDenied(
 
 const insertedId = (data: Record<string, unknown>, field: string): string =>
   (data[field] as { id: string }).id;
-
-async function buildFixture(owner: TestUser, tenantId: string, branchId: string): Promise<Fixture> {
-  const tax = await ok(owner, 'mutation', 'CreateTaxRule', {
-    tenantId,
-    name: 'Impoconsumo',
-    rateBp: 800,
-  });
-  const taxRuleId = insertedId(tax, 'taxRule_insert');
-  const categoryId = insertedId(
-    await ok(owner, 'mutation', 'CreateCategory', { tenantId, name: 'Platos fuertes', sort: 1 }),
-    'category_insert',
-  );
-  const productId = insertedId(
-    await ok(owner, 'mutation', 'CreateProduct', {
-      tenantId,
-      categoryId,
-      taxRuleId,
-      name: 'Bandeja paisa',
-      description: 'Frijoles, arroz, carne molida, chicharrón y huevo',
-      allergensDeclared: ['huevo'],
-      sort: 1,
-    }),
-    'product_insert',
-  );
-  const groupId = insertedId(
-    await ok(owner, 'mutation', 'CreateModifierGroup', {
-      tenantId,
-      productId,
-      name: 'Término de la carne',
-      minSelect: 1,
-      maxSelect: 1,
-      sort: 1,
-    }),
-    'modifierGroup_insert',
-  );
-  const optionId = insertedId(
-    await ok(owner, 'mutation', 'CreateModifierOption', {
-      tenantId,
-      groupId,
-      name: 'Bien asada',
-      priceDeltaMinor: '0',
-      sort: 1,
-    }),
-    'modifierOption_insert',
-  );
-  await ok(owner, 'mutation', 'SetProductAvailability', {
-    tenantId,
-    branchId,
-    productId,
-    available: true,
-    daysMask: null,
-    startMinute: null,
-    endMinute: null,
-  });
-  await ok(owner, 'mutation', 'ChangePrice', {
-    tenantId,
-    branchId,
-    productId,
-    amountMinor: '3200000',
-    currency: 'COP',
-  });
-  const sectorId = insertedId(
-    await ok(owner, 'mutation', 'CreateSector', { tenantId, branchId, name: 'Salón', sort: 1 }),
-    'sector_insert',
-  );
-  const tableId = insertedId(
-    await ok(owner, 'mutation', 'CreateTable', {
-      tenantId,
-      branchId,
-      sectorId,
-      code: 'M1',
-      seats: 4,
-    }),
-    'diningTable_insert',
-  );
-  return {
-    tenantId,
-    branchId,
-    taxRuleId,
-    categoryId,
-    productId,
-    groupId,
-    optionId,
-    sectorId,
-    tableId,
-    qrPublicId: await qrOf(owner, tenantId, branchId, tableId),
-  };
-}
-
-interface LayoutData {
-  sectors: Array<{
-    id: string;
-    archivedAt: string | null;
-    diningTables_on_sector: Array<{ id: string; qrPublicId: string; archivedAt: string | null }>;
-  }>;
-}
-
-async function qrOf(user: TestUser, tenantId: string, branchId: string, tableId: string) {
-  const layout = await ok<LayoutData>(user, 'query', 'BranchLayout', { tenantId, branchId });
-  const table = layout.sectors
-    .flatMap((sector) => sector.diningTables_on_sector)
-    .find((t) => t.id === tableId);
-  if (!table) throw new Error('Mesa no encontrada en BranchLayout');
-  return table.qrPublicId;
-}
 
 async function menuProducts(qrPublicId: string): Promise<string[] | null> {
   const data = expectOk(

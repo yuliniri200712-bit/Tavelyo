@@ -162,7 +162,8 @@ describe('NO_ACCESS: solo el servidor', () => {
       );
     }
     expect(
-      (await query(owner, 'ServerOpenSessionByQr', { qrPublicId })).errors.length,
+      (await query(owner, 'ServerOpenSessionByQr', { qrPublicId, authUid: owner.uid })).errors
+        .length,
     ).toBeGreaterThan(0);
   });
 });
@@ -185,7 +186,7 @@ describe('sesión de mesa y participantes', () => {
       await server<{ diningTables: Array<{ tableSessions_on_table: Array<{ id: string }> }> }>(
         'query',
         'ServerOpenSessionByQr',
-        { qrPublicId },
+        { qrPublicId, authUid: customer.uid },
       ),
       'Sesión abierta por QR',
     );
@@ -229,7 +230,7 @@ describe('sesión de mesa y participantes', () => {
       await server<{ diningTables: Array<{ tableSessions_on_table: Array<{ id: string }> }> }>(
         'query',
         'ServerOpenSessionByQr',
-        { qrPublicId },
+        { qrPublicId, authUid: customer.uid },
       ),
       'Sesión siguiente',
     ).diningTables[0]?.tableSessions_on_table[0]?.id;

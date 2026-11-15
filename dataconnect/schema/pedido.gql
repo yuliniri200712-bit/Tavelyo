@@ -10,7 +10,8 @@ enum OrderQuoteStatus {
 
 """
 Resumen de un carrito validado por el servidor: precios vigentes, impuesto contenido y total.
-idempotencyKey evita duplicados por doble pulsación o reintento del mismo participante.
+idempotencyKey evita duplicados por doble pulsación o reintento del mismo participante. Solo se
+guarda cuando el total que vio el cliente coincide con el del servidor (caso 5).
 """
 type OrderQuote
   @table
@@ -29,6 +30,8 @@ type OrderQuote
       references: ["id", "tenantId", "branchId"]
     )
   idempotencyKey: String!
+  "Huella SHA-256 del contenido (líneas, versiones de precio, opciones, notas y total): identifica el resumen para la Fase 3 y detecta una clave reutilizada con otro contenido."
+  fingerprint: String!
   currency: String! @col(dataType: "char(3)")
   subtotalMinor: Int64!
   taxMinor: Int64!

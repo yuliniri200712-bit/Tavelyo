@@ -105,6 +105,22 @@ export class Money {
   }
 
   /**
+   * Impuesto contenido en un importe que ya lo incluye (D-01b): `importe × tasa / (1 + tasa)`,
+   * con la tasa en puntos básicos y redondeo explícito. El importe sin impuesto es
+   * `this.minus(impuesto)`, así que base más impuesto suman siempre el importe exacto.
+   */
+  includedTax(basisPoints: bigint | number, mode: RoundingMode): Money {
+    const bp = toInteger(basisPoints, 'basisPoints');
+    if (bp < 0n) {
+      throw new RangeError('La tasa no puede ser negativa');
+    }
+    return new Money(
+      divideRounded(this.amountMinor * bp, BASIS_POINTS_PER_UNIT + bp, mode),
+      this.currency,
+    );
+  }
+
+  /**
    * Reparte el importe en partes proporcionales a `weights` cuya suma es **exactamente**
    * el total. Cada parte recibe primero su cociente entero; las unidades menores que sobran
    * se asignan una a una a las partes con mayor resto y, a igual resto, a la de menor índice.

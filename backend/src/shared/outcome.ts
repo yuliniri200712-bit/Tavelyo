@@ -2,7 +2,13 @@ import type { Result } from '@tavelyo/core';
 
 /** Fallas esperadas que el backend devuelve a quien llama. Los errores de programación se lanzan. */
 export type FailureCode =
-  'unauthenticated' | 'permission-denied' | 'invalid-argument' | 'unavailable';
+  | 'unauthenticated'
+  | 'permission-denied'
+  | 'invalid-argument'
+  | 'not-found'
+  | 'failed-precondition'
+  | 'resource-exhausted'
+  | 'unavailable';
 
 export interface Failure {
   readonly code: FailureCode;

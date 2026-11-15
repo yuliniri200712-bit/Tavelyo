@@ -27,7 +27,7 @@ Datos de cada empresa y sucursal · cuentas y operaciones de pago · datos perso
 | T8 | Escalamiento de rol mediante invitación o asignación masiva de campos | E | Alto | Validación de `rank`; listas explícitas de campos editables | Caso 1–2 |
 | T9 | Fuga de credenciales de base de datos o claves de pasarela en la app o el repositorio | I | Crítico | Gestor de secretos, cuentas de servicio por función, revisión de secretos en CI | CI |
 | T10 | Credenciales de servidor eluden las restricciones del conector | E | Alto | Controles explícitos en el backend y pruebas de autorización del propio backend | Caso 1 |
-| T11 | Abuso de QR o sesiones anónimas (spam de pedidos, enumeración) | D | Medio | Límites de solicitudes, App Check como capa adicional, expiración | Fase 2 |
+| T11 | Abuso de QR o sesiones anónimas (spam de pedidos, enumeración) | D | Medio | Límites de solicitudes, App Check como capa adicional, expiración | Fase 2: ✅ mesa abierta por el mesero, participación con vencimiento, máximo de participantes, expulsión, rotación del QR y límites de solicitudes en la base (ADR-0011). App Check, pendiente de aprobación |
 | T12 | Logs con tokens, datos de tarjeta o personales | I | Alto | Política de logs y revisión | Revisión de código |
 | T13 | Modificación del registro de auditoría por roles de negocio | R | Medio | Solo inserción; sin permisos de actualización o borrado | Fase 1 |
 | T14 | Dos cajeros capturan o cierran la misma cuenta a la vez | T | Alto | Versionado optimista / bloqueo de cuenta al cerrar | Caso 9 |

@@ -6,6 +6,14 @@ const MembershipStatus = {
 }
 exports.MembershipStatus = MembershipStatus;
 
+const OrderQuoteStatus = {
+  QUOTED: "QUOTED",
+  AUTHORIZED: "AUTHORIZED",
+  DECLINED: "DECLINED",
+  EXPIRED: "EXPIRED",
+}
+exports.OrderQuoteStatus = OrderQuoteStatus;
+
 const connectorConfig = {
   connector: 'tavelyo',
   service: 'tavelyo',
@@ -583,6 +591,108 @@ exports.serverInsertParticipantRef = serverInsertParticipantRef;
 exports.serverInsertParticipant = function serverInsertParticipant(dcOrVars, vars) {
   const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
   return executeMutation(serverInsertParticipantRef(dcInstance, inputVars));
+}
+;
+
+const serverRenewParticipantRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerRenewParticipant', inputVars);
+}
+serverRenewParticipantRef.operationName = 'ServerRenewParticipant';
+exports.serverRenewParticipantRef = serverRenewParticipantRef;
+
+exports.serverRenewParticipant = function serverRenewParticipant(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverRenewParticipantRef(dcInstance, inputVars));
+}
+;
+
+const serverQuoteContextRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerQuoteContext', inputVars);
+}
+serverQuoteContextRef.operationName = 'ServerQuoteContext';
+exports.serverQuoteContextRef = serverQuoteContextRef;
+
+exports.serverQuoteContext = function serverQuoteContext(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverQuoteContextRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverProductsForQuoteRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerProductsForQuote', inputVars);
+}
+serverProductsForQuoteRef.operationName = 'ServerProductsForQuote';
+exports.serverProductsForQuoteRef = serverProductsForQuoteRef;
+
+exports.serverProductsForQuote = function serverProductsForQuote(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverProductsForQuoteRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverQuoteByKeyRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerQuoteByKey', inputVars);
+}
+serverQuoteByKeyRef.operationName = 'ServerQuoteByKey';
+exports.serverQuoteByKeyRef = serverQuoteByKeyRef;
+
+exports.serverQuoteByKey = function serverQuoteByKey(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverQuoteByKeyRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverQuoteForPaymentRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerQuoteForPayment', inputVars);
+}
+serverQuoteForPaymentRef.operationName = 'ServerQuoteForPayment';
+exports.serverQuoteForPaymentRef = serverQuoteForPaymentRef;
+
+exports.serverQuoteForPayment = function serverQuoteForPayment(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverQuoteForPaymentRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverSetQuotePaymentRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerSetQuotePayment', inputVars);
+}
+serverSetQuotePaymentRef.operationName = 'ServerSetQuotePayment';
+exports.serverSetQuotePaymentRef = serverSetQuotePaymentRef;
+
+exports.serverSetQuotePayment = function serverSetQuotePayment(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverSetQuotePaymentRef(dcInstance, inputVars));
+}
+;
+
+const serverHitRateLimitRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerHitRateLimit', inputVars);
+}
+serverHitRateLimitRef.operationName = 'ServerHitRateLimit';
+exports.serverHitRateLimitRef = serverHitRateLimitRef;
+
+exports.serverHitRateLimit = function serverHitRateLimit(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverHitRateLimitRef(dcInstance, inputVars));
 }
 ;
 

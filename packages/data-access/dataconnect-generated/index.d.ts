@@ -13,6 +13,13 @@ export enum MembershipStatus {
   REVOKED = "REVOKED",
 };
 
+export enum OrderQuoteStatus {
+  QUOTED = "QUOTED",
+  AUTHORIZED = "AUTHORIZED",
+  DECLINED = "DECLINED",
+  EXPIRED = "EXPIRED",
+};
+
 
 
 export interface AddMemberData {
@@ -476,6 +483,11 @@ export interface PublicMenuVariables {
   qrPublicId: UUIDString;
 }
 
+export interface RateLimitHit_Key {
+  id: UUIDString;
+  __typename?: 'RateLimitHit_Key';
+}
+
 export interface RemoveParticipantData {
   sessionParticipant_update?: SessionParticipant_Key | null;
   auditEvent_insert: AuditEvent_Key;
@@ -525,8 +537,25 @@ export interface Sector_Key {
   __typename?: 'Sector_Key';
 }
 
+export interface ServerHitRateLimitData {
+  rateLimitHit_insert: RateLimitHit_Key;
+  query?: {
+    rateLimitHits: ({
+      _count: number;
+    })[];
+  };
+}
+
+export interface ServerHitRateLimitVariables {
+  scope: string;
+  subject: string;
+  since: TimestampString;
+  limit: number;
+}
+
 export interface ServerInsertParticipantData {
   sessionParticipant_insert: SessionParticipant_Key;
+  auditEvent_insert: AuditEvent_Key;
 }
 
 export interface ServerInsertParticipantVariables {
@@ -542,14 +571,162 @@ export interface ServerOpenSessionByQrData {
     id: UUIDString;
     tenantId: UUIDString;
     branchId: UUIDString;
+    code: string;
     tableSessions_on_table: ({
       id: UUIDString;
+      mine: ({
+        id: UUIDString;
+        expiresAt: TimestampString;
+        removedAt?: TimestampString | null;
+      } & SessionParticipant_Key)[];
+      active: ({
+        _count: number;
+      })[];
     } & TableSession_Key)[];
   } & DiningTable_Key)[];
 }
 
 export interface ServerOpenSessionByQrVariables {
   qrPublicId: UUIDString;
+  authUid: string;
+}
+
+export interface ServerProductsForQuoteData {
+  productBranches: ({
+    productId: UUIDString;
+    available: boolean;
+    daysMask?: number | null;
+    startMinute?: number | null;
+    endMinute?: number | null;
+    currentPrice?: {
+      id: UUIDString;
+      amountMinor: Int64String;
+      currency: string;
+    } & Price_Key;
+    product: {
+      name: string;
+      archivedAt?: TimestampString | null;
+      category: {
+        archivedAt?: TimestampString | null;
+      };
+      taxRule?: {
+        rateBp: number;
+        archivedAt?: TimestampString | null;
+      };
+      modifierGroups_on_product: ({
+        id: UUIDString;
+        minSelect: number;
+        maxSelect: number;
+        modifierOptions_on_group: ({
+          id: UUIDString;
+          name: string;
+          priceDeltaMinor: Int64String;
+        } & ModifierOption_Key)[];
+      } & ModifierGroup_Key)[];
+    };
+  })[];
+}
+
+export interface ServerProductsForQuoteVariables {
+  branchId: UUIDString;
+  productIds: UUIDString[];
+}
+
+export interface ServerQuoteByKeyData {
+  orderQuotes: ({
+    id: UUIDString;
+    fingerprint: string;
+    status: OrderQuoteStatus;
+    currency: string;
+    subtotalMinor: Int64String;
+    taxMinor: Int64String;
+    totalMinor: Int64String;
+    expiresAt: TimestampString;
+    orderQuoteLines_on_quote: ({
+      position: number;
+      productId: UUIDString;
+      priceId: UUIDString;
+      productNameSnapshot: string;
+      quantity: number;
+      unitPriceMinor: Int64String;
+      modifiersSnapshot?: string[] | null;
+      modifiersMinor: Int64String;
+      lineTotalMinor: Int64String;
+      taxMinor: Int64String;
+      note?: string | null;
+    })[];
+  } & OrderQuote_Key)[];
+}
+
+export interface ServerQuoteByKeyVariables {
+  participantId: UUIDString;
+  idempotencyKey: string;
+}
+
+export interface ServerQuoteContextData {
+  sessionParticipants: ({
+    id: UUIDString;
+    tenantId: UUIDString;
+    branchId: UUIDString;
+    session: {
+      table: {
+        sector: {
+          branch: {
+            currency: string;
+            timezone: string;
+            status: BranchStatus;
+            tenant: {
+              status: TenantStatus;
+            };
+          };
+        };
+      };
+    };
+  } & SessionParticipant_Key)[];
+}
+
+export interface ServerQuoteContextVariables {
+  sessionId: UUIDString;
+  authUid: string;
+}
+
+export interface ServerQuoteForPaymentData {
+  orderQuotes: ({
+    id: UUIDString;
+    tenantId: UUIDString;
+    status: OrderQuoteStatus;
+    currency: string;
+    totalMinor: Int64String;
+    expiresAt: TimestampString;
+    paymentRef?: string | null;
+  } & OrderQuote_Key)[];
+}
+
+export interface ServerQuoteForPaymentVariables {
+  quoteId: UUIDString;
+  authUid: string;
+}
+
+export interface ServerRenewParticipantData {
+  sessionParticipant_update?: SessionParticipant_Key | null;
+}
+
+export interface ServerRenewParticipantVariables {
+  participantId: UUIDString;
+  expiresAt: TimestampString;
+}
+
+export interface ServerSetQuotePaymentData {
+  orderQuote_update?: OrderQuote_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerSetQuotePaymentVariables {
+  quoteId: UUIDString;
+  tenantId: UUIDString;
+  authUid: string;
+  status: OrderQuoteStatus;
+  paymentRef: string;
 }
 
 export interface SessionParticipant_Key {
@@ -1261,6 +1438,90 @@ export const serverInsertParticipantRef: ServerInsertParticipantRef;
 
 export function serverInsertParticipant(vars: ServerInsertParticipantVariables): MutationPromise<ServerInsertParticipantData, ServerInsertParticipantVariables>;
 export function serverInsertParticipant(dc: DataConnect, vars: ServerInsertParticipantVariables): MutationPromise<ServerInsertParticipantData, ServerInsertParticipantVariables>;
+
+interface ServerRenewParticipantRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerRenewParticipantVariables): MutationRef<ServerRenewParticipantData, ServerRenewParticipantVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerRenewParticipantVariables): MutationRef<ServerRenewParticipantData, ServerRenewParticipantVariables>;
+  operationName: string;
+}
+export const serverRenewParticipantRef: ServerRenewParticipantRef;
+
+export function serverRenewParticipant(vars: ServerRenewParticipantVariables): MutationPromise<ServerRenewParticipantData, ServerRenewParticipantVariables>;
+export function serverRenewParticipant(dc: DataConnect, vars: ServerRenewParticipantVariables): MutationPromise<ServerRenewParticipantData, ServerRenewParticipantVariables>;
+
+interface ServerQuoteContextRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerQuoteContextVariables): QueryRef<ServerQuoteContextData, ServerQuoteContextVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerQuoteContextVariables): QueryRef<ServerQuoteContextData, ServerQuoteContextVariables>;
+  operationName: string;
+}
+export const serverQuoteContextRef: ServerQuoteContextRef;
+
+export function serverQuoteContext(vars: ServerQuoteContextVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteContextData, ServerQuoteContextVariables>;
+export function serverQuoteContext(dc: DataConnect, vars: ServerQuoteContextVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteContextData, ServerQuoteContextVariables>;
+
+interface ServerProductsForQuoteRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerProductsForQuoteVariables): QueryRef<ServerProductsForQuoteData, ServerProductsForQuoteVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerProductsForQuoteVariables): QueryRef<ServerProductsForQuoteData, ServerProductsForQuoteVariables>;
+  operationName: string;
+}
+export const serverProductsForQuoteRef: ServerProductsForQuoteRef;
+
+export function serverProductsForQuote(vars: ServerProductsForQuoteVariables, options?: ExecuteQueryOptions): QueryPromise<ServerProductsForQuoteData, ServerProductsForQuoteVariables>;
+export function serverProductsForQuote(dc: DataConnect, vars: ServerProductsForQuoteVariables, options?: ExecuteQueryOptions): QueryPromise<ServerProductsForQuoteData, ServerProductsForQuoteVariables>;
+
+interface ServerQuoteByKeyRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerQuoteByKeyVariables): QueryRef<ServerQuoteByKeyData, ServerQuoteByKeyVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerQuoteByKeyVariables): QueryRef<ServerQuoteByKeyData, ServerQuoteByKeyVariables>;
+  operationName: string;
+}
+export const serverQuoteByKeyRef: ServerQuoteByKeyRef;
+
+export function serverQuoteByKey(vars: ServerQuoteByKeyVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteByKeyData, ServerQuoteByKeyVariables>;
+export function serverQuoteByKey(dc: DataConnect, vars: ServerQuoteByKeyVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteByKeyData, ServerQuoteByKeyVariables>;
+
+interface ServerQuoteForPaymentRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerQuoteForPaymentVariables): QueryRef<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerQuoteForPaymentVariables): QueryRef<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
+  operationName: string;
+}
+export const serverQuoteForPaymentRef: ServerQuoteForPaymentRef;
+
+export function serverQuoteForPayment(vars: ServerQuoteForPaymentVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
+export function serverQuoteForPayment(dc: DataConnect, vars: ServerQuoteForPaymentVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
+
+interface ServerSetQuotePaymentRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerSetQuotePaymentVariables): MutationRef<ServerSetQuotePaymentData, ServerSetQuotePaymentVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerSetQuotePaymentVariables): MutationRef<ServerSetQuotePaymentData, ServerSetQuotePaymentVariables>;
+  operationName: string;
+}
+export const serverSetQuotePaymentRef: ServerSetQuotePaymentRef;
+
+export function serverSetQuotePayment(vars: ServerSetQuotePaymentVariables): MutationPromise<ServerSetQuotePaymentData, ServerSetQuotePaymentVariables>;
+export function serverSetQuotePayment(dc: DataConnect, vars: ServerSetQuotePaymentVariables): MutationPromise<ServerSetQuotePaymentData, ServerSetQuotePaymentVariables>;
+
+interface ServerHitRateLimitRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerHitRateLimitVariables): MutationRef<ServerHitRateLimitData, ServerHitRateLimitVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerHitRateLimitVariables): MutationRef<ServerHitRateLimitData, ServerHitRateLimitVariables>;
+  operationName: string;
+}
+export const serverHitRateLimitRef: ServerHitRateLimitRef;
+
+export function serverHitRateLimit(vars: ServerHitRateLimitVariables): MutationPromise<ServerHitRateLimitData, ServerHitRateLimitVariables>;
+export function serverHitRateLimit(dc: DataConnect, vars: ServerHitRateLimitVariables): MutationPromise<ServerHitRateLimitData, ServerHitRateLimitVariables>;
 
 interface CreateBranchRef {
   /* Allow users to create refs without passing in DataConnect */

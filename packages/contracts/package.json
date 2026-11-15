@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Contratos compartidos entre las apps, el backend y los datos: catálogo de roles y permisos",
+  "description": "Contratos compartidos entre las apps, el backend y los datos: roles y permisos, API del cliente y pasarela de pago",
   "exports": {
     ".": "./src/index.ts"
   },

@@ -1,26 +1,50 @@
 # Operaciones solo de servidor (ADR-0011): @auth(level: NO_ACCESS). Solo las ejecuta el Admin SDK
 # del backend, después de sus propias comprobaciones; ningún cliente ni miembro del personal puede.
+# Toda variable usada en un filtro es obligatoria: una variable omitida anula su filtro.
 
-# Sesión abierta de la mesa de un QR (para unirse a ella).
-query ServerOpenSessionByQr($qrPublicId: UUID!) @auth(level: NO_ACCESS) {
-  diningTables(where: { qrPublicId: { eq: $qrPublicId }, archivedAt: { isNull: true } }, limit: 1) {
+# Mesa de un QR con su sesión abierta, la participación de quien se une y cuántas hay vigentes.
+# Nada si la mesa o su sector están archivados, la sucursal no está activa o la empresa está
+# suspendida.
+query ServerOpenSessionByQr($qrPublicId: UUID!, $authUid: String!) @auth(level: NO_ACCESS) {
+  diningTables(
+    where: {
+      qrPublicId: { eq: $qrPublicId }
+      archivedAt: { isNull: true }
+      sector: {
+        archivedAt: { isNull: true }
+        branch: { status: { eq: ACTIVE }, tenant: { status: { eq: ACTIVE } } }
+      }
+    }
+    limit: 1
+  ) {
     id
     tenantId
     branchId
+    code
     tableSessions_on_table(where: { status: { eq: OPEN } }, limit: 1) {
       id
+      mine: sessionParticipants_on_session(where: { authUid: { eq: $authUid } }, limit: 1) {
+        id
+        expiresAt
+        removedAt
+      }
+      active: sessionParticipants_on_session(
+        where: { removedAt: { isNull: true }, expiresAt: { gt_expr: "request.time" } }
+      ) {
+        _count
+      }
     }
   }
 }
 
-# Alta de un participante en una sesión (lo decide joinTableSession).
+# Alta de un participante (lo decide joinTableSession), auditada con el uid anónimo del cliente.
 mutation ServerInsertParticipant(
   $tenantId: UUID!
   $branchId: UUID!
   $sessionId: UUID!
   $authUid: String!
   $expiresAt: Timestamp!
-) @auth(level: NO_ACCESS) {
+) @auth(level: NO_ACCESS) @transaction {
   sessionParticipant_insert(
     data: {
       tenantId: $tenantId
@@ -30,4 +54,186 @@ mutation ServerInsertParticipant(
       expiresAt: $expiresAt
     }
   )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "session_participant.join"
+      resourceType: "table_session"
+      resourceId_expr: "vars.sessionId"
+    }
+  )
+}
+
+# Renueva la participación vencida de quien vuelve a escanear la mesa todavía abierta.
+mutation ServerRenewParticipant($participantId: UUID!, $expiresAt: Timestamp!)
+@auth(level: NO_ACCESS) {
+  sessionParticipant_update(id: $participantId, data: { expiresAt: $expiresAt })
+}
+
+# Participación vigente de un cliente en una sesión abierta, con la sucursal de la mesa.
+query ServerQuoteContext($sessionId: UUID!, $authUid: String!) @auth(level: NO_ACCESS) {
+  sessionParticipants(
+    where: {
+      _and: [
+        { sessionId: { eq: $sessionId } }
+        { authUid: { eq: $authUid } }
+        { removedAt: { isNull: true } }
+        { expiresAt: { gt_expr: "request.time" } }
+        { session: { status: { eq: OPEN } } }
+      ]
+    }
+    limit: 1
+  ) {
+    id
+    tenantId
+    branchId
+    session {
+      table {
+        sector {
+          branch {
+            currency
+            timezone
+            status
+            tenant {
+              status
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+# Productos pedidos, tal como están ahora en la sucursal (disponibilidad, horario, precio vigente,
+# impuesto y opciones activas). El backend decide con esto; nunca con lo que envía el cliente.
+query ServerProductsForQuote($branchId: UUID!, $productIds: [UUID!]!) @auth(level: NO_ACCESS) {
+  productBranches(where: { branchId: { eq: $branchId }, productId: { in: $productIds } }) {
+    productId
+    available
+    daysMask
+    startMinute
+    endMinute
+    currentPrice {
+      id
+      amountMinor
+      currency
+    }
+    product {
+      name
+      archivedAt
+      category {
+        archivedAt
+      }
+      taxRule {
+        rateBp
+        archivedAt
+      }
+      modifierGroups_on_product(where: { archivedAt: { isNull: true } }) {
+        id
+        minSelect
+        maxSelect
+        modifierOptions_on_group(where: { archivedAt: { isNull: true } }) {
+          id
+          name
+          priceDeltaMinor
+        }
+      }
+    }
+  }
+}
+
+# Resumen ya guardado con la misma clave de idempotencia (doble pulsación o reintento).
+query ServerQuoteByKey($participantId: UUID!, $idempotencyKey: String!) @auth(level: NO_ACCESS) {
+  orderQuotes(
+    where: { participantId: { eq: $participantId }, idempotencyKey: { eq: $idempotencyKey } }
+    limit: 1
+  ) {
+    id
+    fingerprint
+    status
+    currency
+    subtotalMinor
+    taxMinor
+    totalMinor
+    expiresAt
+    orderQuoteLines_on_quote(orderBy: [{ position: ASC }]) {
+      position
+      productId
+      priceId
+      productNameSnapshot
+      quantity
+      unitPriceMinor
+      modifiersSnapshot
+      modifiersMinor
+      lineTotalMinor
+      taxMinor
+      note
+    }
+  }
+}
+
+# El resumen con sus líneas lo guarda el backend con executeGraphql (documento fijo en
+# backend/src/data/order-quotes.ts): el SDK web generado no admite listas de tipo _Data.
+
+# Resumen de un cliente para autorizar su pago: solo el suyo, con la mesa todavía abierta.
+query ServerQuoteForPayment($quoteId: UUID!, $authUid: String!) @auth(level: NO_ACCESS) {
+  orderQuotes(
+    where: {
+      _and: [
+        { id: { eq: $quoteId } }
+        {
+          participant: {
+            authUid: { eq: $authUid }
+            removedAt: { isNull: true }
+            expiresAt: { gt_expr: "request.time" }
+          }
+        }
+        { session: { status: { eq: OPEN } } }
+      ]
+    }
+    limit: 1
+  ) {
+    id
+    tenantId
+    status
+    currency
+    totalMinor
+    expiresAt
+    paymentRef
+  }
+}
+
+# Resultado de la autorización (simulada en la Fase 2), auditado.
+mutation ServerSetQuotePayment(
+  $quoteId: UUID!
+  $tenantId: UUID!
+  $authUid: String!
+  $status: OrderQuoteStatus!
+  $paymentRef: String!
+) @auth(level: NO_ACCESS) @transaction {
+  orderQuote_update(id: $quoteId, data: { status: $status, paymentRef: $paymentRef })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "order_quote.payment"
+      resourceType: "order_quote"
+      resourceId_expr: "vars.quoteId"
+    }
+  )
+}
+
+# Admite una solicitud si en la ventana hay menos de $limit admitidas; si no, la rechaza y la
+# transacción se revierte (la rechazada no cuenta). El paso query no ve la fila que se inserta.
+mutation ServerHitRateLimit($scope: String!, $subject: String!, $since: Timestamp!, $limit: Int!)
+@auth(level: NO_ACCESS)
+@transaction {
+  rateLimitHit_insert(data: { scope: $scope, subject: $subject })
+  query {
+    rateLimitHits(where: { scope: { eq: $scope }, subject: { eq: $subject }, at: { gt: $since } })
+      @check(expr: "this[0]._count < vars.limit", message: "Límite de solicitudes superado") {
+      _count
+    }
+  }
 }
