@@ -10,3 +10,5 @@ export {
   createTenancyGateway,
   mapDataError,
 } from './sql-connect-gateways.ts';
+export { mapCommandError, type CommandError } from './command-errors.ts';
+export { createFloorAdminGateway } from './floor-gateway.ts';

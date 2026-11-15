@@ -48,3 +48,13 @@ Hallazgo: en SQL Connect **una variable omitida o nula en un filtro anula ese fi
 
 - Recorridos en navegador y en el Android real: llegan con las pantallas (bloques 4 a 7).
 - Servicio real de SQL Connect y Cloud Functions: no hay despliegue autorizado.
+
+## 2026-11-15 — Bloque 4a: sectores, mesas y QR (operations)
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Conjunto | `npm run check` | ✅ 34 archivos, 456 pruebas (nuevas: formularios y QR de `floor`, pantalla de mesas, hoja imprimible, traductor de errores de `data-access`, dirección de la carta y rutas por permiso) |
+| Compilación | `npm run build -w @tavelyo/operations` | ✅ |
+| Navegador con emuladores | `npm run test:e2e:emulators` (`tables-admin.spec.ts`, Chrome y Safari de iPhone) | ⚠️ **No se pudo ejecutar en el equipo local**: Windows bloquea el ejecutable del emulador de SQL Connect («Una directiva de Control de aplicaciones bloqueó este archivo»). Se verifica en CI |
+
+Recorrido de `tables-admin.spec.ts`: el administrador de sucursal crea un sector y dos mesas; el código repetido muestra «Ya existe una mesa con ese código en la sucursal»; ve el QR con la dirección de menu-web, lo renueva con confirmación y la dirección cambia; archiva una mesa y la hoja imprimible solo muestra la activa; axe sin infracciones en las dos pantallas; el mesero no ve el módulo y la ruta directa no muestra datos.

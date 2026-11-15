@@ -92,6 +92,7 @@ Resultado: `npm audit` → **0 vulnerabilidades**. Verificado con `npm run check
 
 - `firebase` **12.19.0** (Apache-2.0). El SDK web del conector se genera en `packages/data-access/dataconnect-generated` (`@tavelyo/dataconnect-sdk`) y se guarda en el repositorio para compilar sin la CLI; se regenera con `npx firebase-tools@15.30.2 dataconnect:sdk:generate --project demo-tavelyo`.
 - `firebase` incluye Firestore, que arrastra `@grpc/grpc-js` 1.9.16 con 4 avisos **altos** (GHSA-m9gg-hp2v-232j y GHSA-f596-whhp-79r4, de lado servidor gRPC; en el navegador Firebase no usa gRPC). Se fuerza **1.13.7** (2026-10-08) con `overrides`. Por un fallo de npm 11.17, la sustitución no se aplica a dependencias que solo declara un *workspace*: `firebase` 12.19.0 se declara también en el `package.json` raíz. Resultado: `npm audit` 0.
+- `qrcode-generator` **2.0.4** (MIT, sin dependencias, con tipos), aprobado por el propietario con el plan de la Fase 2 (2026-11-14). Solo lo usa `packages/features/floor` para el QR de cada mesa: se toma la matriz de módulos (`isDark`) y el SVG se dibuja en React, sin insertar HTML generado.
 - npm bloquea por defecto los scripts de instalación de `protobufjs` (aviso de versiones) y `@firebase/util` (lee `FIREBASE_WEBAPP_CONFIG`, que no usamos). No se aprueban: no son necesarios.
 
 ## Verificación pendiente

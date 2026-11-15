@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from 'react';
-import { Navigate, Outlet } from 'react-router';
+import { Link, Navigate, Outlet } from 'react-router';
 import { Card, LoadingState, StatusChip } from '@tavelyo/design-system';
 import { InactivityGuard, useSession } from '@tavelyo/identity';
 import { PwaShell } from '@tavelyo/pwa-shell';
@@ -10,6 +10,7 @@ import {
   TenantSelector,
   useTenancy,
 } from '@tavelyo/tenancy';
+import { ADMIN_MODULES } from './admin-routes.tsx';
 import { useAppContext } from './app-context.tsx';
 
 const APP_LABEL = 'Operaciones';
@@ -75,17 +76,37 @@ function StaffContextGate({ children }: { readonly children: ReactNode }) {
   return key ? <Fragment key={key}>{children}</Fragment> : <TenantSelector />;
 }
 
-/** Inicio provisional del personal: los módulos llegan en las fases siguientes. */
+/** Inicio del personal: los módulos que el rol puede usar en la sucursal activa. */
 export function StaffHome() {
   const { selection } = useTenancy();
   if (selection.status !== 'ready') return null;
+  const modules = ADMIN_MODULES.filter((module) =>
+    selection.tenant.permissions.includes(module.permission),
+  );
   return (
-    <Card title={`${selection.tenant.tenantName} · ${selection.branch.name}`} headingLevel={2}>
-      <p>
-        Entraste como <strong>{selection.tenant.roleName}</strong>. Los módulos de mesas, cocina y
-        caja se habilitarán en las próximas fases.
-      </p>
-      <StatusChip tone="success" label="Contexto listo" />
-    </Card>
+    <div className="tv-page">
+      <Card title={`${selection.tenant.tenantName} · ${selection.branch.name}`} headingLevel={2}>
+        <p>
+          Entraste como <strong>{selection.tenant.roleName}</strong>.
+        </p>
+        <StatusChip tone="success" label="Contexto listo" />
+      </Card>
+      {modules.length > 0 ? (
+        <nav aria-label="Módulos">
+          <ul className="tv-list">
+            {modules.map((module) => (
+              <li key={module.path} className="tv-list__item">
+                <Link className="tv-list__title" to={module.path}>
+                  {module.title}
+                </Link>
+                <p className="tv-list__meta">{module.description}</p>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : (
+        <p>Los módulos de tu rol se habilitarán en las próximas fases.</p>
+      )}
+    </div>
   );
 }
