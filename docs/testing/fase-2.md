@@ -55,6 +55,12 @@ Hallazgo: en SQL Connect **una variable omitida o nula en un filtro anula ese fi
 |---|---|---|
 | Conjunto | `npm run check` | ✅ 34 archivos, 456 pruebas (nuevas: formularios y QR de `floor`, pantalla de mesas, hoja imprimible, traductor de errores de `data-access`, dirección de la carta y rutas por permiso) |
 | Compilación | `npm run build -w @tavelyo/operations` | ✅ |
-| Navegador con emuladores | `npm run test:e2e:emulators` (`tables-admin.spec.ts`, Chrome y Safari de iPhone) | ⚠️ **No se pudo ejecutar en el equipo local**: Windows bloquea el ejecutable del emulador de SQL Connect («Una directiva de Control de aplicaciones bloqueó este archivo»). Se verifica en CI |
+| Navegador con emuladores | `npm run test:e2e:emulators` (`tables-admin.spec.ts`, Chrome y Safari de iPhone) | ✅ En CI (ejecución #17). ⚠️ No se pudo ejecutar en el equipo local: Windows bloquea el ejecutable del emulador de SQL Connect («Una directiva de Control de aplicaciones bloqueó este archivo») |
+
+Hallazgos corregidos por el recorrido en CI:
+
+- **Contraste en un instante de transición (Safari de iPhone):** al salir de «Guardando…», el texto blanco del botón volvía al instante mientras el fondo deshabilitado se animaba hacia el rojo, y axe midió 1,24:1. Se quitó la transición de fondo de los botones.
+- **Errores HTTP 4xx del SDK web:** llegan como `DataConnectError` con el cuerpo JSON en el mensaje y sin `response`; el traductor de errores ahora los lee (pruebas en `command-errors.test.ts`).
+- Playwright publica cada fallo como anotación de GitHub en CI, para diagnosticar sin permisos de administrador del repositorio.
 
 Recorrido de `tables-admin.spec.ts`: el administrador de sucursal crea un sector y dos mesas; el código repetido muestra «Ya existe una mesa con ese código en la sucursal»; ve el QR con la dirección de menu-web, lo renueva con confirmación y la dirección cambia; archiva una mesa y la hoja imprimible solo muestra la activa; axe sin infracciones en las dos pantallas; el mesero no ve el módulo y la ruta directa no muestra datos.
