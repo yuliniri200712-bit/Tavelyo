@@ -40,6 +40,40 @@ describe('mapCommandError', () => {
     expect(mapCommandError(duplicate)).toEqual({ kind: 'unknown' });
   });
 
+  it('también lee los errores de una respuesta 4xx (mensaje con el cuerpo JSON)', () => {
+    const body = (message: string, code: string) =>
+      Object.assign(new Error(JSON.stringify({ errors: [{ message, extensions: { code } }] })), {
+        name: 'DataConnectError',
+        code: 'other',
+      });
+    expect(
+      mapCommandError(body('Sin acceso a la sucursal (aborted)', 'PERMISSION_DENIED')),
+    ).toEqual({ kind: 'rejected', message: 'Sin acceso a la sucursal' });
+    expect(
+      mapCommandError(
+        body('duplicate key value violates unique constraint', 'ALREADY_EXISTS'),
+        'Ya existe.',
+      ),
+    ).toEqual({ kind: 'rejected', message: 'Ya existe.' });
+    const google = Object.assign(
+      new Error(
+        JSON.stringify({
+          error: {
+            code: 409,
+            message: 'duplicate key value violates unique constraint',
+            status: 'ALREADY_EXISTS',
+          },
+        }),
+      ),
+      { name: 'DataConnectError', code: 'other' },
+    );
+    expect(mapCommandError(google, 'Ya existe.')).toEqual({
+      kind: 'rejected',
+      message: 'Ya existe.',
+    });
+    expect(mapCommandError(new Error('{ no es json'))).toEqual({ kind: 'unknown' });
+  });
+
   it('no muestra errores internos ni de @auth como motivo', () => {
     expect(
       mapCommandError(operationError('violates foreign key constraint "x" (aborted)', 'INTERNAL')),

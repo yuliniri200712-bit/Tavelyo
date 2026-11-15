@@ -15,10 +15,30 @@ interface ServerError {
   readonly extensions?: { readonly code?: unknown };
 }
 
+/**
+ * Errores del servidor dentro del error del SDK web (firebase 12.19):
+ * - respuesta 200 con errores: `DataConnectOperationError` con `response.errors`;
+ * - respuesta 4xx: `DataConnectError` cuyo mensaje es el cuerpo JSON (`{ "errors": [...] }`).
+ */
 function serverErrors(error: unknown): readonly ServerError[] {
-  if (typeof error !== 'object' || error === null || !('response' in error)) return [];
+  if (typeof error !== 'object' || error === null) return [];
   const response = (error as { response?: { errors?: unknown } }).response;
-  return Array.isArray(response?.errors) ? (response.errors as ServerError[]) : [];
+  if (Array.isArray(response?.errors)) return response.errors as ServerError[];
+  const message = (error as { message?: unknown }).message;
+  if (typeof message !== 'string' || !message.trimStart().startsWith('{')) return [];
+  try {
+    const body = JSON.parse(message) as {
+      errors?: unknown;
+      error?: { message?: unknown; status?: unknown };
+    };
+    if (Array.isArray(body.errors)) return body.errors as ServerError[];
+    // Formato de error de las API de Google: { "error": { "code", "message", "status" } }.
+    return typeof body.error?.message === 'string'
+      ? [{ message: body.error.message, extensions: { code: body.error.status } }]
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Mensaje de una regla @check: el servidor añade « (aborted)» y, en transacciones, «(rolled back)». */

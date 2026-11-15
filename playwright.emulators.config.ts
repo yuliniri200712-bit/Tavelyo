@@ -7,7 +7,8 @@ export default defineConfig({
   testDir: './e2e/emulators',
   fullyParallel: false,
   workers: 1,
-  reporter: [['list']],
+  // En CI, cada fallo se publica además como anotación de GitHub (visible sin permisos de admin).
+  reporter: process.env['CI'] ? [['list'], ['github']] : [['list']],
   timeout: 90_000,
   use: { trace: 'retain-on-failure' },
   projects: [

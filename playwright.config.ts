@@ -27,7 +27,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
-  reporter: [['list']],
+  // En CI, cada fallo se publica además como anotación de GitHub (visible sin permisos de admin).
+  reporter: process.env['CI'] ? [['list'], ['github']] : [['list']],
   use: {
     trace: 'retain-on-failure',
     serviceWorkers: 'allow',
