@@ -16,7 +16,8 @@
   line-height: var(--tv-type-label-line-height);
   font-weight: var(--tv-type-label-weight);
   cursor: pointer;
-  transition: background-color var(--tv-motion-fast) ease-out;
+  /* Sin transición de fondo: al salir de «Procesando…» (fondo deshabilitado) el texto blanco cambia
+     al instante y un fondo animado dejaría un instante de contraste insuficiente (axe en WebKit). */
 }
 
 .tv-button--primary {
