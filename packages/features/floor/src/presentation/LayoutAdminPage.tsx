@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import {
+  ActionNotice,
   Card,
   ConfirmDialog,
   EmptyState,
@@ -17,7 +18,7 @@ import type {
 } from '../domain/index.ts';
 import { SectorForm, TableForm } from './forms.tsx';
 import { TableQrCode } from './TableQrCode.tsx';
-import { floorErrorText, useFloorLayout, type Notice } from './useFloorLayout.ts';
+import { floorErrorText, useFloorLayout } from './useFloorLayout.ts';
 
 export interface LayoutAdminPageProps {
   readonly gateway: FloorAdminGateway;
@@ -50,7 +51,7 @@ export function LayoutAdminPage({
         </div>
         <div className="tv-toolbar">{printLink}</div>
       </header>
-      <NoticeMessage notice={notice} />
+      <ActionNotice notice={notice} />
       <Card title="Nuevo sector" headingLevel={2}>
         <SectorForm
           submitLabel="Agregar sector"
@@ -86,19 +87,6 @@ export function LayoutAdminPage({
             />
           ))
         : null}
-    </div>
-  );
-}
-
-/** Resultado de la última acción, anunciado por el lector de pantalla. */
-export function NoticeMessage({ notice }: { readonly notice: Notice }) {
-  return (
-    <div role="status" aria-live="polite">
-      {notice ? (
-        <p className={notice.tone === 'error' ? 'tv-form__error' : 'tv-form__notice'}>
-          {notice.text}
-        </p>
-      ) : null}
     </div>
   );
 }

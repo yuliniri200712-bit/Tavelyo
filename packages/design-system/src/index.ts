@@ -12,6 +12,7 @@ export { CheckboxField, type CheckboxFieldProps } from './components/CheckboxFie
 export { SelectField, type SelectFieldProps } from './components/SelectField.tsx';
 export { TextAreaField, type TextAreaFieldProps } from './components/TextAreaField.tsx';
 export { StatusChip, type StatusChipProps, type StatusTone } from './components/StatusChip.tsx';
+export { ActionNotice, type ActionNoticeProps } from './components/ActionNotice.tsx';
 export { Card, type CardProps } from './components/Card.tsx';
 export { ConfirmDialog, type ConfirmDialogProps } from './components/ConfirmDialog.tsx';
 export {

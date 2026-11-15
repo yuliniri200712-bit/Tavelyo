@@ -64,3 +64,20 @@ Hallazgos corregidos por el recorrido en CI:
 - Playwright publica cada fallo como anotación de GitHub en CI, para diagnosticar sin permisos de administrador del repositorio.
 
 Recorrido de `tables-admin.spec.ts`: el administrador de sucursal crea un sector y dos mesas; el código repetido muestra «Ya existe una mesa con ese código en la sucursal»; ve el QR con la dirección de menu-web, lo renueva con confirmación y la dirección cambia; archiva una mesa y la hoja imprimible solo muestra la activa; axe sin infracciones en las dos pantallas; el mesero no ve el módulo y la ruta directa no muestra datos.
+
+## 2026-11-15 — Bloque 4b: carta de la empresa y de la sucursal (operations)
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Conjunto | `npm run check` | ✅ 484 pruebas (nuevas: captura de importes en `core`, formularios de la carta, pantallas de la carta de la empresa y de la sucursal) |
+| Compilación | `npm run build -w @tavelyo/operations` | ✅ |
+| Navegador con emuladores | `npm run test:e2e:emulators` (`catalog-admin.spec.ts`, Chrome y Safari de iPhone) | Se verifica en CI (en el equipo local el emulador sigue bloqueado por el Control inteligente de aplicaciones de Windows; el propietario decidió no instalar Node en WSL) |
+
+Cobertura:
+
+- **Importes:** «25000», «25.000» y «$ 25.000» dan 2.500.000 unidades menores; en COP no se admiten centavos; nunca pasa por `number` (también con importes de 20 cifras).
+- **Impuestos:** «8», «8,5 %» y «19» a puntos básicos y de vuelta («8 %», «8,5 %»).
+- **Horario:** días y horas a máscara y minutos; fin «00:00» es medianoche; un tramo que termina antes de empezar cruza la medianoche y se describe así («vie y sáb · 18:00 a 02:00 (cruza la medianoche)»).
+- **Pantallas:** el propietario ve y edita todo; el administrador de sucursal consulta la carta de la empresa sin controles de edición y cambia disponibilidad y precio en su sucursal; cambiar un precio pide confirmación con el importe anterior y el nuevo; un precio no válido se explica sin llamar al servidor; sin precio el producto se marca «Sin precio: no aparece en la carta».
+
+Recorrido de `catalog-admin.spec.ts`: el propietario crea un impuesto, una categoría, un producto con alérgenos y un grupo de opciones con un adicional de $ 5.400; en la sucursal lo deja disponible viernes y sábado de 18:00 a 02:00 y le pone $ 32.000; el administrador de sucursal no puede editar la carta de la empresa y sube el precio a $ 35.000 con confirmación; axe sin infracciones en las dos pantallas.

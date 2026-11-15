@@ -81,7 +81,7 @@ export function StaffHome() {
   const { selection } = useTenancy();
   if (selection.status !== 'ready') return null;
   const modules = ADMIN_MODULES.filter((module) =>
-    selection.tenant.permissions.includes(module.permission),
+    module.permissions.some((permission) => selection.tenant.permissions.includes(permission)),
   );
   return (
     <div className="tv-page">

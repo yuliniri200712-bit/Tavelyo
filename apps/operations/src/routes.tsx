@@ -1,7 +1,13 @@
 import type { RouteObject } from 'react-router';
 import { DesignSystemCatalog, EmptyState } from '@tavelyo/design-system';
 import { SignInPage } from '@tavelyo/identity';
-import { PrintQrRoute, RequirePermission, TablesAdminRoute } from './admin-routes.tsx';
+import {
+  BranchMenuRoute,
+  CatalogAdminRoute,
+  PrintQrRoute,
+  RequirePermission,
+  TablesAdminRoute,
+} from './admin-routes.tsx';
 import { AppLayout, PublicOnly, RequireStaffContext, StaffHome } from './layout.tsx';
 
 /** Rutas del personal. Toda ruta con datos exige sesión y contexto de empresa (bloques 6 y 7). */
@@ -21,7 +27,7 @@ export const routes: RouteObject[] = [
         path: '/mesas',
         element: (
           <RequireStaffContext>
-            <RequirePermission permission="table.manage">
+            <RequirePermission permissions={['table.manage']}>
               <TablesAdminRoute />
             </RequirePermission>
           </RequireStaffContext>
@@ -31,8 +37,28 @@ export const routes: RouteObject[] = [
         path: '/mesas/imprimir',
         element: (
           <RequireStaffContext>
-            <RequirePermission permission="table.manage">
+            <RequirePermission permissions={['table.manage']}>
               <PrintQrRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/carta',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['catalog.manage', 'price.change']}>
+              <CatalogAdminRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/carta/sucursal',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['catalog.manage', 'price.change']}>
+              <BranchMenuRoute />
             </RequirePermission>
           </RequireStaffContext>
         ),

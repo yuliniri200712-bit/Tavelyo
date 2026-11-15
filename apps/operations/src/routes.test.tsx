@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { ok } from '@tavelyo/core';
 import { SessionProvider, type AuthGateway, type StaffUser } from '@tavelyo/identity';
+import type { CatalogAdminGateway } from '@tavelyo/catalog';
 import type { FloorAdminGateway } from '@tavelyo/floor';
 import type { TenancyGateway } from '@tavelyo/tenancy';
 import { AppContext } from './app-context.tsx';
@@ -85,6 +86,24 @@ const floorAdmin: FloorAdminGateway = {
   rotateQr: vi.fn(async () => ok(undefined)),
 };
 
+const done = vi.fn(async () => ok(undefined));
+const catalogAdmin: CatalogAdminGateway = {
+  catalog: vi.fn(async () => ok({ taxRules: [], categories: [] })),
+  branchProducts: vi.fn(async () => ok([])),
+  createTaxRule: done,
+  updateTaxRule: done,
+  createCategory: done,
+  updateCategory: done,
+  createProduct: done,
+  updateProduct: done,
+  createModifierGroup: done,
+  updateModifierGroup: done,
+  createModifierOption: done,
+  updateModifierOption: done,
+  setAvailability: done,
+  changePrice: done,
+};
+
 function renderAt(path: string, user: StaffUser | null) {
   const auth = fakeAuth(user);
   const services = {
@@ -92,6 +111,7 @@ function renderAt(path: string, user: StaffUser | null) {
     profiles: { ensureProfile: vi.fn(async () => ok(undefined)) },
     tenancy,
     floorAdmin,
+    catalogAdmin,
     menuWebUrl: 'https://carta.example',
     usesEmulators: true,
   };
