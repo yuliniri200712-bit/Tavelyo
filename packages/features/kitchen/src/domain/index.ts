@@ -1,4 +1,4 @@
-import type { Result } from '@tavelyo/core';
+import type { LiveObserver, Result } from '@tavelyo/core';
 
 /** Sucursal en la que se trabaja: el servidor vuelve a comprobar empresa, sucursal y permiso. */
 export interface BranchScope {
@@ -45,10 +45,7 @@ export type KitchenError =
 export type KitchenResult<T> = Promise<Result<T, KitchenError>>;
 
 /** Observador de la cola en tiempo real (ADR-0007). */
-export interface QueueObserver {
-  readonly onData: (items: readonly KitchenItem[]) => void;
-  readonly onError: (error: KitchenError) => void;
-}
+export type QueueObserver = LiveObserver<readonly KitchenItem[], KitchenError>;
 
 /** Línea a la que se aplica un cambio, con la versión que vio la persona. */
 export interface ItemRef {

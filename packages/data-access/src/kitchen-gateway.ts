@@ -1,4 +1,4 @@
-import { QueryFetchPolicy, subscribe, type DataConnect } from 'firebase/data-connect';
+import type { DataConnect } from 'firebase/data-connect';
 import {
   cancelOrderItem,
   finishOrderItem,
@@ -9,29 +9,14 @@ import {
   startOrderItem,
   type KitchenQueueData,
 } from '@tavelyo/dataconnect-sdk';
-import { err, ok } from '@tavelyo/core';
 import type { KitchenGateway, KitchenItem } from '@tavelyo/kitchen/domain';
-
-import { mapCommandError } from './command-errors.ts';
-
-// Siempre al servidor: la PWA no conserva respuestas de datos (ADR-0008 §8, ADR-0009). La
-// suscripción usa el registro propio del SDK, sin caché persistente.
-const SERVER_ONLY = { fetchPolicy: QueryFetchPolicy.SERVER_ONLY } as const;
+import { readQuery, runCommand, SERVER_ONLY, watchQuery } from './live-query.ts';
 
 /** Estados que muestra la cola; cualquier otro ya salió de cocina y no se lista. */
 const QUEUE_STATUS: Partial<Record<OrderItemStatus, KitchenItem['status']>> = {
   [OrderItemStatus.RECEIVED]: 'RECEIVED',
   [OrderItemStatus.IN_PREPARATION]: 'IN_PREPARATION',
 };
-
-async function command(run: () => Promise<unknown>) {
-  try {
-    await run();
-    return ok(undefined);
-  } catch (error) {
-    return err(mapCommandError(error));
-  }
-}
 
 /** Solo las líneas de pedidos ya enviados a cocina llegan aquí (lo filtra el conector). */
 export function toKitchenItems(data: KitchenQueueData): KitchenItem[] {
@@ -61,55 +46,33 @@ export function toKitchenItems(data: KitchenQueueData): KitchenItem[] {
 /** Cocina con SQL Connect: lectura completa, suscripción en tiempo real (ADR-0007) y cambios. */
 export function createKitchenGateway(dataConnect: DataConnect): KitchenGateway {
   return {
-    async stations(scope) {
-      try {
-        const { data } = await kitchenStations(dataConnect, scope, SERVER_ONLY);
-        return ok(
+    stations: (scope) =>
+      readQuery(
+        () => kitchenStations(dataConnect, scope, SERVER_ONLY),
+        (data) =>
           data.stations.map((station) => ({
             id: station.id,
             name: station.name,
             isDefault: station.defaultForBranchId != null,
           })),
-        );
-      } catch (error) {
-        return err(mapCommandError(error));
-      }
-    },
-
-    async queue(scope, stationId) {
-      try {
-        const { data } = await kitchenQueue(dataConnect, { ...scope, stationId }, SERVER_ONLY);
-        return ok(toKitchenItems(data));
-      } catch (error) {
-        return err(mapCommandError(error));
-      }
-    },
-
-    watchQueue(scope, stationId, observer) {
-      try {
-        return subscribe(kitchenQueueRef(dataConnect, { ...scope, stationId }), {
-          onNext: (result) => observer.onData(toKitchenItems(result.data)),
-          onErr: (error) => {
-            if (error) observer.onError(mapCommandError(error));
-          },
-        });
-      } catch (error) {
-        // Sin conexión de streaming, el SDK lanza al suscribir: la pantalla lo trata como sin red.
-        observer.onError(mapCommandError(error));
-        return () => undefined;
-      }
-    },
-
+      ),
+    queue: (scope, stationId) =>
+      readQuery(
+        () => kitchenQueue(dataConnect, { ...scope, stationId }, SERVER_ONLY),
+        toKitchenItems,
+      ),
+    watchQueue: (scope, stationId, observer) =>
+      watchQuery(kitchenQueueRef(dataConnect, { ...scope, stationId }), toKitchenItems, observer),
     start: (scope, item) =>
-      command(() =>
+      runCommand(() =>
         startOrderItem(dataConnect, { ...scope, itemId: item.id, version: item.version }),
       ),
     finish: (scope, item) =>
-      command(() =>
+      runCommand(() =>
         finishOrderItem(dataConnect, { ...scope, itemId: item.id, version: item.version }),
       ),
     cancel: (scope, item, reason) =>
-      command(() =>
+      runCommand(() =>
         cancelOrderItem(dataConnect, { ...scope, itemId: item.id, version: item.version, reason }),
       ),
   };

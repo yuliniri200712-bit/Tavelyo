@@ -23,8 +23,4 @@ export {
   type KitchenPageProps,
   type StationMemory,
 } from './presentation/KitchenPage.tsx';
-export {
-  useKitchenQueue,
-  type KitchenQueueState,
-  type QueueConnection,
-} from './presentation/useKitchenQueue.ts';
+export { useKitchenQueue } from './presentation/useKitchenQueue.ts';

@@ -1,9 +1,8 @@
+import { elapsedMinutes, ORDER_ITEM_REASON_MAX, parseOrderItemReason } from '@tavelyo/core';
 import type { KitchenItem } from '../domain/index.ts';
 
 /** Minutos completos desde que la línea llegó a cocina (nunca negativos). */
-export function elapsedMinutes(sentAt: Date, now: Date): number {
-  return Math.max(0, Math.floor((now.getTime() - sentAt.getTime()) / 60_000));
-}
+export { elapsedMinutes };
 
 /** Tiempo de espera en texto: el estado nunca depende solo del color (PM §7). */
 export function describeElapsed(minutes: number): string {
@@ -44,11 +43,6 @@ export function describeNewOrders(
   return orderIds.length === 1 ? `Pedido nuevo: ${list}.` : `Pedidos nuevos: ${list}.`;
 }
 
-export const CANCEL_REASON_MIN = 3;
-export const CANCEL_REASON_MAX = 200;
-
-/** Mismo criterio que el servidor (pedidos.gql): entre 3 y 200 caracteres. */
-export function parseCancelReason(text: string): string | null {
-  const reason = text.trim();
-  return reason.length >= CANCEL_REASON_MIN && reason.length <= CANCEL_REASON_MAX ? reason : null;
-}
+/** Mismo criterio que el servidor (pedidos.gql), compartido con el salón en `@tavelyo/core`. */
+export const CANCEL_REASON_MAX = ORDER_ITEM_REASON_MAX;
+export const parseCancelReason = parseOrderItemReason;

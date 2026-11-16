@@ -3,14 +3,14 @@ import { formatLocalTime } from '@tavelyo/core';
 import {
   ActionNotice,
   CheckboxField,
-  ConfirmDialog,
   EmptyState,
   ErrorState,
+  LiveStatus,
   LoadingState,
+  ReasonDialog,
   SelectField,
   StatusChip,
   TavelyoButton,
-  TextAreaField,
   serverErrorText,
   useServerData,
   type ActionResult,
@@ -31,7 +31,7 @@ import type {
   KitchenItem,
   KitchenStation,
 } from '../domain/index.ts';
-import { useKitchenQueue, type KitchenQueueState } from './useKitchenQueue.ts';
+import { useKitchenQueue } from './useKitchenQueue.ts';
 
 /** Estación elegida en este equipo (comodidad local; la autorización la decide el servidor). */
 export interface StationMemory {
@@ -179,7 +179,8 @@ function StationQueue({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<KitchenItem | null>(null);
   const [sound, setSound] = useState(false);
-  const fresh = useFreshOrders(state.items, sound ? chime : null, now);
+  const items = state.data;
+  const fresh = useFreshOrders(items, sound ? chime : null, now);
   const [, setTick] = useState(0);
 
   // Los minutos de espera se actualizan solos.
@@ -204,7 +205,13 @@ function StationQueue({
 
   return (
     <section aria-label={`Cola de ${station.name}`}>
-      <ConnectionLine state={state} timezone={timezone} onRetry={() => void refresh()} />
+      <LiveStatus
+        state={state}
+        formatTime={(date) => formatLocalTime(date, timezone)}
+        liveText="Los pedidos y los cambios llegan solos."
+        blockedText="No puedes avanzar líneas"
+        onRetry={() => void refresh()}
+      />
       <div role="status" aria-live="polite">
         {fresh.announcement ? <p className="tv-list__meta">{fresh.announcement}</p> : null}
       </div>
@@ -215,14 +222,14 @@ function StationQueue({
         onChange={(event) => setSound(event.target.checked)}
       />
       <ActionNotice notice={notice} />
-      {state.items === null && state.connection === 'connecting' ? (
+      {items === null && state.connection === 'connecting' ? (
         <LoadingState message="Cargando la cola…" />
       ) : null}
-      {state.items ? (
+      {items ? (
         <>
-          <p className="tv-list__meta">{describeQueue(state.items)}</p>
+          <p className="tv-list__meta">{describeQueue(items)}</p>
           <ul className="tv-kitchen-queue" aria-label={`Líneas de ${station.name}`}>
-            {state.items.map((item) => (
+            {items.map((item) => (
               <QueueItem
                 key={item.id}
                 item={item}
@@ -287,51 +294,6 @@ function useFreshOrders(
     [...fresh.ids].filter(([, since]) => at - since < NEW_HIGHLIGHT_MS).map(([id]) => id),
   );
   return { ids, announcement: fresh.announcement };
-}
-
-function ConnectionLine({
-  state,
-  timezone,
-  onRetry,
-}: {
-  readonly state: KitchenQueueState;
-  readonly timezone: string;
-  readonly onRetry: () => void;
-}) {
-  const updated = state.lastUpdated
-    ? ` Última actualización a las ${formatLocalTime(state.lastUpdated, timezone)}.`
-    : '';
-  if (state.connection === 'live') {
-    return (
-      <p className="tv-list__meta" role="status">
-        <StatusChip tone="success" label="En vivo" /> Los pedidos y los cambios llegan solos.
-        {updated}
-      </p>
-    );
-  }
-  if (state.connection === 'connecting') {
-    return (
-      <p className="tv-list__meta" role="status">
-        <StatusChip tone="neutral" label="Conectando…" />
-        {updated}
-      </p>
-    );
-  }
-  const revoked = state.problem?.kind === 'unauthorized';
-  return (
-    <div className="tv-notice tv-inverse" role="status">
-      <p className="tv-notice__text">
-        <strong>{revoked ? 'Sin permiso.' : 'Sin conexión con el servidor.'}</strong>
-        {updated} No puedes avanzar líneas hasta{' '}
-        {revoked ? 'volver a iniciar sesión.' : 'recuperar la conexión; se reintenta sola.'}
-      </p>
-      {revoked ? null : (
-        <TavelyoButton variant="secondary" onClick={onRetry}>
-          Reintentar ahora
-        </TavelyoButton>
-      )}
-    </div>
-  );
 }
 
 function QueueItem({
@@ -432,31 +394,20 @@ function CancelDialog({
   readonly onClose: () => void;
   readonly onConfirm: (item: KitchenItem, reason: string) => Promise<void>;
 }) {
-  const [text, setText] = useState('');
-  const [error, setError] = useState<string>();
-  const close = () => {
-    setText('');
-    setError(undefined);
-    onClose();
-  };
   return (
-    <ConfirmDialog
+    <ReasonDialog
       open={item !== null}
       title={item ? `¿Cancelar ${item.quantity} × ${item.productName}?` : 'Cancelar línea'}
       confirmLabel="Cancelar línea"
-      cancelLabel="Volver"
       destructive
-      onCancel={close}
-      onConfirm={() => {
-        const reason = parseCancelReason(text);
-        if (!item) return;
-        if (!reason) {
-          setError(`Escribe el motivo (entre 3 y ${CANCEL_REASON_MAX} caracteres).`);
-          return;
-        }
-        setText('');
-        setError(undefined);
-        void onConfirm(item, reason);
+      label="Motivo de la cancelación"
+      hint="Por ejemplo: se acabó un ingrediente."
+      maxLength={CANCEL_REASON_MAX}
+      parse={parseCancelReason}
+      invalidText={`Escribe el motivo (entre 3 y ${CANCEL_REASON_MAX} caracteres).`}
+      onCancel={onClose}
+      onConfirm={(reason) => {
+        if (item) void onConfirm(item, reason);
       }}
     >
       <p>
@@ -466,14 +417,6 @@ function CancelDialog({
           : 'Todavía no se empezó a preparar.'}{' '}
         El motivo queda en el registro.
       </p>
-      <TextAreaField
-        label="Motivo de la cancelación"
-        hint="Por ejemplo: se acabó un ingrediente."
-        value={text}
-        maxLength={CANCEL_REASON_MAX}
-        onChange={(event) => setText(event.target.value)}
-        {...(error ? { error } : {})}
-      />
-    </ConfirmDialog>
+    </ReasonDialog>
   );
 }

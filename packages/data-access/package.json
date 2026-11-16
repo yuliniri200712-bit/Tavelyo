@@ -20,6 +20,8 @@
     "@tavelyo/identity": "*",
     "@tavelyo/tenancy": "*",
     "@tavelyo/contracts": "*",
-    "@tavelyo/table-session": "*"
+    "@tavelyo/table-session": "*",
+    "@tavelyo/orders": "*",
+    "@tavelyo/service-requests": "*"
   }
 }

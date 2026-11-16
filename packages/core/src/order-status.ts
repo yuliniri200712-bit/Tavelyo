@@ -57,6 +57,20 @@ export function orderItemActionRequiresReason(action: OrderItemAction): boolean 
   return RULES[action].requiresReason;
 }
 
+export const ORDER_ITEM_REASON_MIN = 3;
+export const ORDER_ITEM_REASON_MAX = 200;
+
+/**
+ * Motivo de cancelar o de entregar sin pasar por «recogido». Mismo criterio que el servidor
+ * (pedidos.gql): entre 3 y 200 caracteres sin contar los espacios de los extremos.
+ */
+export function parseOrderItemReason(text: string): string | null {
+  const reason = text.trim();
+  return reason.length >= ORDER_ITEM_REASON_MIN && reason.length <= ORDER_ITEM_REASON_MAX
+    ? reason
+    : null;
+}
+
 /** Cancelar una línea que ya se empezó a preparar la convierte en merma (Fase 5 la valoriza). */
 export function isWasteOnCancel(from: OrderItemStatus): boolean {
   return from === 'IN_PREPARATION' || from === 'READY';

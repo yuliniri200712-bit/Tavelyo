@@ -20,7 +20,7 @@
 - «Esta línea ya cambió» si otra persona se adelantó.
 
 **D-25:** la pantalla de cocina retiene el cierre por inactividad mientras está visible. Recorrido `kitchen-realtime.spec.ts` superado en los **5 navegadores** |
-| 5. Operaciones, meseros | Pendiente |
+| 5. Operaciones, meseros | ✅ **Salón en vivo** (`/salon`): cada mesa abierta dice en texto sus líneas en cocina, listas para recoger y recogidas por entregar, y sus solicitudes con la hora (RF-ME-01). Arriba, **«Solicitudes de las mesas»** con «Atendida» (`service_request.handle`), y con «Ver pedidos», los **pedidos de la mesa**: estado de cada pedido y de cada línea, cancelar con motivo (`order_item.cancel`, avisa la merma) y entregar sin recoger con motivo (`delivery.skip_sequence`). **«Listos para recoger»** (`/entregas`, `delivery.pickup`): «Recogido» y «Entregado», con la espera, la estación y el aviso en texto del plato que queda listo. Módulos nuevos `packages/features/orders` y `packages/features/service-requests`. La lógica de tiempo real de cocina pasa a `useLiveData` y `LiveStatus` en el sistema de diseño, y la usan las cinco pantallas en vivo. Recorrido `waiter-service.spec.ts` superado en los **5 navegadores** |
 | 6. Cliente (`menu-web`) | Pendiente |
 | 7. Cierre | Pendiente |
 

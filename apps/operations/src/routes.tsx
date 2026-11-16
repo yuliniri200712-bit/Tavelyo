@@ -7,6 +7,7 @@ import {
   CatalogAdminRoute,
   FloorServiceRoute,
   KitchenRoute,
+  PickupRoute,
   PrintQrRoute,
   RequirePermission,
   StationsAdminRoute,
@@ -33,6 +34,16 @@ export const routes: RouteObject[] = [
           <RequireStaffContext>
             <RequirePermission permissions={['session.open']}>
               <FloorServiceRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/entregas',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['delivery.pickup']}>
+              <PickupRoute />
             </RequirePermission>
           </RequireStaffContext>
         ),

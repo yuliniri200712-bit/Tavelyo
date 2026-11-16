@@ -48,6 +48,15 @@ Por D-04, todo pedido está sujeto a garantía. Mientras no haya pasarela real (
 - **Envío a cocina en dos pasos (bloque 2):** el SDK web no admite listas de entrada, así que el backend guarda el pedido con sus líneas y después lo envía con la operación `ServerSendOrderToKitchen`, que comprueba en la misma transacción el pago autorizado (D-04), la mesa abierta y la persona vigente, y avisa a las pantallas (ADR-0007). Un pedido sin enviar no aparece en ninguna pantalla.
 - **Sin `KitchenTicket` ni `StateEvent`:** la línea lleva su estación y una marca de tiempo por estado; como ningún estado se repite (D-26), son su historial, y el actor queda en `AuditEvent` (`architecture/data-model.md`).
 
+### Tomadas en el bloque 5 (2026-11-16, dentro del alcance aprobado)
+
+- **Dónde está cada cosa del mesero:**
+  - el **Salón** (`/salon`) muestra en cada mesa sus pedidos y solicitudes, la lista de solicitudes con «Atendida» arriba (si el rol tiene `service_request.handle`) y, con «Ver pedidos», los pedidos de la mesa;
+  - **«Listos para recoger»** es una pantalla propia (`/entregas`, `delivery.pickup`).
+- **«Entregar sin recoger» se ofrece en los pedidos de la mesa**, no en «Listos para recoger». Según la matriz, el administrador de sucursal tiene `delivery.skip_sequence` pero no `delivery.pickup`, y el mesero al revés.
+- **Módulos separados:** `packages/features/orders` (pedidos del personal) y `packages/features/service-requests` (solicitudes). El salón los recibe desde `operations` y no los importa.
+- **Una mesa cerrada con platos listos** sigue en «Listos para recoger» hasta que se entregan o se cancelan. La comida existe y el cierre con cuenta es de la Fase 4, que decidirá si cerrar exige no tener líneas pendientes.
+
 ## 3. Diseño propuesto
 
 ### Del resumen autorizado al pedido

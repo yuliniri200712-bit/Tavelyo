@@ -63,4 +63,21 @@ Hallazgo: las pruebas nuevas sentaron más de 20 personas en la misma mesa y el 
 
 Hallazgo: en el SDK web 12.19 la suscripción funciona sin `clientCache` (ADR-0007, implementación), así que se conserva ADR-0008 §8: no se guardan datos que haya que vaciar al cerrar sesión.
 
+## 2026-11-16 — Bloque 5: meseros
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Tiempo real compartido | `npx vitest run packages/design-system/src/components/live-data` | ✅ 6 pruebas: lectura al abrir y cambios de la suscripción; sin red conserva lo último, explica qué se bloquea y se vuelve a suscribir solo; sin permiso no reintenta; un cambio propio avisa y vuelve a leer; al volver la red se suscribe y lee todo. Diálogo de motivo: no confirma sin un motivo válido |
+| Cocina tras el cambio | `npx vitest run packages/features/kitchen` | ✅ Las 11 pruebas del bloque 4 siguen pasando con `useLiveData`, `LiveStatus` y `ReasonDialog` |
+| Salón | `npx vitest run packages/features/floor` | ✅ 4 de lógica (actividad en texto, en singular y plural, solicitudes con la hora de la sucursal) y 11 de pantalla, 3 nuevas: se actualiza solo con cada cambio, sin conexión no deja abrir ni cerrar, solicitudes arriba y pedidos de la mesa al pedirlos |
+| «Listos para recoger» y pedidos de la mesa | `npx vitest run packages/features/orders` | ✅ 15 pruebas: resumen y espera en texto, aviso del plato que queda listo, acciones según estado y permiso; «Recogido» con la versión vista, «Esta línea ya cambió», sin `delivery.deliver` no hay «Entregado»; estado derivado del pedido, cancelar con motivo y merma, entregar sin recoger con motivo, sin permisos solo estados |
+| Solicitudes | `npx vitest run packages/features/service-requests` | ✅ 4 pruebas: mesa, tipo y espera en texto; «Atendida» y nueva lectura; ya atendida por otra persona; aviso de la solicitud nueva en vivo |
+| Capa de datos | `npx vitest run packages/data-access/src/staff-mappers` | ✅ 4 pruebas de traducción de las lecturas: sin importes ni datos de quien pidió, y conteo por mesa |
+| Rutas | `npx vitest run apps/operations` | ✅ El mesero ve el salón con solicitudes y «Listos para recoger»; un rol sin `delivery.pickup` no la ve |
+| **Meseros en navegador** | `npx playwright test --config playwright.emulators.config.ts waiter-service` | ✅ **5 navegadores** de D-15. Con un pedido real autorizado: la mesa muestra la línea en cocina; el cliente llama al mesero y aparece **sin recargar** en la mesa y en la lista; «Atendida». Cocina termina la línea y el salón muestra «1 lista para recoger» sin recargar. «Recogido»; sin red no deja entregar y al volver sí; «Entregado». Un segundo plato que queda listo se anuncia en texto. En los pedidos de la mesa se cancela con motivo y aviso de merma. axe sin infracciones en el salón, en «Listos para recoger» y con los pedidos abiertos |
+| Regresión en navegador | ídem con `kitchen-realtime waiter-floor`, y `accessibility-fase-2` en Chrome y Safari de iPhone | ✅ Cocina y el salón de la Fase 2 en los 5 navegadores; 320 px, texto al 200 % y teclado sin cambios (Tab omitido en Safari, como antes) |
+| Conjunto | `npm run check` | ✅ 648 pruebas unitarias, tipos, ESLint y Prettier |
+
+Hallazgo durante la prueba: el recorrido pedía la solicitud con el código `CALL_WAITER` del esquema, y `requestService` la rechazó como inválida, como debía: el contrato del cliente usa `call_waiter`. Se corrigió la prueba.
+
 Pendiente de verificar en los bloques siguientes: TalkBack y el Android real (bloque 7).

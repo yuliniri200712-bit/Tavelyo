@@ -5,6 +5,8 @@ import { EmptyState } from '@tavelyo/design-system';
 import { FloorServicePage, LayoutAdminPage, PrintQrPage } from '@tavelyo/floor';
 import { useInactivityHold } from '@tavelyo/identity';
 import { KitchenPage } from '@tavelyo/kitchen';
+import { PickupPage, SessionOrdersPanel } from '@tavelyo/orders';
+import { ServiceRequestsPanel } from '@tavelyo/service-requests';
 import { BranchesAdminPage, useTenancy } from '@tavelyo/tenancy';
 import { useAppContext } from './app-context.tsx';
 
@@ -27,8 +29,15 @@ export const STAFF_MODULES: readonly StaffModule[] = [
   {
     path: '/salon',
     title: 'Salón',
-    description: 'Mesas libres y abiertas por sector: abrir, cerrar y ver quién se unió.',
+    description:
+      'Mesas en vivo: pedidos en curso, platos listos y solicitudes; abrir, cerrar y ver quién se unió.',
     permissions: ['session.open'],
+  },
+  {
+    path: '/entregas',
+    title: 'Listos para recoger',
+    description: 'Platos que cocina marcó listos, en vivo: recoger y entregar en la mesa.',
+    permissions: ['delivery.pickup'],
   },
   {
     path: '/mesas',
@@ -116,6 +125,40 @@ export function FloorServiceRoute() {
       branchName={branchName}
       timezone={timezone}
       canClose={can('session.close')}
+      requestsPanel={
+        can('service_request.handle') ? (
+          <ServiceRequestsPanel
+            gateway={services.serviceRequests}
+            scope={scope}
+            timezone={timezone}
+          />
+        ) : null
+      }
+      renderOrders={(session, tableCode) => (
+        <SessionOrdersPanel
+          gateway={services.orders}
+          scope={scope}
+          sessionId={session.id}
+          tableCode={tableCode}
+          timezone={timezone}
+          canCancel={can('order_item.cancel')}
+          canDeliverDirectly={can('delivery.skip_sequence')}
+        />
+      )}
+    />
+  );
+}
+
+export function PickupRoute() {
+  const { services } = useAppContext();
+  const { scope, branchName, timezone, can } = useStaffContext();
+  return (
+    <PickupPage
+      gateway={services.orders}
+      scope={scope}
+      branchName={branchName}
+      timezone={timezone}
+      canDeliver={can('delivery.deliver')}
     />
   );
 }

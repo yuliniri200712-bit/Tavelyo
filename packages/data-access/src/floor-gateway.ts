@@ -1,34 +1,84 @@
-import { QueryFetchPolicy, type DataConnect } from 'firebase/data-connect';
+import type { DataConnect } from 'firebase/data-connect';
 import {
   branchLayout,
   closeTableSession,
   createSector,
   createTable,
   floorView,
+  floorViewRef,
   openTableSession,
+  OrderItemStatus,
   removeParticipant,
   rotateTableQr,
+  ServiceRequestKind,
   sessionParticipants,
   updateSector,
   updateTable,
+  type FloorViewData,
 } from '@tavelyo/dataconnect-sdk';
 import { err, ok } from '@tavelyo/core';
-import type { FloorAdminGateway, FloorServiceGateway } from '@tavelyo/floor/domain';
+import type {
+  FloorAdminGateway,
+  FloorSector,
+  FloorServiceGateway,
+  TableActivity,
+} from '@tavelyo/floor/domain';
 import { mapCommandError } from './command-errors.ts';
+import { readQuery, runCommand as command, SERVER_ONLY, watchQuery } from './live-query.ts';
 
-// Siempre al servidor: la PWA no conserva respuestas de datos (ADR-0008 §8, ADR-0009).
-const SERVER_ONLY = { fetchPolicy: QueryFetchPolicy.SERVER_ONLY } as const;
 const DUPLICATE_TABLE = 'Ya existe una mesa con ese código en la sucursal.';
 const ALREADY_OPEN = 'La mesa ya está abierta. Actualiza el salón para verla.';
 
-/** Ejecuta una mutación y traduce el resultado al contrato del módulo. */
-async function command(run: () => Promise<unknown>, duplicateMessage?: string) {
-  try {
-    await run();
-    return ok(undefined);
-  } catch (error) {
-    return err(mapCommandError(error, duplicateMessage));
-  }
+type FloorViewSession =
+  FloorViewData['sectors'][number]['diningTables_on_sector'][number]['tableSessions_on_table'][number];
+
+const IN_KITCHEN: readonly OrderItemStatus[] = [
+  OrderItemStatus.RECEIVED,
+  OrderItemStatus.IN_PREPARATION,
+];
+
+/** Cuenta las líneas activas de la mesa por etapa (el conector ya excluye entregadas y canceladas). */
+export function toTableActivity(session: FloorViewSession): TableActivity {
+  const statuses = session.orders_on_session.flatMap((order) =>
+    order.orderItems_on_order.map((item) => item.status),
+  );
+  return {
+    inKitchen: statuses.filter((status) => IN_KITCHEN.includes(status)).length,
+    ready: statuses.filter((status) => status === OrderItemStatus.READY).length,
+    pickedUp: statuses.filter((status) => status === OrderItemStatus.PICKED_UP).length,
+    requests: session.serviceRequests_on_session
+      .map((request) => ({
+        kind:
+          request.kind === ServiceRequestKind.REQUEST_BILL
+            ? ('REQUEST_BILL' as const)
+            : ('CALL_WAITER' as const),
+        createdAt: new Date(request.createdAt),
+      }))
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
+  };
+}
+
+/** Salón del personal: sectores, mesas y, en las abiertas, su actividad. */
+export function toFloorSectors(data: FloorViewData): FloorSector[] {
+  return data.sectors.map((sector) => ({
+    id: sector.id,
+    name: sector.name,
+    tables: sector.diningTables_on_sector.map((table) => {
+      const session = table.tableSessions_on_table[0];
+      return {
+        id: table.id,
+        code: table.code,
+        seats: table.seats,
+        session: session
+          ? {
+              id: session.id,
+              openedAt: new Date(session.openedAt),
+              activity: toTableActivity(session),
+            }
+          : null,
+      };
+    }),
+  }));
 }
 
 export function createFloorAdminGateway(dataConnect: DataConnect): FloorAdminGateway {
@@ -70,28 +120,9 @@ export function createFloorAdminGateway(dataConnect: DataConnect): FloorAdminGat
 /** Salón para el personal en servicio: sin el qrPublicId ni la cuenta de los clientes. */
 export function createFloorServiceGateway(dataConnect: DataConnect): FloorServiceGateway {
   return {
-    async floor(scope) {
-      try {
-        const { data } = await floorView(dataConnect, scope, SERVER_ONLY);
-        return ok(
-          data.sectors.map((sector) => ({
-            id: sector.id,
-            name: sector.name,
-            tables: sector.diningTables_on_sector.map((table) => {
-              const session = table.tableSessions_on_table[0];
-              return {
-                id: table.id,
-                code: table.code,
-                seats: table.seats,
-                session: session ? { id: session.id, openedAt: new Date(session.openedAt) } : null,
-              };
-            }),
-          })),
-        );
-      } catch (error) {
-        return err(mapCommandError(error));
-      }
-    },
+    floor: (scope) => readQuery(() => floorView(dataConnect, scope, SERVER_ONLY), toFloorSectors),
+    watchFloor: (scope, observer) =>
+      watchQuery(floorViewRef(dataConnect, scope), toFloorSectors, observer),
     async participants(scope, sessionId) {
       try {
         const { data } = await sessionParticipants(

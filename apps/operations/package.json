@@ -20,6 +20,8 @@
     "@tavelyo/floor": "*",
     "@tavelyo/identity": "*",
     "@tavelyo/kitchen": "*",
-    "@tavelyo/tenancy": "*"
+    "@tavelyo/tenancy": "*",
+    "@tavelyo/orders": "*",
+    "@tavelyo/service-requests": "*"
   }
 }

@@ -5,6 +5,7 @@ import {
   deriveOrderStatus,
   isWasteOnCancel,
   orderItemActionRequiresReason,
+  parseOrderItemReason,
   type OrderItemAction,
   type OrderItemStatus,
 } from './order-status';
@@ -126,5 +127,15 @@ describe('deriveOrderStatus', () => {
   it('cancelado si no le queda ninguna línea activa', () => {
     expect(deriveOrderStatus(['CANCELLED', 'CANCELLED'])).toBe('CANCELLED');
     expect(deriveOrderStatus([])).toBe('CANCELLED');
+  });
+});
+
+describe('parseOrderItemReason', () => {
+  it('exige entre 3 y 200 caracteres sin contar los espacios de los extremos', () => {
+    expect(parseOrderItemReason('  ')).toBeNull();
+    expect(parseOrderItemReason(' no ')).toBeNull();
+    expect(parseOrderItemReason('  Se enfrió ')).toBe('Se enfrió');
+    expect(parseOrderItemReason('x'.repeat(200))).toBe('x'.repeat(200));
+    expect(parseOrderItemReason('x'.repeat(201))).toBeNull();
   });
 });
