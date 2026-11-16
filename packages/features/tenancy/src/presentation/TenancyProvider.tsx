@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -18,6 +19,8 @@ import {
 export interface TenancyContextValue {
   readonly selection: SelectionState;
   readonly dispatch: Dispatch<SelectionEvent>;
+  /** Vuelve a leer las sucursales de la empresa activa sin cambiar la sucursal en uso. */
+  readonly refreshBranches: () => Promise<void>;
 }
 
 const TenancyContext = createContext<TenancyContextValue | null>(null);
@@ -68,7 +71,17 @@ export function TenancyProvider({ gateway, children }: TenancyProviderProps) {
     };
   }, [gateway, loadingTenantId]);
 
-  const value = useMemo(() => ({ selection, dispatch }), [selection]);
+  const activeTenantId = selection.status === 'ready' ? selection.tenant.tenantId : null;
+  const refreshBranches = useCallback(async () => {
+    if (!activeTenantId) return;
+    const result = await gateway.myBranches(activeTenantId);
+    if (result.ok) dispatch({ type: 'branches-refreshed', branches: result.value });
+  }, [gateway, activeTenantId]);
+
+  const value = useMemo(
+    () => ({ selection, dispatch, refreshBranches }),
+    [selection, refreshBranches],
+  );
   return <TenancyContext.Provider value={value}>{children}</TenancyContext.Provider>;
 }
 

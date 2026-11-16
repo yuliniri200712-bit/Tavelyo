@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router';
 import { DesignSystemCatalog, EmptyState } from '@tavelyo/design-system';
 import { SignInPage } from '@tavelyo/identity';
 import {
+  BranchesAdminRoute,
   BranchMenuRoute,
   CatalogAdminRoute,
   PrintQrRoute,
@@ -59,6 +60,16 @@ export const routes: RouteObject[] = [
           <RequireStaffContext>
             <RequirePermission permissions={['catalog.manage', 'price.change']}>
               <BranchMenuRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/sucursales',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['tenant.settings']}>
+              <BranchesAdminRoute />
             </RequirePermission>
           </RequireStaffContext>
         ),

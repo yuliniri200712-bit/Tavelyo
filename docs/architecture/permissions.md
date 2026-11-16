@@ -93,7 +93,7 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 | Precio por sucursal (versión nueva en `Price`) | `price.change` | Sucursal asignada |
 | Consultar la carta de administración | `catalog.manage` o `price.change` | Empresa; la de la sucursal, con la sucursal asignada |
 | Impuestos (`TaxRule`) | `tenant.settings` | Empresa (D-01b: la tasa la decide la empresa con su contador) |
-| Crear, editar y archivar sucursales | `tenant.settings` | Empresa; la moneda es la de la empresa y no cambia |
+| Listar todas las sucursales (archivadas incluidas), crearlas, editarlas, archivarlas y restaurarlas | `tenant.settings` | Empresa; la moneda es la de la empresa y no cambia |
 
 - El mesero no ve el `qrPublicId` (solo quien gestiona las mesas, para imprimirlo) ni el uid de Firebase Auth de los clientes que se unen a la mesa.
 - El cliente (`customer`) no tiene operaciones de personal: solo la carta pública por QR y su propia participación (ADR-0011).

@@ -2,6 +2,9 @@ import { useCallback, useState, type FormEvent, type ReactNode } from 'react';
 import { formatMoney, isCurrencyCode, Money, ok } from '@tavelyo/core';
 import {
   ActionNotice,
+  serverErrorText,
+  useServerData,
+  type RunCommand,
   Card,
   CheckboxField,
   ConfirmDialog,
@@ -26,7 +29,6 @@ import type {
   ProductAdmin,
 } from '../domain/index.ts';
 import { ScheduleFields } from './forms.tsx';
-import { catalogErrorText, useServerData, type Run } from './useServerData.ts';
 
 export interface BranchMenuPageProps {
   readonly gateway: CatalogAdminGateway;
@@ -93,7 +95,7 @@ export function BranchMenuPage(props: BranchMenuPageProps) {
       {state.status === 'error' ? (
         <ErrorState
           title="No se pudo cargar la carta de la sucursal"
-          description={catalogErrorText(state.error)}
+          description={serverErrorText(state.error)}
           onRetry={reload}
         />
       ) : null}
@@ -111,7 +113,7 @@ function BranchCategories({
 }: {
   readonly data: BranchMenuData;
   readonly props: BranchMenuPageProps;
-  readonly run: Run;
+  readonly run: RunCommand;
 }) {
   const categories = data.catalog.categories
     .filter((category) => !category.archived)
@@ -158,7 +160,7 @@ function BranchProductItem({
   readonly product: ProductAdmin;
   readonly entry: BranchProduct | undefined;
   readonly props: BranchMenuPageProps;
-  readonly run: Run;
+  readonly run: RunCommand;
 }) {
   const [open, setOpen] = useState(false);
   const price = priceLabel(entry);
@@ -202,7 +204,7 @@ function AvailabilityForm({
   readonly product: ProductAdmin;
   readonly entry: BranchProduct | undefined;
   readonly props: BranchMenuPageProps;
-  readonly run: Run;
+  readonly run: RunCommand;
 }) {
   const [available, setAvailable] = useState(entry?.available ?? true);
   const [schedule, setSchedule] = useState(scheduleToForm(entry?.schedule ?? null));
@@ -261,7 +263,7 @@ function PriceForm({
   readonly entry: BranchProduct | undefined;
   readonly current: string | null;
   readonly props: BranchMenuPageProps;
-  readonly run: Run;
+  readonly run: RunCommand;
 }) {
   const [text, setText] = useState('');
   const [error, setError] = useState<string>();

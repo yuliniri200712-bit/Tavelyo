@@ -117,3 +117,36 @@ describe('selección de empresa y sucursal', () => {
     expect(state.status).toBe('no-branches');
   });
 });
+
+describe('lista de sucursales actualizada', () => {
+  const tenant = {
+    tenantId: 't',
+    tenantName: 'T',
+    roleCode: 'tenant_owner',
+    roleName: 'Propietario',
+    permissions: [],
+  };
+  const centro = { id: 'b1', name: 'Centro', currency: 'COP', timezone: 'America/Bogota' };
+  const ready = {
+    status: 'ready' as const,
+    memberships: [tenant],
+    tenant,
+    branches: [centro],
+    branch: centro,
+  };
+
+  it('añade la sucursal nueva sin cambiar la activa (y habilita cambiar de contexto)', () => {
+    const norte = { ...centro, id: 'b2', name: 'Norte' };
+    const next = selectionReducer(ready, { type: 'branches-refreshed', branches: [centro, norte] });
+    expect(next).toMatchObject({ status: 'ready', branch: centro, branches: [centro, norte] });
+    expect(canChangeContext(next)).toBe(true);
+    expect(contextKey(next)).toBe(contextKey(ready));
+  });
+
+  it('se ignora si la sucursal activa ya no está o si no hay contexto listo', () => {
+    expect(selectionReducer(ready, { type: 'branches-refreshed', branches: [] })).toBe(ready);
+    expect(
+      selectionReducer(initialSelection, { type: 'branches-refreshed', branches: [centro] }),
+    ).toBe(initialSelection);
+  });
+});

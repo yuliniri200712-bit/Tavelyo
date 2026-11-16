@@ -1,4 +1,5 @@
 import {
+  createBranchAdminGateway,
   createCatalogAdminGateway,
   createFirebaseAuthGateway,
   createFloorAdminGateway,
@@ -11,7 +12,7 @@ import {
 import type { CatalogAdminGateway } from '@tavelyo/catalog';
 import type { FloorAdminGateway } from '@tavelyo/floor';
 import type { AuthGateway, ProfileGateway } from '@tavelyo/identity';
-import type { TenancyGateway } from '@tavelyo/tenancy';
+import type { BranchAdminGateway, TenancyGateway } from '@tavelyo/tenancy';
 
 /** Dependencias de la app, inyectadas por contexto (ADR-0010). */
 export interface Services {
@@ -20,6 +21,7 @@ export interface Services {
   readonly tenancy: TenancyGateway;
   readonly floorAdmin: FloorAdminGateway;
   readonly catalogAdmin: CatalogAdminGateway;
+  readonly branchAdmin: BranchAdminGateway;
   /** Dirección pública de menu-web: la del QR de cada mesa. */
   readonly menuWebUrl: string;
   readonly usesEmulators: boolean;
@@ -71,6 +73,7 @@ export function compose(env: RawEnvironment): Composition {
       tenancy: createTenancyGateway(client.dataConnect),
       floorAdmin: createFloorAdminGateway(client.dataConnect),
       catalogAdmin: createCatalogAdminGateway(client.dataConnect),
+      branchAdmin: createBranchAdminGateway(client.dataConnect),
       menuWebUrl,
       usesEmulators: environment.value.useEmulators,
     },

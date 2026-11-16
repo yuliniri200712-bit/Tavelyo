@@ -922,6 +922,38 @@ describe('sucursales', () => {
     expect(await names()).not.toContain('Chapinero');
   });
 
+  it('el propietario ve todas sus sucursales, archivadas incluidas; nadie más', async () => {
+    const all = await ok<{ branches: Array<{ name: string; status: string }> }>(
+      u.ownerA,
+      'query',
+      'TenantBranches',
+      { tenantId: a.tenantId },
+    );
+    expect(all.branches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'Centro', status: 'ACTIVE' }),
+        expect.objectContaining({ name: 'Chapinero', status: 'ARCHIVED' }),
+      ]),
+    );
+    expect(all.branches.map((branch) => branch.name)).not.toContain('Sur');
+    for (const user of [u.adminA, u.waiterA]) {
+      await expectDenied(
+        user,
+        'query',
+        'TenantBranches',
+        { tenantId: a.tenantId },
+        /Sin permiso: tenant\.settings/,
+      );
+    }
+    await expectDenied(
+      u.ownerB,
+      'query',
+      'TenantBranches',
+      { tenantId: a.tenantId },
+      /Sin membresía activa/,
+    );
+  });
+
   it('valida la moneda de la empresa y la zona horaria', async () => {
     const base = { tenantId: a.tenantId, name: 'Usaquén' };
     await expectDenied(

@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { BranchMenuPage, CatalogAdminPage } from '@tavelyo/catalog';
 import { EmptyState } from '@tavelyo/design-system';
 import { LayoutAdminPage, PrintQrPage } from '@tavelyo/floor';
-import { useTenancy } from '@tavelyo/tenancy';
+import { BranchesAdminPage, useTenancy } from '@tavelyo/tenancy';
 import { useAppContext } from './app-context.tsx';
 
 export interface AdminModule {
@@ -34,6 +34,12 @@ export const ADMIN_MODULES: readonly AdminModule[] = [
     description: 'Disponibilidad, horario y precio de cada producto en esta sucursal.',
     permissions: ['catalog.manage', 'price.change'],
   },
+  {
+    path: '/sucursales',
+    title: 'Sucursales',
+    description: 'Crear, editar y archivar las sucursales de la empresa.',
+    permissions: ['tenant.settings'],
+  },
 ];
 
 /** Sucursal activa y permisos de la persona; los permisos solo orientan la interfaz. */
@@ -47,6 +53,7 @@ export function useStaffContext() {
     scope: { tenantId: selection.tenant.tenantId, branchId: selection.branch.id },
     branchName: selection.branch.name,
     currency: selection.branch.currency,
+    timezone: selection.branch.timezone,
     isOwner: selection.tenant.roleCode === 'tenant_owner',
     can,
     canAny: (permissions: readonly string[]) => permissions.some(can),
@@ -150,6 +157,22 @@ export function BranchMenuRoute() {
           Carta de la empresa
         </Link>
       }
+    />
+  );
+}
+
+export function BranchesAdminRoute() {
+  const { services } = useAppContext();
+  const { scope, currency, timezone } = useStaffContext();
+  const { refreshBranches } = useTenancy();
+  return (
+    <BranchesAdminPage
+      onBranchesChanged={() => void refreshBranches()}
+      gateway={services.branchAdmin}
+      tenantId={scope.tenantId}
+      currency={currency}
+      currentBranchId={scope.branchId}
+      defaultTimezone={timezone}
     />
   );
 }

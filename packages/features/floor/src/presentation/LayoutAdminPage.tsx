@@ -8,6 +8,7 @@ import {
   LoadingState,
   StatusChip,
   TavelyoButton,
+  serverErrorText,
 } from '@tavelyo/design-system';
 import { tableMenuUrl } from '../application/forms.ts';
 import type {
@@ -18,7 +19,7 @@ import type {
 } from '../domain/index.ts';
 import { SectorForm, TableForm } from './forms.tsx';
 import { TableQrCode } from './TableQrCode.tsx';
-import { floorErrorText, useFloorLayout } from './useFloorLayout.ts';
+import { useFloorLayout } from './useFloorLayout.ts';
 
 export interface LayoutAdminPageProps {
   readonly gateway: FloorAdminGateway;
@@ -64,22 +65,22 @@ export function LayoutAdminPage({
       {state.status === 'error' ? (
         <ErrorState
           title="No se pudo cargar el salón"
-          description={floorErrorText(state.error)}
+          description={serverErrorText(state.error)}
           onRetry={reload}
         />
       ) : null}
-      {state.status === 'ready' && state.sectors.length === 0 ? (
+      {state.status === 'ready' && state.data.length === 0 ? (
         <EmptyState
           title="Todavía no hay sectores"
           description="Agrega un sector (por ejemplo, Salón principal) y luego sus mesas."
         />
       ) : null}
       {state.status === 'ready'
-        ? state.sectors.map((sector) => (
+        ? state.data.map((sector) => (
             <SectorCard
               key={sector.id}
               sector={sector}
-              activeSectors={state.sectors.filter((s) => !s.archived)}
+              activeSectors={state.data.filter((s) => !s.archived)}
               gateway={gateway}
               scope={scope}
               menuWebUrl={menuWebUrl}

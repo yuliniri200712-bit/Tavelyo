@@ -8,6 +8,11 @@ export type Int64String = string;
 export type DateString = string;
 
 
+export enum BranchStatus {
+  ACTIVE = "ACTIVE",
+  ARCHIVED = "ARCHIVED",
+};
+
 export enum MembershipStatus {
   ACTIVE = "ACTIVE",
   REVOKED = "REVOKED",
@@ -790,6 +795,20 @@ export interface TenantAuditEventsVariables {
   tenantId: UUIDString;
 }
 
+export interface TenantBranchesData {
+  branches: ({
+    id: UUIDString;
+    name: string;
+    currency: string;
+    timezone: string;
+    status: BranchStatus;
+  } & Branch_Key)[];
+}
+
+export interface TenantBranchesVariables {
+  tenantId: UUIDString;
+}
+
 export interface TenantMembersData {
   memberships: ({
     user: {
@@ -1522,6 +1541,18 @@ export const serverHitRateLimitRef: ServerHitRateLimitRef;
 
 export function serverHitRateLimit(vars: ServerHitRateLimitVariables): MutationPromise<ServerHitRateLimitData, ServerHitRateLimitVariables>;
 export function serverHitRateLimit(dc: DataConnect, vars: ServerHitRateLimitVariables): MutationPromise<ServerHitRateLimitData, ServerHitRateLimitVariables>;
+
+interface TenantBranchesRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: TenantBranchesVariables): QueryRef<TenantBranchesData, TenantBranchesVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: TenantBranchesVariables): QueryRef<TenantBranchesData, TenantBranchesVariables>;
+  operationName: string;
+}
+export const tenantBranchesRef: TenantBranchesRef;
+
+export function tenantBranches(vars: TenantBranchesVariables, options?: ExecuteQueryOptions): QueryPromise<TenantBranchesData, TenantBranchesVariables>;
+export function tenantBranches(dc: DataConnect, vars: TenantBranchesVariables, options?: ExecuteQueryOptions): QueryPromise<TenantBranchesData, TenantBranchesVariables>;
 
 interface CreateBranchRef {
   /* Allow users to create refs without passing in DataConnect */

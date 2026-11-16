@@ -1,9 +1,15 @@
 import type { ReactNode } from 'react';
-import { EmptyState, ErrorState, LoadingState, TavelyoButton } from '@tavelyo/design-system';
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  serverErrorText,
+  TavelyoButton,
+} from '@tavelyo/design-system';
 import { tableMenuUrl } from '../application/forms.ts';
 import type { BranchScope, FloorAdminGateway } from '../domain/index.ts';
 import { TableQrCode } from './TableQrCode.tsx';
-import { floorErrorText, useFloorLayout } from './useFloorLayout.ts';
+import { useFloorLayout } from './useFloorLayout.ts';
 
 export interface PrintQrPageProps {
   readonly gateway: FloorAdminGateway;
@@ -29,13 +35,13 @@ export function PrintQrPage({
     return (
       <ErrorState
         title="No se pudieron preparar los códigos QR"
-        description={floorErrorText(state.error)}
+        description={serverErrorText(state.error)}
         onRetry={reload}
       />
     );
   }
 
-  const tables = state.sectors
+  const tables = state.data
     .filter((sector) => !sector.archived)
     .flatMap((sector) =>
       sector.tables

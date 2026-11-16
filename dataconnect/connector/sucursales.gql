@@ -2,6 +2,33 @@
 # es la de la empresa y no cambia después (los precios guardados están en esa moneda). La zona
 # horaria debe tener forma IANA (Región/Ciudad); el horario de la carta se evalúa en ella.
 
+# Todas las sucursales de la empresa, archivadas incluidas, para gestionarlas (tenant.settings).
+query TenantBranches($tenantId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      rolePermissions_on_role(where: { permission: { code: { eq: "tenant.settings" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: tenant.settings") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  branches(where: { tenant: { id: { eq: $tenantId } } }, orderBy: [{ name: ASC }]) {
+    id
+    name
+    currency
+    timezone
+    status
+  }
+}
+
 mutation CreateBranch($tenantId: UUID!, $name: String!, $currency: String!, $timezone: String!)
 @auth(level: USER)
 @transaction {

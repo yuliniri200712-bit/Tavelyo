@@ -6,7 +6,7 @@ import { ok } from '@tavelyo/core';
 import { SessionProvider, type AuthGateway, type StaffUser } from '@tavelyo/identity';
 import type { CatalogAdminGateway } from '@tavelyo/catalog';
 import type { FloorAdminGateway } from '@tavelyo/floor';
-import type { TenancyGateway } from '@tavelyo/tenancy';
+import type { BranchAdminGateway, TenancyGateway } from '@tavelyo/tenancy';
 import { AppContext } from './app-context.tsx';
 import { routes } from './routes.tsx';
 
@@ -104,6 +104,12 @@ const catalogAdmin: CatalogAdminGateway = {
   changePrice: done,
 };
 
+const branchAdmin: BranchAdminGateway = {
+  branches: vi.fn(async () => ok([])),
+  createBranch: done,
+  updateBranch: done,
+};
+
 function renderAt(path: string, user: StaffUser | null) {
   const auth = fakeAuth(user);
   const services = {
@@ -112,6 +118,7 @@ function renderAt(path: string, user: StaffUser | null) {
     tenancy,
     floorAdmin,
     catalogAdmin,
+    branchAdmin,
     menuWebUrl: 'https://carta.example',
     usesEmulators: true,
   };

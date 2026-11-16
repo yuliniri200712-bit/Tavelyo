@@ -13,3 +13,4 @@ export {
 export { mapCommandError, type CommandError } from './command-errors.ts';
 export { createFloorAdminGateway } from './floor-gateway.ts';
 export { createCatalogAdminGateway } from './catalog-gateway.ts';
+export { createBranchAdminGateway } from './branch-gateway.ts';

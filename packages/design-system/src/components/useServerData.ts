@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { Result } from '@tavelyo/core';
-import type { CatalogError, CatalogResult } from '../domain/index.ts';
+
+/**
+ * Falla de una operación de los módulos de administración. `rejected` lleva el motivo que da el
+ * servidor (mensajes fijos de las reglas, sin datos de otras empresas).
+ */
+export type ServerError =
+  | { readonly kind: 'rejected'; readonly message: string }
+  | { readonly kind: 'unauthorized' | 'network' | 'unknown' };
+
+type Outcome<T> =
+  { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: ServerError };
 
 export type DataState<T> =
   | { readonly status: 'loading' }
-  | { readonly status: 'error'; readonly error: CatalogError }
+  | { readonly status: 'error'; readonly error: ServerError }
   | { readonly status: 'ready'; readonly data: T };
 
-export type Notice = { readonly tone: 'success' | 'error'; readonly text: string } | null;
+export type ActionResult = { readonly tone: 'success' | 'error'; readonly text: string } | null;
 
 const FAILURE_TEXT = {
   unauthorized: 'Tu sesión ya no tiene permiso para esta acción. Vuelve a iniciar sesión.',
@@ -15,17 +24,18 @@ const FAILURE_TEXT = {
   unknown: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
 } as const;
 
-export function catalogErrorText(error: CatalogError): string {
+export function serverErrorText(error: ServerError): string {
   return error.kind === 'rejected' ? error.message : FAILURE_TEXT[error.kind];
 }
 
 /**
  * Datos leídos siempre del servidor. Cada cambio se confirma con el servidor y luego se vuelve a
- * leer todo: la pantalla nunca muestra un estado que no existe (precios incluidos).
+ * leer todo: la pantalla nunca muestra un estado que no existe. `load` debe ser estable
+ * (useCallback) para no repetir la lectura en cada render.
  */
-export function useServerData<T>(load: () => Promise<Result<T, CatalogError>>) {
+export function useServerData<T>(load: () => Promise<Outcome<T>>) {
   const [state, setState] = useState<DataState<T>>({ status: 'loading' });
-  const [notice, setNotice] = useState<Notice>(null);
+  const [notice, setNotice] = useState<ActionResult>(null);
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
@@ -50,10 +60,10 @@ export function useServerData<T>(load: () => Promise<Result<T, CatalogError>>) {
 
   /** Ejecuta un cambio; devuelve true si el servidor lo aceptó. */
   const run = useCallback(
-    async (command: () => CatalogResult<void>, successText: string): Promise<boolean> => {
+    async (command: () => Promise<Outcome<void>>, successText: string): Promise<boolean> => {
       const result = await command();
       if (!result.ok) {
-        setNotice({ tone: 'error', text: catalogErrorText(result.error) });
+        setNotice({ tone: 'error', text: serverErrorText(result.error) });
         return false;
       }
       setNotice({ tone: 'success', text: successText });
@@ -66,4 +76,4 @@ export function useServerData<T>(load: () => Promise<Result<T, CatalogError>>) {
   return { state, notice, reload, run };
 }
 
-export type Run = ReturnType<typeof useServerData>['run'];
+export type RunCommand = ReturnType<typeof useServerData>['run'];

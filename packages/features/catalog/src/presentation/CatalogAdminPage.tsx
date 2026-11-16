@@ -2,6 +2,9 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { isCurrencyCode, Money, formatMoney } from '@tavelyo/core';
 import {
   ActionNotice,
+  serverErrorText,
+  useServerData,
+  type RunCommand,
   Card,
   EmptyState,
   ErrorState,
@@ -20,7 +23,6 @@ import type {
   TaxRuleAdmin,
 } from '../domain/index.ts';
 import { CategoryForm, GroupForm, OptionForm, ProductForm, TaxForm } from './forms.tsx';
-import { catalogErrorText, useServerData, type Run } from './useServerData.ts';
 
 export interface CatalogAdminPageProps {
   readonly gateway: CatalogAdminGateway;
@@ -39,7 +41,7 @@ interface Shared {
   readonly gateway: CatalogAdminGateway;
   readonly tenantId: string;
   readonly currency: string;
-  readonly run: Run;
+  readonly run: RunCommand;
   readonly canEdit: boolean;
 }
 
@@ -73,7 +75,7 @@ export function CatalogAdminPage(props: CatalogAdminPageProps) {
       {state.status === 'error' ? (
         <ErrorState
           title="No se pudo cargar la carta"
-          description={catalogErrorText(state.error)}
+          description={serverErrorText(state.error)}
           onRetry={reload}
         />
       ) : null}

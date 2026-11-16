@@ -25,6 +25,7 @@ This README will guide you through the process of using the generated JavaScript
   - [*ServerProductsForQuote*](#serverproductsforquote)
   - [*ServerQuoteByKey*](#serverquotebykey)
   - [*ServerQuoteForPayment*](#serverquoteforpayment)
+  - [*TenantBranches*](#tenantbranches)
 - [**Mutations**](#mutations)
   - [*CreateTaxRule*](#createtaxrule)
   - [*UpdateTaxRule*](#updatetaxrule)
@@ -2229,6 +2230,121 @@ console.log(data.orderQuotes);
 executeQuery(ref).then((response) => {
   const data = response.data;
   console.log(data.orderQuotes);
+});
+```
+
+## TenantBranches
+You can execute the `TenantBranches` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+tenantBranches(vars: TenantBranchesVariables, options?: ExecuteQueryOptions): QueryPromise<TenantBranchesData, TenantBranchesVariables>;
+
+interface TenantBranchesRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: TenantBranchesVariables): QueryRef<TenantBranchesData, TenantBranchesVariables>;
+}
+export const tenantBranchesRef: TenantBranchesRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+tenantBranches(dc: DataConnect, vars: TenantBranchesVariables, options?: ExecuteQueryOptions): QueryPromise<TenantBranchesData, TenantBranchesVariables>;
+
+interface TenantBranchesRef {
+  ...
+  (dc: DataConnect, vars: TenantBranchesVariables): QueryRef<TenantBranchesData, TenantBranchesVariables>;
+}
+export const tenantBranchesRef: TenantBranchesRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the tenantBranchesRef:
+```typescript
+const name = tenantBranchesRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `TenantBranches` query requires an argument of type `TenantBranchesVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface TenantBranchesVariables {
+  tenantId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `TenantBranches` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `TenantBranchesData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface TenantBranchesData {
+  branches: ({
+    id: UUIDString;
+    name: string;
+    currency: string;
+    timezone: string;
+    status: BranchStatus;
+  } & Branch_Key)[];
+}
+```
+### Using `TenantBranches`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, tenantBranches, TenantBranchesVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `TenantBranches` query requires an argument of type `TenantBranchesVariables`:
+const tenantBranchesVars: TenantBranchesVariables = {
+  tenantId: ..., 
+};
+
+// Call the `tenantBranches()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await tenantBranches(tenantBranchesVars);
+// Variables can be defined inline as well.
+const { data } = await tenantBranches({ tenantId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await tenantBranches(dataConnect, tenantBranchesVars);
+
+console.log(data.branches);
+
+// Or, you can use the `Promise` API.
+tenantBranches(tenantBranchesVars).then((response) => {
+  const data = response.data;
+  console.log(data.branches);
+});
+```
+
+### Using `TenantBranches`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, tenantBranchesRef, TenantBranchesVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `TenantBranches` query requires an argument of type `TenantBranchesVariables`:
+const tenantBranchesVars: TenantBranchesVariables = {
+  tenantId: ..., 
+};
+
+// Call the `tenantBranchesRef()` function to get a reference to the query.
+const ref = tenantBranchesRef(tenantBranchesVars);
+// Variables can be defined inline as well.
+const ref = tenantBranchesRef({ tenantId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = tenantBranchesRef(dataConnect, tenantBranchesVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.branches);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.branches);
 });
 ```
 

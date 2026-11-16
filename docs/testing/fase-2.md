@@ -81,3 +81,12 @@ Cobertura:
 - **Pantallas:** el propietario ve y edita todo; el administrador de sucursal consulta la carta de la empresa sin controles de edición y cambia disponibilidad y precio en su sucursal; cambiar un precio pide confirmación con el importe anterior y el nuevo; un precio no válido se explica sin llamar al servidor; sin precio el producto se marca «Sin precio: no aparece en la carta».
 
 Recorrido de `catalog-admin.spec.ts`: el propietario crea un impuesto, una categoría, un producto con alérgenos y un grupo de opciones con un adicional de $ 5.400; en la sucursal lo deja disponible viernes y sábado de 18:00 a 02:00 y le pone $ 32.000; el administrador de sucursal no puede editar la carta de la empresa y sube el precio a $ 35.000 con confirmación; axe sin infracciones en las dos pantallas.
+
+## 2026-11-15 — Bloque 4c: sucursales (operations)
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Conjunto | `npm run check` | ✅ 491 pruebas (nuevas: formulario y pantalla de sucursales y lista de sucursales actualizada sin cambiar la sucursal activa) |
+| Autorización de `TenantBranches` | `npm run test:integration` (`salon-carta.int.test.ts`) | Se verifica en CI: el propietario ve sus sucursales archivadas incluidas y no las de otra empresa; administrador de sucursal y mesero sin `tenant.settings`; otra empresa sin membresía |
+| Navegador con emuladores | `npm run test:e2e:emulators` (`branches-admin.spec.ts`) | Se verifica en CI: crear, archivar con confirmación y restaurar; la sucursal actual no se archiva; la nueva aparece al cambiar de contexto; el administrador de sucursal no ve el módulo |
+| SDK generado | CI (`dataconnect:sdk:generate` + `git diff`) | Escrito a mano siguiendo el formato del generador porque la CLI no corre en el equipo local; CI lo compara con el generador real |

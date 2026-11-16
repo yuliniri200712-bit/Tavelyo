@@ -1,5 +1,10 @@
 import { queryRef, executeQuery, validateArgsWithOptions, mutationRef, executeMutation, validateArgs } from 'firebase/data-connect';
 
+export const BranchStatus = {
+  ACTIVE: "ACTIVE",
+  ARCHIVED: "ARCHIVED",
+}
+
 export const MembershipStatus = {
   ACTIVE: "ACTIVE",
   REVOKED: "REVOKED",
@@ -596,6 +601,19 @@ serverHitRateLimitRef.operationName = 'ServerHitRateLimit';
 export function serverHitRateLimit(dcOrVars, vars) {
   const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
   return executeMutation(serverHitRateLimitRef(dcInstance, inputVars));
+}
+
+export const tenantBranchesRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'TenantBranches', inputVars);
+}
+tenantBranchesRef.operationName = 'TenantBranches';
+
+export function tenantBranches(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(tenantBranchesRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
 }
 
 export const createBranchRef = (dcOrVars, vars) => {
