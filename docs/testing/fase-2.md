@@ -71,7 +71,7 @@ Recorrido de `tables-admin.spec.ts`: el administrador de sucursal crea un sector
 |---|---|---|
 | Conjunto | `npm run check` | ✅ 484 pruebas (nuevas: captura de importes en `core`, formularios de la carta, pantallas de la carta de la empresa y de la sucursal) |
 | Compilación | `npm run build -w @tavelyo/operations` | ✅ |
-| Navegador con emuladores | `npm run test:e2e:emulators` (`catalog-admin.spec.ts`, Chrome y Safari de iPhone) | Se verifica en CI (en el equipo local el emulador sigue bloqueado por el Control inteligente de aplicaciones de Windows; el propietario decidió no instalar Node en WSL) |
+| Navegador con emuladores | `npm run test:e2e:emulators` (`catalog-admin.spec.ts`, Chrome y Safari de iPhone) | ✅ CI #20 (en el equipo local el emulador sigue bloqueado por el Control inteligente de aplicaciones de Windows; el propietario decidió no instalar Node en WSL) |
 
 Cobertura:
 
@@ -87,6 +87,6 @@ Recorrido de `catalog-admin.spec.ts`: el propietario crea un impuesto, una categ
 | Comprobación | Comando | Resultado |
 |---|---|---|
 | Conjunto | `npm run check` | ✅ 491 pruebas (nuevas: formulario y pantalla de sucursales y lista de sucursales actualizada sin cambiar la sucursal activa) |
-| Autorización de `TenantBranches` | `npm run test:integration` (`salon-carta.int.test.ts`) | Se verifica en CI: el propietario ve sus sucursales archivadas incluidas y no las de otra empresa; administrador de sucursal y mesero sin `tenant.settings`; otra empresa sin membresía |
-| Navegador con emuladores | `npm run test:e2e:emulators` (`branches-admin.spec.ts`) | Se verifica en CI: crear, archivar con confirmación y restaurar; la sucursal actual no se archiva; la nueva aparece al cambiar de contexto; el administrador de sucursal no ve el módulo |
-| SDK generado | CI (`dataconnect:sdk:generate` + `git diff`) | Escrito a mano siguiendo el formato del generador porque la CLI no corre en el equipo local; CI lo compara con el generador real |
+| Autorización de `TenantBranches` | `npm run test:integration` (`salon-carta.int.test.ts`) | ✅ CI #21: el propietario ve sus sucursales archivadas incluidas y no las de otra empresa; administrador de sucursal y mesero sin `tenant.settings`; otra empresa sin membresía |
+| Navegador con emuladores | `npm run test:e2e:emulators` (`branches-admin.spec.ts`) | ✅ CI #21: crear, archivar con confirmación y restaurar; la sucursal actual no se archiva; la nueva aparece al cambiar de contexto; el administrador de sucursal no ve el módulo |
+| SDK generado | CI (`dataconnect:sdk:generate` + `git diff`) | ✅ CI #21: el SDK escrito a mano siguiendo el formato del generador coincide byte a byte con el del generador real (la CLI no corre en el equipo local) |
