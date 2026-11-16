@@ -146,6 +146,7 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-21 | Quién abre la mesa | **El mesero** (2026-11-14). El QR muestra siempre la carta; para pedir, la mesa debe estar abierta | Sesión de mesa (ADR-0011, propuesta) |
 | D-22 | Fotos de los platos | **Más adelante** (2026-11-14). Requieren aprobar Cloud Storage | Fuera de la Fase 2 |
 | D-06 (carrito) | Carrito en mesa compartida | **Un carrito por persona**, privado (2026-11-14). Quién ve y paga qué en la cuenta sigue pendiente | `plans/fase-2.md` |
+| D-04 | Garantía antes de cocina | **Preautorización obligatoria y sin excepciones** (2026-11-16): ningún pedido llega a cocina sin un pago autorizado verificado por el servidor; tampoco los tomados por el mesero ni los de clientes que pagan en efectivo. Mientras no haya pasarela real (D-02), solo con el adaptador simulado y en emuladores | `plans/fase-3.md`; ADR-0006; PM §8 paso 4 |
 | D-16 | Bibliotecas y herramientas del stack web, y Firebase Hosting | **Aceptadas** según ADR-0010; formateador **Prettier** (2026-11-13); validación de formularios se decide en Fase 1 | ADR-0010 aceptado |
 
 ### Pendientes
@@ -153,7 +154,6 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | ID | Decisión | Bloquea |
 |---|---|---|
 | D-02 | Pasarela de pago (debe admitir autorización y captura separadas en Colombia). **El propietario está buscando proveedor** (2026-11-14) | Fase 4; ADR-0006 |
-| D-04 | Política de garantía: ¿preautorización obligatoria antes de enviar a cocina? Excepciones (efectivo, atención por mesero) | Flujo de pedido de Fase 2–3 |
 | D-05 | Propinas: momento, cálculo y si se capturan con la cuenta | Modelo de cuenta |
 | D-06 | Sesión de mesa compartida: quién ve y quién paga qué en la cuenta (el carrito ya es por persona) | División de cuentas, Fases 3–4 |
 | D-09 | Carga objetivo por sucursal, latencia aceptable y presupuesto mensual | RNF-12, dimensionamiento de Cloud SQL |

@@ -4,7 +4,7 @@
 
 ## Fase actual
 
-**Fase 2 — Salón y carta: los 7 bloques terminados; espera la aprobación del propietario para cerrarse.** Autorizada por el propietario el 2026-11-14. Rama: `fase-2-salon-carta`. Plan: [`plans/fase-2.md`](plans/fase-2.md). Decisiones: D-01b, D-21, D-22, D-06 (carrito) y ADR-0011.
+**Fase 2 — Salón y carta: cerrada** con aprobación del propietario el 2026-11-16 e integrada en `main`. Autorizada el 2026-11-14. Rama: `fase-2-salon-carta`. Plan: [`plans/fase-2.md`](plans/fase-2.md). Decisiones: D-01b, D-21, D-22, D-06 (carrito) y ADR-0011.
 
 | Bloque del plan | Estado |
 |---|---|
@@ -59,11 +59,11 @@ D-07 Cloud Functions con TypeScript · D-12 (fuente) Plus Jakarta Sans, OFL 1.1 
 
 - iPhone: instalación de las dos PWA y revisión con VoiceOver cuando el propietario tenga uno a mano (pendiente de la Fase 1, aprobado como no bloqueante).
 - Antes de producción (Fase 2): habilitar el inicio de sesión anónimo en `tavelyo-e2b57` (sin coste); purgar `RateLimitHit` y las cuentas anónimas antiguas con una tarea programada; decidir App Check; tope o motivo en `price.change`.
-- Para la Fase 3: decidir **D-04** (¿preautorización obligatoria antes de enviar a cocina?); actualización en vivo del salón y de la cuenta (hoy se refrescan con un botón).
+- Para la Fase 3: **D-04 decidida** (preautorización obligatoria y sin excepciones antes de cocina); actualización en vivo del salón y de la cuenta (hoy se refrescan con un botón). Plan propuesto en `plans/fase-3.md`, pendiente de aprobación.
 - Fases con cobros o comandas: decidir cómo se comporta el cierre por inactividad a mitad de una operación (hoy no hay ninguna) y si las pantallas de cocina quedan exentas.
 - Antes del primer despliegue (requiere autorización): verificar IAM de `executeGraphql`/suplantación en `tavelyo-e2b57`, sembrar el catálogo de roles y permisos en el entorno real (hoy solo lo hacen las pruebas), herramienta para conceder la afirmación `platform_operator` y empaquetado del backend para Cloud Build.
 - Validación de formularios en el cliente (pendiente dentro de ADR-0010; se decide en Fase 1 si hace falta).
-- Decisiones de negocio: D-01 y D-01b resueltas (Colombia, COP; precios con impuestos incluidos, tasa por empresa), D-02 (pasarela: el propietario busca proveedor), D-04, D-05, D-06 (quién ve y paga qué; el carrito ya es por persona) y D-09 a D-11 (`requirements.md` §6).
+- Decisiones de negocio: D-01 y D-01b resueltas (Colombia, COP; precios con impuestos incluidos, tasa por empresa), D-02 (pasarela: el propietario busca proveedor), D-04 resuelta (preautorización sin excepciones), D-05, D-06 (quién ve y paga qué; el carrito ya es por persona) y D-09 a D-11 (`requirements.md` §6).
 
 ## Bloqueos
 

@@ -18,7 +18,7 @@ Según PM §11: sucursales, sectores, mesas, catálogo, QR y sesión de mesa, y 
 | D-22 | **Fotos de los platos más adelante.** Carta sin fotos en esta fase; las fotos requieren aprobar Cloud Storage |
 | D-06 (parcial) | **Cada persona tiene su propio carrito** y nadie ve el de los demás. Quién ve y paga qué en la cuenta se decide en las fases de pedidos y caja |
 
-Pendiente para la Fase 3: **D-04** (si la preautorización es obligatoria antes de enviar a cocina). En esta fase el adaptador simulado se ejercita sin decidirlo.
+Pendiente para la Fase 3: **D-04** (si la preautorización es obligatoria antes de enviar a cocina). En esta fase el adaptador simulado se ejercita sin decidirlo. **Resuelta el 2026-11-16:** obligatoria y sin excepciones (`requirements.md`).
 
 ## 3. Diseño propuesto
 
