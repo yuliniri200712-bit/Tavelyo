@@ -1,6 +1,6 @@
 # Plan de Fase 3 — Pedidos
 
-Estado: **propuesto, pendiente de aprobación del propietario** (2026-11-16). Rama de trabajo: `fase-3-pedidos`. Nada de este plan se implementa hasta que se apruebe.
+Estado: **aprobado por el propietario el 2026-11-16**, con las recomendaciones de D-23 a D-26 y la aclaración de D-04 sobre clientes sin teléfono y pago en efectivo (sección 2). Rama de trabajo: `fase-3-pedidos`.
 
 ## 1. Objetivo
 
@@ -25,13 +25,16 @@ Por D-04, todo pedido está sujeto a garantía. Mientras no haya pasarela real (
 
 ### Consecuencias de D-04 que este plan asume
 
-- **Un cliente sin teléfono, o que quiere pagar en efectivo, no puede pedir.** No hay excepción para efectivo ni para clientes atendidos por el mesero.
+- **Aclaración del propietario (2026-11-16):**
+  - **Un cliente sin teléfono puede pedir por medio de otra persona de la mesa que sí lo tenga.** Esa persona se une a la mesa y hace el pedido desde su teléfono.
+  - **Quien paga en efectivo también puede pedir.** La preautorización es la garantía para que el pedido llegue a cocina; el pago final de la cuenta puede hacerse en efectivo, y entonces la retención se libera (Fase 4, caja).
+  - Sigue sin haber pedidos sin una preautorización verificada.
 - **Cada envío a cocina tiene su propia preautorización.** Si la mesa pide una segunda ronda, se revisa y se autoriza ese pedido nuevo. No se aumenta en silencio la retención anterior (PM §8, paso 5).
 - **Cancelar una línea no devuelve dinero en esta fase.** Lo autorizado sigue reservado. En la Fase 4 se captura solo lo consumido y se libera el resto, según lo que permita la pasarela.
 
-### Pendientes del propietario (necesarias para aprobar el plan)
+### Decididas al aprobar el plan (2026-11-16: el propietario aprobó las recomendaciones)
 
-| ID | Pregunta | Recomendación |
+| ID | Pregunta | Decisión |
 |---|---|---|
 | D-23 | **¿El mesero puede tomar pedidos?** Por D-04, el pedido necesita la preautorización del cliente, y sin pasarela real no hay datáfono ni enlace de pago | **No en la Fase 3: los pedidos salen del teléfono del cliente.** La toma de comandas por el mesero (RF-ME-02) pasa a la Fase 4, cuando la pasarela permita autorizar con datáfono o con un enlace de pago |
 | D-24 | **Estaciones de cocina:** ¿cada persona de cocina tiene estaciones asignadas, o elige en pantalla? | **Elige en pantalla** entre las estaciones de su sucursal. La asignación por persona queda para cuando haga falta |
@@ -200,12 +203,12 @@ Por D-04, todo pedido está sujeto a garantía. Mientras no haya pasarela real (
 
 ## 8. Aprobaciones que pide este plan
 
-- El plan, con las decisiones **D-23 a D-26** (sección 2).
-- Que **un cliente sin teléfono, o que paga en efectivo, no pueda pedir** mientras rija D-04 sin excepciones.
+- ✅ El plan, con las decisiones **D-23 a D-26** (sección 2), aprobado el 2026-11-16.
+- ✅ Aclaración de D-04: un cliente sin teléfono pide por medio de otra persona de la mesa, y quien paga en efectivo puede pedir; la preautorización sigue siendo obligatoria antes de cocina.
 
 ## 9. Riesgos
 
 - **Es la primera fase con tiempo real en producción de pantallas.** El emulador no reproduce la latencia real; las suscripciones se verifican de nuevo al desplegar.
 - **Autorizar y crear el pedido no es atómico:** la pasarela y la base de datos son sistemas distintos (PM §8). Se cubre con idempotencia por resumen, reintento y conciliación, y se prueba la caída entre los dos pasos.
-- **D-04 sin excepciones puede frenar la operación real:** efectivo, clientes sin teléfono y pedidos al mesero. Si en el piloto resulta un problema, se revisa como una decisión nueva.
+- **D-04 sin excepciones puede frenar la operación real:** una mesa donde nadie tenga teléfono o tarjeta no puede pedir, y los pedidos al mesero llegan en la Fase 4. Si en el piloto resulta un problema, se revisa como una decisión nueva.
 - **Una pantalla de cocina siempre abierta** (D-25) aumenta el riesgo si el equipo queda sin vigilancia. Se mitiga con el permiso mínimo (`kitchen.advance`, sin importes ni datos del cliente) y con el cierre de sesión visible.

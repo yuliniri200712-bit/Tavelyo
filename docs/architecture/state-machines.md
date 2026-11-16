@@ -19,7 +19,7 @@ stateDiagram-v2
 ```
 
 - Saltar `recogido` exige `delivery.skip_sequence` y queda auditado.
-- Retroceder (p. ej. `en_preparacion → recibido`) no está permitido salvo como excepción auditada; pendiente de decidir si se admite.
+- Retroceder (p. ej. `en_preparacion → recibido`) **no está permitido** (D-26, 2026-11-16): un error se corrige cancelando la línea con motivo.
 - **Estado de la orden (derivado):** `recibido` si todas sus líneas activas lo están; `parcialmente_listo` si alguna está `listo` y otras no; `listo` cuando todas las activas lo están; `entregado` cuando todas se entregaron.
 
 ## 2. Sesión de mesa (TableSession)
@@ -94,7 +94,7 @@ sequenceDiagram
   B->>DB: aplicar idempotentemente
 ```
 
-Pendiente de D-04: si la garantía no es obligatoria, el pedido se libera a cocina sin esperar la autorización.
+D-04 (2026-11-16): la garantía es obligatoria y sin excepciones; el pedido se libera a cocina solo después de la autorización confirmada.
 
 ## 7. Flujo crítico: cierre y captura
 
