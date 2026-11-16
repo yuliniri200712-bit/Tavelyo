@@ -91,6 +91,12 @@
   background: var(--tv-color-surface-card);
   color: var(--tv-color-text-primary);
   font: inherit;
+  /*
+   * Ancho porcentual: el campo nunca ensancha la página. Sin esto, un selector con una opción
+   * larga (p. ej. «America/Argentina/ComodRivadavia») desbordaba a 320 px (WCAG 1.4.10).
+   */
+  width: 100%;
+  min-width: 0;
 }
 
 .tv-field__input[aria-invalid='true'] {

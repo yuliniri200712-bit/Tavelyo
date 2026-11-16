@@ -11,8 +11,12 @@ export default defineConfig({
   reporter: process.env['CI'] ? [['list'], ['github']] : [['list']],
   timeout: 90_000,
   use: { trace: 'retain-on-failure' },
+  // Matriz D-15 completa, como los recorridos sin datos (playwright.config.ts).
   projects: [
     { name: 'chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
+    { name: 'edge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
+    { name: 'safari-escritorio', use: { ...devices['Desktop Safari'] } },
+    { name: 'chrome-android', use: { ...devices['Pixel 7'] } },
     { name: 'safari-iphone', use: { ...devices['iPhone 15'] } },
   ],
   webServer: [

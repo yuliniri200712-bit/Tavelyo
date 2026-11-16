@@ -69,3 +69,10 @@ Además, `branch_insert` y `branch_update` solo aparecen en las operaciones auto
 - **Límites de solicitudes (T11):** se cuentan en la base (`RateLimitHit`), así que valen para todas las instancias a la vez. Unirse: 10 cada 10 minutos por persona y 120 por mesa; «Revisar pedido»: 30 por minuto; pagos: 10 por minuto. La solicitud rechazada no cuenta, porque la transacción se revierte.
 - **Limitación encontrada:** el SDK web generado no admite variables de lista de tipo `_Data`, así que el resumen con sus líneas se guarda con un documento fijo de `executeGraphql` en el backend (`backend/src/data/order-quotes.ts`), el mismo patrón que el aprovisionamiento de la Fase 1.
 - **Pendiente antes de producción:** purgar las filas antiguas de `RateLimitHit` y las cuentas anónimas (tarea programada), y decidir si App Check se suma como capa adicional.
+
+## Implementación (Fase 2, bloques 5 a 7, 2026-11-15 y 2026-11-16)
+
+- **Mesero (`operations`, módulo «Salón»):** abre y cierra la mesa, ve a las personas unidas como «Persona 1, 2…» con su hora de ingreso y su estado, sin ningún dato de su cuenta, y las retira con confirmación. La lista no se actualiza sola: se refresca con un botón (las actualizaciones en vivo son de la Fase 3).
+- **Cliente (`menu-web`, `/mesa/<qrPublicId>`):** la carta se lee sin sesión. La sesión anónima se crea **solo al revisar el pedido**, no al mirar la carta, para no crear cuentas anónimas por cada visita. El carrito vive en el navegador de la persona (D-06) y se lee como dato no confiable; el servidor recalcula todo.
+- **Cambios de precio (caso 5):** si `quoteOrder` informa cambios, la pantalla muestra el importe anterior y el actual y no sigue sin confirmación; además la carta se vuelve a leer para que lo siguiente que se agregue tenga el precio vigente (hallazgo del recorrido en CI #26).
+- **Pago simulado:** rotulado en la pantalla; con emuladores la persona elige el resultado para probar cada caso. Aprobado termina en «Pedido listo»; nada llega a cocina hasta la Fase 3.
