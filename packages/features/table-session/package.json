@@ -1,0 +1,23 @@
+{
+  "name": "@tavelyo/table-session",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cliente en la mesa (ADR-0011): carta por QR, unirse a la mesa, revisar el pedido con el servidor y pago simulado",
+  "exports": {
+    ".": "./src/index.ts",
+    "./domain": "./src/domain/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@tavelyo/cart": "*",
+    "@tavelyo/contracts": "*",
+    "@tavelyo/core": "*",
+    "@tavelyo/design-system": "*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.7"
+  }
+}

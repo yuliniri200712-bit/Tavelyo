@@ -1,0 +1,101 @@
+# Operaciones de la carta pública y del cliente en la mesa (ADR-0011).
+# PUBLIC: solo PublicMenu, filtrada por el qrPublicId de la mesa. USER_ANON: solo operaciones que
+# comprueban que auth.uid es un participante vigente de una sesión abierta.
+
+# Carta de la sucursal de la mesa: productos no archivados, disponibles y con precio vigente. No
+# devuelve sesiones, pedidos ni datos del personal. Nada si la mesa o su sector están archivados,
+# la sucursal no está activa o la empresa está suspendida. El horario lo aplica la interfaz y lo
+# revalida quoteOrder en el servidor.
+query PublicMenu($qrPublicId: UUID!) @auth(level: PUBLIC) {
+  diningTables(
+    where: {
+      qrPublicId: { eq: $qrPublicId }
+      archivedAt: { isNull: true }
+      sector: {
+        archivedAt: { isNull: true }
+        branch: { status: { eq: ACTIVE }, tenant: { status: { eq: ACTIVE } } }
+      }
+    }
+    limit: 1
+  ) {
+    code
+    sector {
+      branch {
+        name
+        status
+        currency
+        timezone
+        productBranches_on_branch(
+          where: {
+            _and: [
+              { available: { eq: true } }
+              { currentPriceId: { isNull: false } }
+              { product: { archivedAt: { isNull: true } } }
+              { product: { category: { archivedAt: { isNull: true } } } }
+            ]
+          }
+          limit: 500
+        ) {
+          daysMask
+          startMinute
+          endMinute
+          currentPrice {
+            id
+            amountMinor
+            currency
+          }
+          product {
+            id
+            name
+            description
+            allergensDeclared
+            sort
+            category {
+              id
+              name
+              sort
+            }
+            modifierGroups_on_product(where: { archivedAt: { isNull: true } }) {
+              id
+              name
+              minSelect
+              maxSelect
+              sort
+              modifierOptions_on_group(where: { archivedAt: { isNull: true } }) {
+                id
+                name
+                priceDeltaMinor
+                sort
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+# Participación vigente del propio cliente en una sesión abierta.
+query MyParticipation($sessionId: UUID!) @auth(level: USER_ANON) {
+  sessionParticipants(
+    where: {
+      _and: [
+        { sessionId: { eq: $sessionId } }
+        { authUid: { eq_expr: "auth.uid" } }
+        { removedAt: { isNull: true } }
+        { expiresAt: { gt_expr: "request.time" } }
+        { session: { status: { eq: OPEN } } }
+      ]
+    }
+    limit: 1
+  ) {
+    id
+    expiresAt
+    session {
+      status
+      table {
+        code
+      }
+    }
+  }
+}

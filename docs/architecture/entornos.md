@@ -18,6 +18,6 @@ Estado: **Fase 1** (2026-11-14). Configuración sin secretos en el repositorio.
 
 ## Emuladores
 
-`VITE_EMULATOR_HOST` (opcional) indica la IP del equipo cuando se prueba desde un teléfono en la misma red; por defecto `127.0.0.1`. Comandos: `npm run test:integration` (conectores, pasarelas y backend) y `npm run test:e2e:emulators` (recorrido en navegador), que arrancan y detienen los emuladores con la CLI 15.30.2.
+`VITE_EMULATOR_HOST` (opcional) indica la IP del equipo cuando se prueba desde un teléfono en la misma red; por defecto `127.0.0.1`. Comandos: `npm run test:integration` (conectores, pasarelas y backend) y `npm run test:e2e:emulators` (recorridos del personal y del cliente en navegador, con Auth, SQL Connect y Cloud Functions; compila el backend antes), que arrancan y detienen los emuladores con la CLI 15.30.2. `menu-web` usa además el emulador de Cloud Functions (puerto 5001) para unirse a la mesa, revisar el pedido y el pago simulado.
 
 `firebase.json` define Auth (puerto 9099), SQL Connect (puerto 9399, servicio `tavelyo`, PostgreSQL embebido con PGlite) y Cloud Functions (puerto 5001, código en `backend/`, runtime `nodejs24`). `npm run test:integration` compila el backend antes de arrancar los emuladores; la CLI define `FIREBASE_AUTH_EMULATOR_HOST` y `DATA_CONNECT_EMULATOR_HOST` para que el Admin SDK use los emuladores.

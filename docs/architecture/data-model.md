@@ -1,6 +1,14 @@
 # Modelo de datos — ERD y diccionario
 
-Estado: **grupo «Organización» implementado en la Fase 1** (`dataconnect/schema/schema.gql`); el resto sigue siendo el diseño lógico de la Fase 0 y se fija al escribir el esquema en su fase.
+Estado: **«Organización» implementado en la Fase 1** (`dataconnect/schema/schema.gql`); **«Salón», «Carta» y el resumen de pedido, en la Fase 2** (`salon.gql`, `carta.gql`, `pedido.gql`, `control.gql`). El resto sigue siendo el diseño lógico de la Fase 0 y se fija al escribir el esquema en su fase.
+
+**Implementado (Fase 2, bloque 1, 2026-11-14), con sus diferencias respecto al borrador:**
+
+- **Salón:** `Sector`, `DiningTable` (`qrPublicId` aleatorio y único) y `TableSession`. El borrador preveía un índice único parcial para garantizar una sola sesión abierta por mesa; SQL Connect no lo ofrece, así que se usa `openTableId` único, que vale el id de la mesa mientras está abierta y `null` al cerrarla. Verificado: el segundo intento de abrir la misma mesa falla por unicidad. `SessionParticipant` guarda `authUid` (sesión anónima) y `expiresAt` en lugar de un token: no hay credencial propia que guardar (ADR-0011).
+- **Carta:** `TaxRule` (siempre incluido, D-01b; sin campo `inclusive`), `Category`, `Product` (alérgenos declarados como lista), `ModifierGroup`, `ModifierOption` (precio adicional por empresa), `ProductBranch` (disponibilidad y horario con `daysMask` y minutos locales) y `Price` (historial). `ProductBranch.currentPrice` apunta a la versión vigente para que la carta se lea en una consulta; se actualiza en la misma transacción que inserta el precio nuevo.
+- **Pedido:** `OrderQuote` y `OrderQuoteLine` (resumen verificable con instantáneas), escritos solo por el backend. `IdempotencyRecord` se sustituye en esta fase por la unicidad `(participantId, idempotencyKey)` del resumen más su huella SHA-256 (`fingerprint`, bloque 3), que detecta una clave reutilizada con otro contenido y servirá a la Fase 3 para verificar el resumen al enviarlo a cocina. Las opciones elegidas se guardan como instantáneas JSON con nombre e importe.
+- **Control (bloque 3):** `RateLimitHit` (`control.gql`): una fila por solicitud admitida a un límite del backend, con índice `(scope, subject, at)`. Solo la usa el backend; la purga de filas antiguas queda pendiente.
+- Todas las relaciones usan FK compuestas con `tenantId` y, en lo operativo, `branchId`.
 
 **Implementado (Fase 1):** `Tenant` (con `status` ACTIVE/SUSPENDED), `Branch`, `UserProfile` (solo `displayName`; sin correo, por minimización), `Role`, `Permission`, `RolePermission`, `Membership`, `MembershipBranch` (FK compuestas hacia `Membership` y `Branch` con `tenantId`) y `AuditEvent` (operación, recurso, actor y motivo; sin `before`/`after` todavía). Diferencias con el borrador: los roles son **solo de sistema** (clave `code`, sin `tenant_id`) hasta que haga falta personalizarlos; `version` en `Membership` se aplaza hasta que haya edición concurrente real; las empresas, sucursales y el catálogo de roles se crean por aprovisionamiento en el servidor, nunca desde la app.
 

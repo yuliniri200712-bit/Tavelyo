@@ -7,6 +7,7 @@ import { StatusChip } from '../components/StatusChip.tsx';
 import { TavelyoButton } from '../components/TavelyoButton.tsx';
 import { TextField } from '../components/TextField.tsx';
 import { CheckboxField } from '../components/CheckboxField.tsx';
+import { RadioField } from '../components/RadioField.tsx';
 import { cssVariables, kebab } from '../css-variables.ts';
 import { typeScale } from '../tokens.ts';
 
@@ -76,6 +77,11 @@ export function DesignSystemCatalog() {
           hint="La sesión se borra al cerrar esta pestaña o la app."
           defaultChecked
         />
+        <fieldset className="tv-fieldset">
+          <legend className="tv-fieldset__legend">Término de la carne · Elige 1</legend>
+          <RadioField name="cat-termino" label="Término medio" defaultChecked />
+          <RadioField name="cat-termino" label="Bien asado" />
+        </fieldset>
       </section>
 
       <section aria-labelledby="cat-chips" className="tv-catalog__stack">

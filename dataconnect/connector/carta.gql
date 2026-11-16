@@ -1,0 +1,855 @@
+# Gestión de la carta (Fase 2).
+# - Catálogo de la empresa (categorías, productos, modificadores): catalog.manage y propietario. El
+#   catalog.manage del administrador de sucursal es «catálogo local» (permissions.md): disponibilidad
+#   y horario en sus sucursales.
+# - Impuestos: tenant.settings (D-01b: la tasa la decide la empresa con su contador).
+# - Precio por sucursal: price.change en una sucursal asignada (salvo propietario); cada cambio
+#   inserta una versión nueva de Price y la marca como vigente en la misma transacción.
+# Archivar en lugar de borrar: archived = true archiva y false restaura. Las operaciones de edición
+# esperan todos los campos (un opcional enviado como null lo vacía). Toda variable usada en un
+# filtro es obligatoria, salvo donde la expresión de @check descarta antes la variable nula.
+
+# Catálogo completo de la empresa, archivados incluidos, con sus impuestos.
+query CatalogAdmin($tenantId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      rolePermissions_on_role(
+        where: { permission: { code: { in: ["catalog.manage", "price.change"] } } }
+      ) @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  taxRules(where: { tenantId: { eq: $tenantId } }, orderBy: [{ name: ASC }]) {
+    id
+    name
+    rateBp
+    archivedAt
+  }
+  categories(where: { tenantId: { eq: $tenantId } }, orderBy: [{ sort: ASC }, { name: ASC }]) {
+    id
+    name
+    sort
+    archivedAt
+    products_on_category(orderBy: [{ sort: ASC }, { name: ASC }]) {
+      id
+      name
+      description
+      allergensDeclared
+      sort
+      taxRuleId
+      archivedAt
+      modifierGroups_on_product(orderBy: [{ sort: ASC }]) {
+        id
+        name
+        minSelect
+        maxSelect
+        sort
+        archivedAt
+        modifierOptions_on_group(orderBy: [{ sort: ASC }]) {
+          id
+          name
+          priceDeltaMinor
+          sort
+          archivedAt
+        }
+      }
+    }
+  }
+}
+
+# Disponibilidad, horario y precio vigente de los productos en una sucursal.
+query BranchCatalog($tenantId: UUID!, $branchId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(
+        where: { permission: { code: { in: ["catalog.manage", "price.change"] } } }
+      ) @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  productBranches(where: { tenantId: { eq: $tenantId }, branchId: { eq: $branchId } }) {
+    productId
+    available
+    daysMask
+    startMinute
+    endMinute
+    currentPrice {
+      id
+      amountMinor
+      currency
+      validFrom
+    }
+  }
+}
+
+mutation CreateTaxRule($tenantId: UUID!, $name: String!, $rateBp: Int!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 60 && vars.rateBp >= 0 && vars.rateBp <= 10000"
+        message: "Datos del impuesto no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        rolePermissions_on_role(where: { permission: { code: { eq: "tenant.settings" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: tenant.settings") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+  }
+  taxRule_insert(data: { tenantId: $tenantId, name: $name, rateBp: $rateBp })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "tax_rule.create"
+      resourceType: "tax_rule"
+      resourceId_expr: "response.taxRule_insert.id"
+    }
+  )
+}
+
+# Edita, archiva o restaura un impuesto. Solo se archiva si ningún producto activo lo usa. Los
+# resúmenes de pedido ya calculados conservan la tasa con la que se calcularon.
+mutation UpdateTaxRule(
+  $tenantId: UUID!
+  $taxRuleId: UUID!
+  $name: String!
+  $rateBp: Int!
+  $archived: Boolean!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 60 && vars.rateBp >= 0 && vars.rateBp <= 10000"
+        message: "Datos del impuesto no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        rolePermissions_on_role(where: { permission: { code: { eq: "tenant.settings" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: tenant.settings") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    taxRule(id: $taxRuleId) @check(expr: "this != null", message: "Impuesto inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "El impuesto no pertenece a la empresa")
+      products_on_taxRule(where: { archivedAt: { isNull: true } })
+        @check(
+          expr: "!vars.archived || this.size() == 0"
+          message: "El impuesto está en uso por productos activos"
+        ) {
+        id
+      }
+    }
+  }
+  taxRule_update(
+    id: $taxRuleId
+    data: { name: $name, rateBp: $rateBp, archivedAt_expr: "vars.archived ? request.time : null" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation_expr: "vars.archived ? 'tax_rule.archive' : 'tax_rule.update'"
+      resourceType: "tax_rule"
+      resourceId_expr: "vars.taxRuleId"
+    }
+  )
+}
+
+mutation CreateCategory($tenantId: UUID!, $name: String!, $sort: Int!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 60 && vars.sort >= 0"
+        message: "Datos de la categoría no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+          @check(
+            expr: "this == 'tenant_owner'"
+            message: "Solo el propietario gestiona el catálogo de la empresa"
+          )
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+  }
+  category_insert(data: { tenantId: $tenantId, name: $name, sort: $sort })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "category.create"
+      resourceType: "category"
+      resourceId_expr: "response.category_insert.id"
+    }
+  )
+}
+
+# Edita, archiva o restaura una categoría. Archivada, sus productos dejan de verse en la carta.
+mutation UpdateCategory(
+  $tenantId: UUID!
+  $categoryId: UUID!
+  $name: String!
+  $sort: Int!
+  $archived: Boolean!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 60 && vars.sort >= 0"
+        message: "Datos de la categoría no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+          @check(
+            expr: "this == 'tenant_owner'"
+            message: "Solo el propietario gestiona el catálogo de la empresa"
+          )
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    category(id: $categoryId) @check(expr: "this != null", message: "Categoría inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La categoría no pertenece a la empresa")
+    }
+  }
+  category_update(
+    id: $categoryId
+    data: { name: $name, sort: $sort, archivedAt_expr: "vars.archived ? request.time : null" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation_expr: "vars.archived ? 'category.archive' : 'category.update'"
+      resourceType: "category"
+      resourceId_expr: "vars.categoryId"
+    }
+  )
+}
+
+# Alérgenos: información declarada por el restaurante; la app nunca garantiza su ausencia.
+mutation CreateProduct(
+  $tenantId: UUID!
+  $categoryId: UUID!
+  $taxRuleId: UUID
+  $name: String!
+  $description: String
+  $allergensDeclared: [String!]
+  $sort: Int!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 80 && vars.sort >= 0 && (!has(vars.description) || vars.description == null || size(vars.description) <= 500) && (!has(vars.allergensDeclared) || vars.allergensDeclared == null || (size(vars.allergensDeclared) <= 20 && vars.allergensDeclared.all(a, size(a.trim()) >= 1 && size(a) <= 40)))"
+        message: "Datos del producto no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+          @check(
+            expr: "this == 'tenant_owner'"
+            message: "Solo el propietario gestiona el catálogo de la empresa"
+          )
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    category(id: $categoryId) @check(expr: "this != null", message: "Categoría inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La categoría no pertenece a la empresa")
+      archivedAt @check(expr: "this == null", message: "La categoría está archivada")
+    }
+    # Con taxRuleId nulo el filtro por id desaparece; la expresión lo descarta antes de mirar la lista.
+    taxRules(
+      where: {
+        _and: [
+          { id: { eq: $taxRuleId } }
+          { tenantId: { eq: $tenantId } }
+          { archivedAt: { isNull: true } }
+        ]
+      }
+    )
+      @check(
+        expr: "!has(vars.taxRuleId) || vars.taxRuleId == null || this.size() == 1"
+        message: "Impuesto inexistente o archivado"
+      ) {
+      id
+    }
+  }
+  product_insert(
+    data: {
+      tenantId: $tenantId
+      categoryId: $categoryId
+      taxRuleId: $taxRuleId
+      name: $name
+      description: $description
+      allergensDeclared: $allergensDeclared
+      sort: $sort
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "product.create"
+      resourceType: "product"
+      resourceId_expr: "response.product_insert.id"
+    }
+  )
+}
+
+mutation UpdateProduct(
+  $tenantId: UUID!
+  $productId: UUID!
+  $categoryId: UUID!
+  $taxRuleId: UUID
+  $name: String!
+  $description: String
+  $allergensDeclared: [String!]
+  $sort: Int!
+  $archived: Boolean!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 80 && vars.sort >= 0 && (!has(vars.description) || vars.description == null || size(vars.description) <= 500) && (!has(vars.allergensDeclared) || vars.allergensDeclared == null || (size(vars.allergensDeclared) <= 20 && vars.allergensDeclared.all(a, size(a.trim()) >= 1 && size(a) <= 40)))"
+        message: "Datos del producto no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+          @check(
+            expr: "this == 'tenant_owner'"
+            message: "Solo el propietario gestiona el catálogo de la empresa"
+          )
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    product(id: $productId) @check(expr: "this != null", message: "Producto inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "El producto no pertenece a la empresa")
+    }
+    category(id: $categoryId) @check(expr: "this != null", message: "Categoría inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La categoría no pertenece a la empresa")
+      archivedAt
+        @check(expr: "vars.archived || this == null", message: "La categoría está archivada")
+    }
+    taxRules(
+      where: {
+        _and: [
+          { id: { eq: $taxRuleId } }
+          { tenantId: { eq: $tenantId } }
+          { archivedAt: { isNull: true } }
+        ]
+      }
+    )
+      @check(
+        expr: "!has(vars.taxRuleId) || vars.taxRuleId == null || this.size() == 1"
+        message: "Impuesto inexistente o archivado"
+      ) {
+      id
+    }
+  }
+  product_update(
+    id: $productId
+    data: {
+      categoryId: $categoryId
+      taxRuleId: $taxRuleId
+      name: $name
+      description: $description
+      allergensDeclared: $allergensDeclared
+      sort: $sort
+      archivedAt_expr: "vars.archived ? request.time : null"
+      updatedAt_expr: "request.time"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation_expr: "vars.archived ? 'product.archive' : 'product.update'"
+      resourceType: "product"
+      resourceId_expr: "vars.productId"
+    }
+  )
+}
+
+mutation CreateModifierGroup(
+  $tenantId: UUID!
+  $productId: UUID!
+  $name: String!
+  $minSelect: Int!
+  $maxSelect: Int!
+  $sort: Int!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 60 && vars.sort >= 0 && vars.minSelect >= 0 && vars.maxSelect >= 1 && vars.maxSelect >= vars.minSelect && vars.maxSelect <= 20"
+        message: "Datos del grupo de opciones no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+          @check(
+            expr: "this == 'tenant_owner'"
+            message: "Solo el propietario gestiona el catálogo de la empresa"
+          )
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    product(id: $productId) @check(expr: "this != null", message: "Producto inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "El producto no pertenece a la empresa")
+      archivedAt @check(expr: "this == null", message: "El producto está archivado")
+    }
+  }
+  modifierGroup_insert(
+    data: {
+      tenantId: $tenantId
+      productId: $productId
+      name: $name
+      minSelect: $minSelect
+      maxSelect: $maxSelect
+      sort: $sort
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "modifier_group.create"
+      resourceType: "modifier_group"
+      resourceId_expr: "response.modifierGroup_insert.id"
+    }
+  )
+}
+
+mutation UpdateModifierGroup(
+  $tenantId: UUID!
+  $groupId: UUID!
+  $name: String!
+  $minSelect: Int!
+  $maxSelect: Int!
+  $sort: Int!
+  $archived: Boolean!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 60 && vars.sort >= 0 && vars.minSelect >= 0 && vars.maxSelect >= 1 && vars.maxSelect >= vars.minSelect && vars.maxSelect <= 20"
+        message: "Datos del grupo de opciones no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+          @check(
+            expr: "this == 'tenant_owner'"
+            message: "Solo el propietario gestiona el catálogo de la empresa"
+          )
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    modifierGroup(id: $groupId)
+      @check(expr: "this != null", message: "Grupo de opciones inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El grupo no pertenece a la empresa")
+    }
+  }
+  modifierGroup_update(
+    id: $groupId
+    data: {
+      name: $name
+      minSelect: $minSelect
+      maxSelect: $maxSelect
+      sort: $sort
+      archivedAt_expr: "vars.archived ? request.time : null"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation_expr: "vars.archived ? 'modifier_group.archive' : 'modifier_group.update'"
+      resourceType: "modifier_group"
+      resourceId_expr: "vars.groupId"
+    }
+  )
+}
+
+# El precio adicional de una opción incluye impuestos, como el del producto, y no es negativo.
+mutation CreateModifierOption(
+  $tenantId: UUID!
+  $groupId: UUID!
+  $name: String!
+  $priceDeltaMinor: Int64!
+  $sort: Int!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 60 && vars.sort >= 0 && vars.priceDeltaMinor >= 0 && vars.priceDeltaMinor <= 100000000000"
+        message: "Datos de la opción no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+          @check(
+            expr: "this == 'tenant_owner'"
+            message: "Solo el propietario gestiona el catálogo de la empresa"
+          )
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    modifierGroup(id: $groupId)
+      @check(expr: "this != null", message: "Grupo de opciones inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El grupo no pertenece a la empresa")
+      archivedAt @check(expr: "this == null", message: "El grupo está archivado")
+    }
+  }
+  modifierOption_insert(
+    data: {
+      tenantId: $tenantId
+      groupId: $groupId
+      name: $name
+      priceDeltaMinor: $priceDeltaMinor
+      sort: $sort
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "modifier_option.create"
+      resourceType: "modifier_option"
+      resourceId_expr: "response.modifierOption_insert.id"
+    }
+  )
+}
+
+mutation UpdateModifierOption(
+  $tenantId: UUID!
+  $optionId: UUID!
+  $name: String!
+  $priceDeltaMinor: Int64!
+  $sort: Int!
+  $archived: Boolean!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 60 && vars.sort >= 0 && vars.priceDeltaMinor >= 0 && vars.priceDeltaMinor <= 100000000000"
+        message: "Datos de la opción no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+          @check(
+            expr: "this == 'tenant_owner'"
+            message: "Solo el propietario gestiona el catálogo de la empresa"
+          )
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    modifierOption(id: $optionId) @check(expr: "this != null", message: "Opción inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "La opción no pertenece a la empresa")
+    }
+  }
+  modifierOption_update(
+    id: $optionId
+    data: {
+      name: $name
+      priceDeltaMinor: $priceDeltaMinor
+      sort: $sort
+      archivedAt_expr: "vars.archived ? request.time : null"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation_expr: "vars.archived ? 'modifier_option.archive' : 'modifier_option.update'"
+      resourceType: "modifier_option"
+      resourceId_expr: "vars.optionId"
+    }
+  )
+}
+
+# Disponibilidad y horario de un producto en una sucursal. Horario: los tres campos nulos (todo el
+# día, todos los días) o los tres definidos; endMinute < startMinute cruza la medianoche.
+mutation SetProductAvailability(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $productId: UUID!
+  $available: Boolean!
+  $daysMask: Int
+  $startMinute: Int
+  $endMinute: Int
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "has(vars.daysMask) && has(vars.startMinute) && has(vars.endMinute) && ((vars.daysMask == null && vars.startMinute == null && vars.endMinute == null) || (vars.daysMask != null && vars.startMinute != null && vars.endMinute != null && vars.daysMask >= 1 && vars.daysMask <= 127 && vars.startMinute >= 0 && vars.startMinute <= 1439 && vars.endMinute >= 0 && vars.endMinute <= 1440 && vars.startMinute != vars.endMinute))"
+        message: "Horario no válido"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    branch(id: $branchId) @check(expr: "this != null", message: "Sucursal inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La sucursal no pertenece a la empresa")
+      status @check(expr: "this == 'ACTIVE'", message: "La sucursal no está activa")
+    }
+    product(id: $productId) @check(expr: "this != null", message: "Producto inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "El producto no pertenece a la empresa")
+      archivedAt
+        @check(expr: "!vars.available || this == null", message: "El producto está archivado")
+    }
+  }
+  productBranch_upsert(
+    data: {
+      tenantId: $tenantId
+      branchId: $branchId
+      productId: $productId
+      available: $available
+      daysMask: $daysMask
+      startMinute: $startMinute
+      endMinute: $endMinute
+      updatedAt_expr: "request.time"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "product_branch.availability"
+      resourceType: "product"
+      resourceId_expr: "vars.productId"
+    }
+  )
+}
+
+# Precio nuevo de un producto en una sucursal, con impuestos incluidos (D-01b), en unidades menores
+# y en la moneda de la sucursal. El historial queda en Price; el carrito abierto con el precio
+# anterior exige confirmar el nuevo importe (caso 5, en quoteOrder).
+mutation ChangePrice(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $productId: UUID!
+  $amountMinor: Int64!
+  $currency: String!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "vars.amountMinor > 0 && vars.amountMinor <= 100000000000"
+        message: "Precio no válido"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "price.change" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: price.change") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    branch(id: $branchId) @check(expr: "this != null", message: "Sucursal inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La sucursal no pertenece a la empresa")
+      status @check(expr: "this == 'ACTIVE'", message: "La sucursal no está activa")
+      currency @check(expr: "this == vars.currency", message: "La moneda no es la de la sucursal")
+    }
+    productBranch(key: { productId: $productId, branchId: $branchId })
+      @check(expr: "this != null", message: "Primero agrega el producto a la sucursal") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "El producto no pertenece a la empresa")
+      product {
+        archivedAt @check(expr: "this == null", message: "El producto está archivado")
+      }
+    }
+  }
+  price_insert(
+    data: {
+      tenantId: $tenantId
+      branchId: $branchId
+      productId: $productId
+      amountMinor: $amountMinor
+      currency: $currency
+      createdBy_expr: "auth.uid"
+    }
+  )
+  productBranch_update(
+    key: { productId: $productId, branchId: $branchId }
+    data: { currentPriceId_expr: "response.price_insert.id", updatedAt_expr: "request.time" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "price.change"
+      resourceType: "product"
+      resourceId_expr: "vars.productId"
+    }
+  )
+}

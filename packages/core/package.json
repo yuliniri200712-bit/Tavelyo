@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Dominio compartido en TypeScript puro: Money, Result y tiempo UTC (sin React ni Firebase)",
+  "description": "Dominio compartido en TypeScript puro: Money, impuesto contenido, formato, horarios, Result y tiempo UTC (sin React ni Firebase)",
   "exports": {
     ".": "./src/index.ts"
   },

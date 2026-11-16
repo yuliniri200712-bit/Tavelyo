@@ -1,0 +1,134 @@
+# Sucursales (Fase 2, ADR-0011 §6): las crea y edita el propietario, con tenant.settings. La moneda
+# es la de la empresa y no cambia después (los precios guardados están en esa moneda). La zona
+# horaria debe tener forma IANA (Región/Ciudad); el horario de la carta se evalúa en ella.
+
+# Todas las sucursales de la empresa, archivadas incluidas, para gestionarlas (tenant.settings).
+query TenantBranches($tenantId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      rolePermissions_on_role(where: { permission: { code: { eq: "tenant.settings" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: tenant.settings") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  branches(where: { tenant: { id: { eq: $tenantId } } }, orderBy: [{ name: ASC }]) {
+    id
+    name
+    currency
+    timezone
+    status
+  }
+}
+
+mutation CreateBranch($tenantId: UUID!, $name: String!, $currency: String!, $timezone: String!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 80 && size(vars.timezone) <= 64 && vars.timezone.matches('^[A-Za-z]+(/[A-Za-z0-9_+-]+)+$')"
+        message: "Datos de la sucursal no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+        defaultCurrency
+          @check(expr: "this == vars.currency", message: "La moneda no es la de la empresa")
+      }
+      role {
+        rolePermissions_on_role(where: { permission: { code: { eq: "tenant.settings" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: tenant.settings") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+  }
+  branch_insert(
+    data: {
+      tenantId: $tenantId
+      name: $name
+      currency: $currency
+      timezone: $timezone
+      status: ACTIVE
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "branch.create"
+      resourceType: "branch"
+      resourceId_expr: "response.branch_insert.id"
+    }
+  )
+}
+
+# Edita o archiva una sucursal. Solo se archiva sin mesas abiertas.
+mutation UpdateBranch(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $name: String!
+  $timezone: String!
+  $archived: Boolean!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 80 && size(vars.timezone) <= 64 && vars.timezone.matches('^[A-Za-z]+(/[A-Za-z0-9_+-]+)+$')"
+        message: "Datos de la sucursal no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        rolePermissions_on_role(where: { permission: { code: { eq: "tenant.settings" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: tenant.settings") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    branch(id: $branchId) @check(expr: "this != null", message: "Sucursal inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La sucursal no pertenece a la empresa")
+    }
+    tableSessions(
+      where: { tenantId: { eq: $tenantId }, branchId: { eq: $branchId }, status: { eq: OPEN } }
+      limit: 1
+    )
+      @check(
+        expr: "!vars.archived || this.size() == 0"
+        message: "Cierra las mesas abiertas antes de archivar la sucursal"
+      ) {
+      id
+    }
+  }
+  branch_update(
+    id: $branchId
+    data: { name: $name, timezone: $timezone, status_expr: "vars.archived ? 'ARCHIVED' : 'ACTIVE'" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation_expr: "vars.archived ? 'branch.archive' : 'branch.update'"
+      resourceType: "branch"
+      resourceId_expr: "vars.branchId"
+    }
+  )
+}

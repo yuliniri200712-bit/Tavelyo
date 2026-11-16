@@ -27,7 +27,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
-  reporter: [['list']],
+  // En CI, cada fallo se publica además como anotación de GitHub (visible sin permisos de admin).
+  reporter: process.env['CI'] ? [['list'], ['github']] : [['list']],
   use: {
     trace: 'retain-on-failure',
     serviceWorkers: 'allow',
@@ -42,6 +43,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'npm run build -w @tavelyo/menu-web && npm run preview -w @tavelyo/menu-web',
+      env: EMULATOR_ENV,
       url: APPS.menuWeb,
       reuseExistingServer: !isCI,
       timeout: 180_000,

@@ -1,0 +1,110 @@
+# Carta (Fase 2): impuestos, categorías, productos, modificadores, disponibilidad y precios.
+# Catálogo por empresa; disponibilidad, horario y precio por sucursal. Los importes van en
+# unidades menores (Int64) con moneda explícita (ADR-0005). Los precios incluyen impuestos (D-01b).
+
+"Impuesto de la empresa (impoconsumo, IVA…), siempre incluido en el precio. Tasa en puntos básicos."
+type TaxRule @table @unique(fields: ["id", "tenantId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  tenant: Tenant! @ref(fields: ["tenantId"])
+  name: String!
+  rateBp: Int!
+  archivedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type Category @table @unique(fields: ["id", "tenantId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  tenant: Tenant! @ref(fields: ["tenantId"])
+  name: String!
+  sort: Int!
+  archivedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+"""
+Producto de la carta. Los alérgenos son información declarada por el restaurante: la app nunca
+garantiza su ausencia (RF-CA-02).
+"""
+type Product @table @unique(fields: ["id", "tenantId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  categoryId: UUID!
+  category: Category! @ref(fields: ["categoryId", "tenantId"], references: ["id", "tenantId"])
+  taxRuleId: UUID
+  taxRule: TaxRule @ref(fields: ["taxRuleId", "tenantId"], references: ["id", "tenantId"])
+  name: String!
+  description: String
+  allergensDeclared: [String!]
+  sort: Int!
+  archivedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+"Grupo de opciones de un producto (p. ej. «Término de la carne»: mínimo 1, máximo 1)."
+type ModifierGroup @table @unique(fields: ["id", "tenantId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  productId: UUID!
+  product: Product! @ref(fields: ["productId", "tenantId"], references: ["id", "tenantId"])
+  name: String!
+  minSelect: Int!
+  maxSelect: Int!
+  sort: Int!
+  archivedAt: Timestamp
+}
+
+"Opción de un grupo; su precio adicional incluye impuestos, como el del producto."
+type ModifierOption @table @unique(fields: ["id", "tenantId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  groupId: UUID!
+  group: ModifierGroup! @ref(fields: ["groupId", "tenantId"], references: ["id", "tenantId"])
+  name: String!
+  priceDeltaMinor: Int64!
+  sort: Int!
+  archivedAt: Timestamp
+}
+
+"""
+Disponibilidad de un producto en una sucursal. Horario opcional en la hora local de la sucursal:
+daysMask (bit 0 = lunes … bit 6 = domingo) y minutos desde medianoche [startMinute, endMinute).
+"""
+type ProductBranch @table(key: ["productId", "branchId"]) {
+  tenantId: UUID!
+  productId: UUID!
+  branchId: UUID!
+  product: Product! @ref(fields: ["productId", "tenantId"], references: ["id", "tenantId"])
+  branch: Branch! @ref(fields: ["branchId", "tenantId"], references: ["id", "tenantId"])
+  available: Boolean!
+  "Precio vigente: se actualiza en la misma transacción que inserta la versión nueva de Price."
+  currentPriceId: UUID
+  currentPrice: Price
+    @ref(
+      fields: ["currentPriceId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  daysMask: Int
+  startMinute: Int
+  endMinute: Int
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+"""
+Precio de un producto en una sucursal, con impuestos incluidos. Cambiar el precio inserta una
+versión nueva (historial); el vigente es el de validFrom más reciente.
+"""
+type Price @table @unique(fields: ["id", "tenantId", "branchId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  productId: UUID!
+  product: Product! @ref(fields: ["productId", "tenantId"], references: ["id", "tenantId"])
+  branch: Branch! @ref(fields: ["branchId", "tenantId"], references: ["id", "tenantId"])
+  amountMinor: Int64!
+  currency: String! @col(dataType: "char(3)")
+  validFrom: Timestamp! @default(expr: "request.time")
+  createdBy: String!
+}

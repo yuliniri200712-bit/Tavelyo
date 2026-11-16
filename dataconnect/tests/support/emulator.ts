@@ -46,6 +46,23 @@ export async function createUser(label: string): Promise<TestUser> {
   return { label, email: `${label}-${runId}@example.test`, uid: body.localId, token: body.idToken };
 }
 
+/** Cliente anónimo de Firebase Auth, como el de la carta en el teléfono (ADR-0011). */
+export async function createAnonymousUser(label: string): Promise<TestUser> {
+  const response = await fetch(
+    `${AUTH_URL}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-api-key`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ returnSecureToken: true }),
+    },
+  );
+  const body = (await response.json()) as { localId?: string; idToken?: string };
+  if (!response.ok || !body.localId || !body.idToken) {
+    throw new Error(`No se pudo crear el cliente anónimo ${label}: ${JSON.stringify(body)}`);
+  }
+  return { label, email: '', uid: body.localId, token: body.idToken };
+}
+
 async function post<T>(url: string, headers: Record<string, string>, payload: unknown) {
   const response = await fetch(url, {
     method: 'POST',
@@ -89,6 +106,23 @@ export function mutate<T = Record<string, unknown>>(
     operationName,
     variables,
   });
+}
+
+/**
+ * Operación del conector ejecutada como el Admin SDK sin suplantar (operaciones NO_ACCESS). Usa los
+ * mismos puntos que firebase-admin 14.5: impersonateQuery/impersonateMutation sin `impersonate`.
+ */
+export function server<T = Record<string, unknown>>(
+  kind: 'query' | 'mutation',
+  operationName: string,
+  variables: Variables = {},
+): Promise<GraphqlResult<T>> {
+  const endpoint = kind === 'query' ? 'impersonateQuery' : 'impersonateMutation';
+  return post<T>(
+    `${SERVICE_URL}/connectors/${CONNECTOR}:${endpoint}`,
+    { Authorization: 'Bearer owner' },
+    { operationName, variables },
+  );
 }
 
 /** GraphQL arbitrario con credenciales de servidor: solo aprovisionamiento y comprobaciones. */

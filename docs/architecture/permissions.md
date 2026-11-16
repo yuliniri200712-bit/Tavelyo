@@ -81,6 +81,24 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - **Operador de plataforma:** afirmación personalizada `platform_operator: true` en Firebase Auth, que solo concede el Admin SDK. El backend la lee **del servidor de Auth en cada llamada** (`getUser`), no solo del token: retirarla o revocar las sesiones del operador surte efecto en la llamada siguiente, y una afirmación metida en un token pero no guardada en la cuenta se rechaza. El operador no obtiene membresía ni acceso a los datos de las empresas que crea.
 - Toda entrada se valida en el servidor y se rechazan campos no admitidos.
 
+### Salón y carta (Fase 2, 2026-11-14)
+
+| Operaciones | Permiso | Ámbito |
+|---|---|---|
+| Vista del salón, participantes, abrir mesa | `session.open` | Sucursal asignada (propietario: todas) |
+| Cerrar mesa, expulsar participante | `session.close` | Sucursal asignada |
+| Sectores, mesas, archivado y rotación del QR | `table.manage` | Sucursal asignada |
+| Categorías, productos, modificadores y alérgenos | `catalog.manage` **y** rol propietario | Empresa |
+| Disponibilidad y horario por sucursal | `catalog.manage` | Sucursal asignada: es el «catálogo local» 🔸 del administrador de sucursal |
+| Precio por sucursal (versión nueva en `Price`) | `price.change` | Sucursal asignada |
+| Consultar la carta de administración | `catalog.manage` o `price.change` | Empresa; la de la sucursal, con la sucursal asignada |
+| Impuestos (`TaxRule`) | `tenant.settings` | Empresa (D-01b: la tasa la decide la empresa con su contador) |
+| Listar todas las sucursales (archivadas incluidas), crearlas, editarlas, archivarlas y restaurarlas | `tenant.settings` | Empresa; la moneda es la de la empresa y no cambia |
+
+- El mesero no ve el `qrPublicId` (solo quien gestiona las mesas, para imprimirlo) ni el uid de Firebase Auth de los clientes que se unen a la mesa.
+- El cliente (`customer`) no tiene operaciones de personal: solo la carta pública por QR y su propia participación (ADR-0011).
+- Pendiente: tope o motivo en `price.change` (🔸 de la matriz), y si un administrador de sucursal puede tener productos propios de su sucursal.
+
 ## 6. Pendiente
 
 - Topes concretos de descuento y reembolso por rol (configurables por empresa).

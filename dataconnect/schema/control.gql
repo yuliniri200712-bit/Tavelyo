@@ -1,0 +1,14 @@
+# Control (Fase 2): límites de solicitudes del backend (riesgo T11 de ADR-0011).
+# Una fila por solicitud admitida; el backend cuenta las de la ventana en la misma transacción que
+# inserta la nueva y la rechaza (sin guardarla) si supera el límite. Solo el backend la usa.
+
+"""
+Solicitud admitida por un límite. scope es la regla (p. ej. join.uid) y subject, a quién se aplica
+(un uid, una mesa). Las filas antiguas se purgan con una tarea programada (pendiente).
+"""
+type RateLimitHit @table @index(fields: ["scope", "subject", "at"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  scope: String!
+  subject: String!
+  at: Timestamp! @default(expr: "request.time")
+}

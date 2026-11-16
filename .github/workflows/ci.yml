@@ -44,7 +44,14 @@ jobs:
       - name: Esquema y conector válidos y SDK generado al día
         run: |
           npx --yes ${{ env.FIREBASE_TOOLS }} dataconnect:sdk:generate --project demo-tavelyo
-          git diff --exit-code -- packages/data-access/dataconnect-generated
+          # Si el SDK guardado no coincide, cada bloque de la diferencia se publica como anotación
+          # (los registros completos solo los ven los administradores del repositorio).
+          if ! git diff --quiet -- packages/data-access/dataconnect-generated; then
+            git diff --stat -- packages/data-access/dataconnect-generated
+            git diff -U2 -- packages/data-access/dataconnect-generated | head -c 60000 \
+              | awk 'BEGIN { RS = "\n@@"; n = 0 } { n++; if (n > 10) exit; gsub(/%/, "%25"); gsub(/\r/, "%0D"); gsub(/\n/, "%0A"); print "::error title=SDK generado distinto (" n ")::@@" $0 }'
+            exit 1
+          fi
       - name: Compilación de las dos PWA y del backend
         run: |
           npm run build -w @tavelyo/menu-web
@@ -67,9 +74,10 @@ jobs:
       - run: npm run test:integration
 
   navegadores:
-    name: PWA, accesibilidad y recorrido del personal (Playwright)
+    name: PWA, accesibilidad y recorridos del personal y del cliente (Playwright)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Los recorridos con emuladores corren en los 5 navegadores de D-15 (unos 19 minutos).
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -81,7 +89,7 @@ jobs:
         run: npx playwright install --with-deps chromium webkit chrome msedge
       - name: PWA y accesibilidad
         run: npm run test:e2e
-      - name: Recorrido del personal con emuladores
+      - name: Recorridos con emuladores y backend (5 navegadores)
         run: npm run test:e2e:emulators
       - name: Trazas de las pruebas fallidas
         if: failure()

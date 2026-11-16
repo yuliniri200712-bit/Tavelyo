@@ -16,7 +16,8 @@
   line-height: var(--tv-type-label-line-height);
   font-weight: var(--tv-type-label-weight);
   cursor: pointer;
-  transition: background-color var(--tv-motion-fast) ease-out;
+  /* Sin transición de fondo: al salir de «Procesando…» (fondo deshabilitado) el texto blanco cambia
+     al instante y un fondo animado dejaría un instante de contraste insuficiente (axe en WebKit). */
 }
 
 .tv-button--primary {
@@ -90,6 +91,12 @@
   background: var(--tv-color-surface-card);
   color: var(--tv-color-text-primary);
   font: inherit;
+  /*
+   * Ancho porcentual: el campo nunca ensancha la página. Sin esto, un selector con una opción
+   * larga (p. ej. «America/Argentina/ComodRivadavia») desbordaba a 320 px (WCAG 1.4.10).
+   */
+  width: 100%;
+  min-width: 0;
 }
 
 .tv-field__input[aria-invalid='true'] {
@@ -342,4 +349,170 @@
 .tv-choice-list .tv-button {
   width: 100%;
   justify-content: flex-start;
+}
+
+/* ---------- Campos: lista desplegable y texto de varias líneas ---------- */
+.tv-field__input--select {
+  cursor: pointer;
+}
+.tv-field__input--multiline {
+  min-height: calc(var(--tv-touch-min) * 2);
+  resize: vertical;
+}
+
+/* ---------- Página: título con acciones ---------- */
+.tv-page {
+  display: grid;
+  gap: var(--tv-space-5);
+}
+.tv-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tv-space-3);
+}
+.tv-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tv-space-2);
+}
+.tv-link-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tv-touch-min);
+  padding: var(--tv-space-2) var(--tv-space-4);
+  border: var(--tv-stroke-control) solid var(--tv-color-border-control);
+  border-radius: var(--tv-radius-control);
+  background: var(--tv-color-action-secondary);
+  color: var(--tv-color-text-primary);
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+  font-weight: var(--tv-type-label-weight);
+  text-decoration: none;
+}
+.tv-link-button:hover {
+  background: var(--tv-color-action-secondary-hover);
+}
+
+/* ---------- Listas de elementos editables ---------- */
+.tv-list {
+  display: grid;
+  gap: var(--tv-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tv-list__item {
+  display: grid;
+  gap: var(--tv-space-3);
+  padding: var(--tv-space-3);
+  border: var(--tv-stroke-hairline) solid var(--tv-color-border-subtle);
+  border-radius: var(--tv-radius-control);
+  background: var(--tv-color-surface-card);
+}
+.tv-list__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tv-space-2);
+}
+.tv-list__title {
+  font-weight: var(--tv-type-label-weight);
+}
+.tv-list__meta {
+  color: var(--tv-color-text-secondary);
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+}
+.tv-fieldset {
+  display: grid;
+  gap: var(--tv-space-3);
+  margin: 0;
+  padding: var(--tv-space-3);
+  border: var(--tv-stroke-hairline) solid var(--tv-color-border-subtle);
+  border-radius: var(--tv-radius-control);
+  background: var(--tv-color-surface-grouped);
+}
+.tv-fieldset__legend {
+  padding: 0 var(--tv-space-1);
+  font-weight: var(--tv-type-label-weight);
+}
+
+/* ---------- Totales de un pedido (subtotal, impuestos incluidos y total) ---------- */
+.tv-totals {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--tv-space-1) var(--tv-space-3);
+  margin: 0;
+}
+.tv-totals dd {
+  margin: 0;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.tv-totals__total {
+  font-weight: var(--tv-type-label-weight);
+}
+
+/* ---------- Código QR de una mesa ---------- */
+.tv-qr {
+  display: block;
+  width: min(100%, calc(var(--tv-touch-min) * 5));
+  height: auto;
+}
+.tv-qr__background {
+  fill: var(--tv-color-surface-card);
+}
+.tv-qr__modules {
+  fill: var(--tv-color-text-primary);
+}
+.tv-url {
+  overflow-wrap: anywhere;
+  color: var(--tv-color-text-secondary);
+  font-size: var(--tv-type-caption-size);
+  line-height: var(--tv-type-caption-line-height);
+}
+
+/* ---------- Hoja imprimible (QR de las mesas) ---------- */
+.tv-print-sheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: var(--tv-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tv-print-card {
+  display: grid;
+  justify-items: center;
+  gap: var(--tv-space-2);
+  padding: var(--tv-space-4);
+  border: var(--tv-stroke-hairline) solid var(--tv-color-border-control);
+  border-radius: var(--tv-radius-card);
+  background: var(--tv-color-surface-card);
+  text-align: center;
+  break-inside: avoid;
+}
+.tv-print-card__code {
+  font-size: var(--tv-type-h2-size);
+  line-height: var(--tv-type-h2-line-height);
+  font-weight: var(--tv-type-h2-weight);
+}
+
+@media print {
+  .tv-app-header,
+  .tv-skip-link,
+  .tv-notice,
+  .tv-no-print {
+    display: none;
+  }
+  .tv-app-main {
+    max-width: none;
+    padding: 0;
+  }
+  .tv-print-card {
+    box-shadow: none;
+  }
 }

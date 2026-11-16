@@ -115,4 +115,11 @@ export const contrastPairs: readonly ContrastPair[] = [
       minimum: 4.5 as const,
     })),
   ),
+  // Código QR de las mesas: módulos espresso sobre blanco, en pantalla y al imprimir (señal gráfica).
+  {
+    use: 'QR: text.primary sobre surface.card',
+    foreground: color.text.primary,
+    background: color.surface.card,
+    minimum: 3,
+  },
 ];

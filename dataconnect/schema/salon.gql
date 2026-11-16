@@ -1,0 +1,82 @@
+# Salón (Fase 2): sectores, mesas, sesiones de mesa y participantes (ADR-0011).
+# Mismas reglas que schema.gql: FK compuestas con tenantId (y branchId en lo operativo), sin
+# borrados de entidades con historia y archivado en lugar de borrado.
+
+enum TableSessionStatus {
+  OPEN
+  CLOSED
+}
+
+"Sector del salón de una sucursal (terraza, salón principal, barra…)."
+type Sector @table @unique(fields: ["id", "tenantId", "branchId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  branch: Branch! @ref(fields: ["branchId", "tenantId"], references: ["id", "tenantId"])
+  name: String!
+  sort: Int!
+  archivedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+"""
+Mesa. qrPublicId es el identificador aleatorio que lleva el QR impreso; rotarlo invalida los QR
+anteriores (ADR-0011). El código es único por sucursal.
+"""
+type DiningTable
+  @table
+  @unique(fields: ["id", "tenantId", "branchId"])
+  @unique(fields: ["tenantId", "branchId", "code"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  sectorId: UUID!
+  sector: Sector!
+    @ref(fields: ["sectorId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  code: String!
+  seats: Int!
+  qrPublicId: UUID! @unique @default(expr: "uuidV4()")
+  archivedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+"""
+Sesión de mesa: la abre el mesero (D-21) y la cierra el personal. openTableId vale el id de la
+mesa mientras está abierta y null al cerrarla: su unicidad garantiza una sola sesión abierta por
+mesa, incluso con dos meseros a la vez.
+"""
+type TableSession @table @unique(fields: ["id", "tenantId", "branchId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  tableId: UUID!
+  table: DiningTable!
+    @ref(fields: ["tableId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  openTableId: UUID @unique
+  status: TableSessionStatus!
+  openedAt: Timestamp! @default(expr: "request.time")
+  openedBy: String!
+  closedAt: Timestamp
+  closedBy: String
+}
+
+"""
+Cliente unido a una sesión desde su teléfono, con sesión anónima de Firebase Auth (ADR-0011).
+Solo lo crea el backend; vence en expiresAt o al cerrar la sesión, y el personal puede expulsarlo.
+"""
+type SessionParticipant
+  @table
+  @unique(fields: ["sessionId", "authUid"])
+  @unique(fields: ["id", "tenantId", "branchId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  sessionId: UUID!
+  session: TableSession!
+    @ref(fields: ["sessionId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  authUid: String!
+  joinedAt: Timestamp! @default(expr: "request.time")
+  expiresAt: Timestamp!
+  removedAt: Timestamp
+  removedBy: String
+}

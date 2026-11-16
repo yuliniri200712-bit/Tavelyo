@@ -1,0 +1,22 @@
+{
+  "name": "@tavelyo/cart",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Carrito del cliente: local en su teléfono y privado para cada persona (D-06); el servidor valida los importes",
+  "exports": {
+    ".": "./src/index.ts",
+    "./domain": "./src/domain/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@tavelyo/contracts": "*",
+    "@tavelyo/core": "*",
+    "@tavelyo/design-system": "*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.7"
+  }
+}

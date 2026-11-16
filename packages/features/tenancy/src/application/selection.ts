@@ -35,6 +35,8 @@ export type SelectionEvent =
   | { readonly type: 'tenant-chosen'; readonly tenantId: string }
   | { readonly type: 'branches-loaded'; readonly branches: readonly BranchOption[] }
   | { readonly type: 'branch-chosen'; readonly branchId: string }
+  /** Lista de sucursales actualizada (p. ej. tras crear una) sin cambiar la sucursal activa. */
+  | { readonly type: 'branches-refreshed'; readonly branches: readonly BranchOption[] }
   | { readonly type: 'change-context' }
   | { readonly type: 'failed'; readonly error: TenancyErrorCode }
   | { readonly type: 'reload' };
@@ -84,6 +86,12 @@ export function selectionReducer(state: SelectionState, event: SelectionEvent): 
       if (!branch) return state;
       const { memberships, tenant, branches } = state;
       return { status: 'ready', memberships, tenant, branches, branch };
+    }
+    case 'branches-refreshed': {
+      if (state.status !== 'ready') return state;
+      const branch = event.branches.find((b) => b.id === state.branch.id);
+      // Si la sucursal activa ya no está en la lista, el contexto no cambia: la app no la quita.
+      return branch ? { ...state, branches: event.branches, branch } : state;
     }
     case 'change-context': {
       if (

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-// Controles de proceso de ADR-0008 sobre los .gql de los conectores (se ejecuta en CI).
+// Controles de proceso de ADR-0008 y ADR-0011 sobre los .gql de los conectores (se ejecuta en CI).
 const connectorDir = fileURLToPath(new URL('../connector/', import.meta.url));
 
 interface Operation {
@@ -38,20 +38,65 @@ function readOperations(): Operation[] {
 
 /** Operaciones que solo tocan datos del propio usuario (excepción de ADR-0008 §2). */
 const SELF_ONLY = new Set(['MyProfile', 'UpsertMyProfile', 'MyMemberships']);
+/** Únicas operaciones públicas: la carta por QR (ADR-0011 §2). */
+const PUBLIC_OPERATIONS = new Set(['PublicMenu']);
+/** Operaciones del cliente con sesión anónima: comprueban su participación por auth.uid. */
+const CUSTOMER_OPERATIONS = new Set(['MyParticipation']);
+/** Operaciones de sucursal del propietario (ADR-0011 §6). */
+const BRANCH_OPERATIONS = new Set(['CreateBranch', 'UpdateBranch']);
+/**
+ * Variables opcionales admitidas en un filtro. Una variable omitida o nula anula su filtro (el
+ * filtro devuelve todo), así que solo se admite donde la expresión de @check la descarta antes.
+ */
+const NULLABLE_FILTER_ALLOWLIST = new Set(['CreateProduct.taxRuleId', 'UpdateProduct.taxRuleId']);
+
+/** Tipo declarado de una variable en la cabecera de la operación. */
+function declaredType(header: string, variable: string): string | undefined {
+  return new RegExp(`\\$${variable}:\\s*([\\w\\[\\]!]+)`).exec(header)?.[1];
+}
 /** Borrados permitidos: relaciones sin historia propia, con AuditEvent en la misma transacción. */
 const DELETE_ALLOWLIST = new Set(['UnassignMemberBranch']);
 
 const operations = readOperations();
 
-describe('reglas de los conectores (ADR-0008)', () => {
+describe('reglas de los conectores (ADR-0008 y ADR-0011)', () => {
   it('se leyeron las operaciones', () => {
     expect(operations.map((op) => op.name)).toContain('AddMember');
     expect(operations.length).toBeGreaterThanOrEqual(10);
   });
 
   it.each(operations.map((op) => [op.name, op] as const))('%s', (_name, op) => {
-    // 1. Toda operación declara @auth y nunca es pública en esta fase.
-    expect(op.header).toMatch(/@auth\(level: USER\)/);
+    const level = /@auth\(level: (\w+)\)/.exec(op.header)?.[1];
+
+    // 1. Toda operación declara @auth, y cada nivel distinto de USER solo en su lista blanca.
+    expect(level, 'falta @auth').toBeDefined();
+
+    // 1b. Las variables de los filtros son obligatorias, salvo la lista blanca.
+    for (const match of op.body.matchAll(/\b(eq|ne|in|nin|gt|ge|lt|le): \$(\w+)/g)) {
+      const variable = match[2] ?? '';
+      if (NULLABLE_FILTER_ALLOWLIST.has(`${op.name}.${variable}`)) continue;
+      expect(
+        declaredType(op.header, variable),
+        `$${variable} en un filtro debe ser obligatoria`,
+      ).toMatch(/!$/);
+    }
+    if (level === 'PUBLIC') {
+      expect(PUBLIC_OPERATIONS.has(op.name), 'PUBLIC fuera de la lista blanca').toBe(true);
+      expect(op.body).toMatch(/qrPublicId: \{ eq: \$qrPublicId \}/);
+      return;
+    }
+    if (level === 'USER_ANON') {
+      expect(CUSTOMER_OPERATIONS.has(op.name), 'USER_ANON fuera de la lista blanca').toBe(true);
+      expect(op.body).toMatch(/authUid: \{ eq_expr: "auth\.uid" \}/);
+      expect(op.body).toMatch(/expiresAt: \{ gt_expr: "request\.time" \}/);
+      return;
+    }
+    // Solo de servidor: nombre con prefijo Server y NO_ACCESS, en los dos sentidos.
+    expect(level === 'NO_ACCESS', 'Server* debe ser NO_ACCESS y al revés').toBe(
+      op.name.startsWith('Server'),
+    );
+    if (level === 'NO_ACCESS') return;
+    expect(level).toBe('USER');
 
     // 2. La identidad sale de auth.uid y no de una variable.
     expect(op.header).not.toMatch(/\$(actorId|callerId|currentUserId)\b/);
@@ -77,10 +122,14 @@ describe('reglas de los conectores (ADR-0008)', () => {
       expect(op.body).not.toMatch(/_delete(Many)?\(/);
     }
 
-    // 6. Empresas, sucursales, roles, permisos y auditoría no se crean ni modifican desde la app.
+    // 6. Empresas, roles, permisos y auditoría no se crean ni modifican desde la app; sucursales,
+    //    solo en las operaciones del propietario.
     expect(op.body).not.toMatch(
-      /\b(tenant|branch|role|permission|rolePermission)_(insert|upsert|update|delete)(Many)?\(/,
+      /\b(tenant|role|permission|rolePermission)_(insert|upsert|update|delete)(Many)?\(/,
     );
+    if (!BRANCH_OPERATIONS.has(op.name)) {
+      expect(op.body).not.toMatch(/\bbranch_(insert|upsert|update|delete)(Many)?\(/);
+    }
     expect(op.body).not.toMatch(/auditEvent_(update|delete|upsert)(Many)?\(/);
   });
 });

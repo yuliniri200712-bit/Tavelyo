@@ -17,3 +17,4 @@ Una decisión solo pasa a *Aceptada* con aprobación expresa del propietario o c
 | [0008](0008-autorizacion-multiempresa.md) | Autorización multiempresa y revocación | Aceptada |
 | [0009](0009-plataforma-web-pwa.md) | Plataforma: PWA con React, Vite y TypeScript; dos aplicaciones | Aceptada (decisión del propietario) |
 | [0010](0010-stack-web.md) | Bibliotecas y herramientas del stack web | Aceptada (validación de formularios pendiente) |
+| [0011](0011-sesion-de-mesa-del-cliente.md) | Sesión de mesa del cliente y niveles de acceso de los conectores | Aceptada (2026-11-14) |

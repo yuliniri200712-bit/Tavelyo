@@ -4,7 +4,9 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { ok } from '@tavelyo/core';
 import { SessionProvider, type AuthGateway, type StaffUser } from '@tavelyo/identity';
-import type { TenancyGateway } from '@tavelyo/tenancy';
+import type { CatalogAdminGateway } from '@tavelyo/catalog';
+import type { FloorAdminGateway, FloorServiceGateway } from '@tavelyo/floor';
+import type { BranchAdminGateway, TenancyGateway } from '@tavelyo/tenancy';
 import { AppContext } from './app-context.tsx';
 import { routes } from './routes.tsx';
 
@@ -35,7 +37,7 @@ const tenancy: TenancyGateway = {
         tenantName: 'La Fonda',
         roleCode: 'waiter',
         roleName: 'Mesero',
-        permissions: [],
+        permissions: ['session.open', 'session.close'],
       },
       {
         tenantId: 'b',
@@ -44,18 +46,84 @@ const tenancy: TenancyGateway = {
         roleName: 'Cajero',
         permissions: [],
       },
+      {
+        tenantId: 'c',
+        tenantName: 'Casa Ana',
+        roleCode: 'branch_admin',
+        roleName: 'Administrador de sucursal',
+        permissions: ['table.manage'],
+      },
     ]),
   ),
   myBranches: vi.fn(async (tenantId: string) =>
     ok([
       {
         id: `${tenantId}1`,
-        name: tenantId === 'a' ? 'Centro' : 'Malecón',
+        name: { a: 'Centro', b: 'Malecón' }[tenantId] ?? 'Chapinero',
         currency: 'COP',
         timezone: 'America/Bogota',
       },
     ]),
   ),
+};
+
+const floorAdmin: FloorAdminGateway = {
+  layout: vi.fn(async () =>
+    ok([
+      {
+        id: 's1',
+        name: 'Terraza',
+        sort: 1,
+        archived: false,
+        tables: [{ id: 't1', code: 'T1', seats: 2, qrPublicId: 'q1', archived: false }],
+      },
+    ]),
+  ),
+  createSector: vi.fn(async () => ok(undefined)),
+  updateSector: vi.fn(async () => ok(undefined)),
+  createTable: vi.fn(async () => ok(undefined)),
+  updateTable: vi.fn(async () => ok(undefined)),
+  rotateQr: vi.fn(async () => ok(undefined)),
+};
+
+const floorService: FloorServiceGateway = {
+  floor: vi.fn(async () =>
+    ok([
+      {
+        id: 's1',
+        name: 'Terraza',
+        tables: [{ id: 't1', code: 'T1', seats: 2, session: null }],
+      },
+    ]),
+  ),
+  participants: vi.fn(async () => ok([])),
+  openTable: vi.fn(async () => ok(undefined)),
+  closeSession: vi.fn(async () => ok(undefined)),
+  removeParticipant: vi.fn(async () => ok(undefined)),
+};
+
+const done = vi.fn(async () => ok(undefined));
+const catalogAdmin: CatalogAdminGateway = {
+  catalog: vi.fn(async () => ok({ taxRules: [], categories: [] })),
+  branchProducts: vi.fn(async () => ok([])),
+  createTaxRule: done,
+  updateTaxRule: done,
+  createCategory: done,
+  updateCategory: done,
+  createProduct: done,
+  updateProduct: done,
+  createModifierGroup: done,
+  updateModifierGroup: done,
+  createModifierOption: done,
+  updateModifierOption: done,
+  setAvailability: done,
+  changePrice: done,
+};
+
+const branchAdmin: BranchAdminGateway = {
+  branches: vi.fn(async () => ok([])),
+  createBranch: done,
+  updateBranch: done,
 };
 
 function renderAt(path: string, user: StaffUser | null) {
@@ -64,6 +132,11 @@ function renderAt(path: string, user: StaffUser | null) {
     auth,
     profiles: { ensureProfile: vi.fn(async () => ok(undefined)) },
     tenancy,
+    floorAdmin,
+    floorService,
+    catalogAdmin,
+    branchAdmin,
+    menuWebUrl: 'https://carta.example',
     usesEmulators: true,
   };
   const update = { needRefresh: false, onUpdate: vi.fn(), onDismiss: vi.fn() };
@@ -115,6 +188,46 @@ describe('rutas de operations', () => {
     expect(auth.signOut).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole('heading', { name: 'Acceso del personal' })).toBeTruthy();
     expect(screen.queryByText(/La Fonda/)).toBeNull();
+  });
+
+  it('el inicio muestra los módulos del rol y abre la gestión de mesas', async () => {
+    renderAt('/', ana);
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Casa Ana · Administrador de sucursal' }),
+    );
+    fireEvent.click(await screen.findByRole('link', { name: 'Mesas y códigos QR' }));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Mesas y códigos QR' }),
+    ).toBeTruthy();
+    expect(await screen.findByText('Mesa T1')).toBeTruthy();
+    expect(floorAdmin.layout).toHaveBeenCalledWith({ tenantId: 'c', branchId: 'c1' });
+  });
+
+  it('el mesero ve solo el salón y lo abre en su sucursal', async () => {
+    renderAt('/', ana);
+    fireEvent.click(await screen.findByRole('button', { name: 'La Fonda · Mesero' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Salón' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Salón' })).toBeTruthy();
+    expect(await screen.findByText('Mesa T1')).toBeTruthy();
+    expect(floorService.floor).toHaveBeenCalledWith({ tenantId: 'a', branchId: 'a1' });
+    expect(screen.queryByRole('link', { name: 'Mesas y códigos QR' })).toBeNull();
+  });
+
+  it('un rol sin session.open no ve el salón', async () => {
+    renderAt('/salon', ana);
+    fireEvent.click(await screen.findByRole('button', { name: 'El Puerto · Cajero' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Esta sección no está disponible para tu rol' }),
+    ).toBeTruthy();
+  });
+
+  it('un rol sin table.manage no ve el módulo ni la pantalla', async () => {
+    renderAt('/mesas', ana);
+    fireEvent.click(await screen.findByRole('button', { name: 'La Fonda · Mesero' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Esta sección no está disponible para tu rol' }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Mesas y códigos QR' })).toBeNull();
   });
 
   it('una ruta desconocida explica qué pasó', async () => {
