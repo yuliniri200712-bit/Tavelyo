@@ -4,6 +4,8 @@
 
 ## Fase actual
 
+**Fase 3 — Pedidos: plan propuesto** en [`plans/fase-3.md`](plans/fase-3.md) (2026-11-16), pendiente de aprobación junto con las decisiones D-23 a D-26. Rama: `fase-3-pedidos`. No se implementa nada hasta que se apruebe.
+
 **Fase 2 — Salón y carta: cerrada** con aprobación del propietario el 2026-11-16 e integrada en `main`. Autorizada el 2026-11-14. Rama: `fase-2-salon-carta`. Plan: [`plans/fase-2.md`](plans/fase-2.md). Decisiones: D-01b, D-21, D-22, D-06 (carrito) y ADR-0011.
 
 | Bloque del plan | Estado |
