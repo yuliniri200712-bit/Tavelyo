@@ -14,6 +14,7 @@ import type {
   ModifierGroupInput,
   ModifierOptionInput,
   ProductInput,
+  StationInput,
   TaxRuleInput,
 } from '../domain/index.ts';
 
@@ -21,6 +22,8 @@ import type {
 // quien decide (carta.gql).
 
 export const NAME_MAX = 60;
+/** Mismo tope que aplica el servidor (cocina.gql). */
+export const STATION_NAME_MAX = 40;
 export const PRODUCT_NAME_MAX = 80;
 export const DESCRIPTION_MAX = 500;
 export const ALLERGENS_MAX = 20;
@@ -286,4 +289,20 @@ export function describeSchedule(schedule: WeeklySchedule | null): string {
   return `${dayText} · ${formatClock(schedule.startMinute)} a ${formatClock(schedule.endMinute)}${
     crosses ? ' (cruza la medianoche)' : ''
   }`;
+}
+
+export function parseStationForm(form: {
+  readonly name: string;
+  readonly sort: string;
+}): Result<StationInput, Partial<Record<'name' | 'sort', string>>> {
+  const errors: Partial<Record<'name' | 'sort', string>> = {};
+  const name = form.name.trim();
+  if (name.length === 0) errors.name = 'Escribe el nombre de la estación.';
+  else if (name.length > STATION_NAME_MAX) {
+    errors.name = `El nombre admite hasta ${STATION_NAME_MAX} caracteres.`;
+  }
+  const sortText = form.sort.trim();
+  const sort = sortText === '' ? 0 : /^\d{1,4}$/.test(sortText) ? Number(sortText) : null;
+  if (sort === null) errors.sort = 'El orden debe ser un número entero, sin signos.';
+  return Object.keys(errors).length > 0 ? err(errors) : ok({ name, sort: sort ?? 0 });
 }

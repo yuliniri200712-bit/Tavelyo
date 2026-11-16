@@ -11,6 +11,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  SelectField,
   StatusChip,
   TavelyoButton,
   TextField,
@@ -27,6 +28,7 @@ import type {
   CatalogAdmin,
   CatalogAdminGateway,
   ProductAdmin,
+  StationAdmin,
 } from '../domain/index.ts';
 import { ScheduleFields } from './forms.tsx';
 
@@ -46,6 +48,19 @@ export interface BranchMenuPageProps {
 interface BranchMenuData {
   readonly catalog: CatalogAdmin;
   readonly branch: ReadonlyMap<string, BranchProduct>;
+  /** Solo con catalog.manage (las estaciones se gestionan con ese permiso). */
+  readonly stations: readonly StationAdmin[] | null;
+}
+
+/** Estación que prepara el producto: la asignada si sigue activa, si no la predeterminada. */
+function stationLabel(
+  entry: BranchProduct | undefined,
+  stations: readonly StationAdmin[],
+): string | null {
+  const assigned = stations.find((s) => s.id === entry?.stationId && !s.archived);
+  const station = assigned ?? stations.find((s) => s.isDefault);
+  if (!station) return null;
+  return assigned ? station.name : `${station.name} (predeterminada)`;
 }
 
 /** Texto del precio guardado, o null si no hay. */
@@ -61,20 +76,23 @@ function priceLabel(entry: BranchProduct | undefined): string | null {
  * disponible y tiene precio; el servidor vuelve a comprobar todo al revisar el pedido.
  */
 export function BranchMenuPage(props: BranchMenuPageProps) {
-  const { gateway, scope } = props;
+  const { gateway, scope, canManageAvailability } = props;
   const { tenantId, branchId } = scope;
   const load = useCallback(async () => {
-    const [catalog, branch] = await Promise.all([
+    const [catalog, branch, stations] = await Promise.all([
       gateway.catalog(tenantId),
       gateway.branchProducts({ tenantId, branchId }),
+      canManageAvailability ? gateway.stations({ tenantId, branchId }) : null,
     ]);
     if (!catalog.ok) return catalog;
     if (!branch.ok) return branch;
+    if (stations && !stations.ok) return stations;
     return ok({
       catalog: catalog.value,
       branch: new Map(branch.value.map((entry) => [entry.productId, entry])),
+      stations: stations ? stations.value : null,
     });
-  }, [gateway, tenantId, branchId]);
+  }, [gateway, tenantId, branchId, canManageAvailability]);
   const { state, notice, reload, run } = useServerData<BranchMenuData>(load);
 
   return (
@@ -135,6 +153,7 @@ function BranchCategories({
             key={product.id}
             product={product}
             entry={data.branch.get(product.id)}
+            stations={data.stations}
             props={props}
             run={run}
           />
@@ -154,16 +173,19 @@ function stateChip(entry: BranchProduct | undefined, price: string | null) {
 function BranchProductItem({
   product,
   entry,
+  stations,
   props,
   run,
 }: {
   readonly product: ProductAdmin;
   readonly entry: BranchProduct | undefined;
+  readonly stations: readonly StationAdmin[] | null;
   readonly props: BranchMenuPageProps;
   readonly run: RunCommand;
 }) {
   const [open, setOpen] = useState(false);
   const price = priceLabel(entry);
+  const station = stations ? stationLabel(entry, stations) : null;
   const canEdit = props.canManageAvailability || props.canChangePrice;
 
   return (
@@ -175,6 +197,7 @@ function BranchProductItem({
       <p className="tv-list__meta">
         {price ? `Precio: ${price}` : 'Sin precio'} ·{' '}
         {entry ? describeSchedule(entry.schedule) : 'Sin horario'}
+        {station ? ` · Estación: ${station}` : ''}
       </p>
       {canEdit ? (
         <TavelyoButton variant="secondary" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -185,6 +208,15 @@ function BranchProductItem({
         <>
           {props.canManageAvailability ? (
             <AvailabilityForm product={product} entry={entry} props={props} run={run} />
+          ) : null}
+          {props.canManageAvailability && entry && stations ? (
+            <StationForm
+              product={product}
+              entry={entry}
+              stations={stations}
+              props={props}
+              run={run}
+            />
           ) : null}
           {props.canChangePrice ? (
             <PriceForm product={product} entry={entry} current={price} props={props} run={run} />
@@ -333,6 +365,69 @@ function PriceForm({
           confirmar el importe nuevo antes de pedir.
         </p>
       </ConfirmDialog>
+    </form>
+  );
+}
+
+function StationForm({
+  product,
+  entry,
+  stations,
+  props,
+  run,
+}: {
+  readonly product: ProductAdmin;
+  readonly entry: BranchProduct;
+  readonly stations: readonly StationAdmin[];
+  readonly props: BranchMenuPageProps;
+  readonly run: RunCommand;
+}) {
+  const active = stations.filter((station) => !station.archived);
+  const initial =
+    active.find((s) => s.id === entry.stationId)?.id ?? active.find((s) => s.isDefault)?.id ?? '';
+  const [stationId, setStationId] = useState(initial);
+  const [busy, setBusy] = useState(false);
+
+  if (active.length === 0) {
+    return (
+      <p className="tv-list__meta">
+        La sucursal todavía no tiene estaciones de cocina. Créalas en «Estaciones de cocina».
+      </p>
+    );
+  }
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    const station = active.find((s) => s.id === stationId);
+    if (!station) return;
+    setBusy(true);
+    await run(
+      () => props.gateway.setProductStation(props.scope, product.id, station.id),
+      `«${product.name}» se prepara en ${station.name}.`,
+    );
+    setBusy(false);
+  };
+
+  return (
+    <form className="tv-fieldset" onSubmit={(event) => void submit(event)} noValidate>
+      <p className="tv-fieldset__legend">Estación de cocina</p>
+      <SelectField
+        label="Estación que lo prepara"
+        hint="Cocina ve este producto en la pantalla de esa estación."
+        value={stationId}
+        onChange={(event) => setStationId(event.target.value)}
+      >
+        {active.map((station) => (
+          <option key={station.id} value={station.id}>
+            {station.isDefault ? `${station.name} (predeterminada)` : station.name}
+          </option>
+        ))}
+      </SelectField>
+      <div className="tv-toolbar">
+        <TavelyoButton type="submit" loading={busy} loadingLabel="Guardando…">
+          Guardar estación
+        </TavelyoButton>
+      </div>
     </form>
   );
 }

@@ -2,9 +2,15 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { err, ok } from '@tavelyo/core';
-import type { BranchProduct, CatalogAdmin, CatalogAdminGateway } from '../domain/index.ts';
+import type {
+  BranchProduct,
+  CatalogAdmin,
+  CatalogAdminGateway,
+  StationAdmin,
+} from '../domain/index.ts';
 import { BranchMenuPage } from './BranchMenuPage.tsx';
 import { CatalogAdminPage } from './CatalogAdminPage.tsx';
+import { StationsAdminPage } from './StationsAdminPage.tsx';
 
 beforeAll(() => {
   // jsdom no implementa <dialog>: basta con alternar `open` (el foco real se prueba en Playwright).
@@ -80,7 +86,14 @@ const branchProducts: BranchProduct[] = [
       currency: 'COP',
       validFrom: '2026-11-14T00:00:00Z',
     },
+    stationId: null,
   },
+];
+
+const stations: StationAdmin[] = [
+  { id: 's1', name: 'Cocina', sort: 0, isDefault: true, archived: false },
+  { id: 's2', name: 'Bar', sort: 1, isDefault: false, archived: false },
+  { id: 's3', name: 'Parrilla', sort: 2, isDefault: false, archived: true },
 ];
 
 function fakeGateway(overrides: Partial<CatalogAdminGateway> = {}): CatalogAdminGateway {
@@ -100,6 +113,10 @@ function fakeGateway(overrides: Partial<CatalogAdminGateway> = {}): CatalogAdmin
     updateModifierOption: done,
     setAvailability: vi.fn(async () => ok(undefined)),
     changePrice: vi.fn(async () => ok(undefined)),
+    stations: vi.fn(async () => ok(stations)),
+    createStation: vi.fn(async () => ok(undefined)),
+    updateStation: vi.fn(async () => ok(undefined)),
+    setProductStation: vi.fn(async () => ok(undefined)),
     ...overrides,
   };
 }
@@ -258,8 +275,66 @@ describe('BranchMenuPage', () => {
   });
 
   it('sin permisos de sucursal solo se consulta', async () => {
-    renderBranch(fakeGateway(), { availability: false, price: false });
+    const gateway = renderBranch(fakeGateway(), { availability: false, price: false });
     await screen.findByText('Bandeja paisa');
     expect(screen.queryByRole('button', { name: 'Editar en esta sucursal' })).toBeNull();
+    // Las estaciones se gestionan con catalog.manage: sin ese permiso ni se consultan.
+    expect(gateway.stations).not.toHaveBeenCalled();
+  });
+
+  it('muestra la estación de cada producto y la cambia entre las activas', async () => {
+    const gateway = renderBranch();
+    const bandeja = (await screen.findByText('Bandeja paisa')).closest('li') as HTMLElement;
+    expect(within(bandeja).getByText(/Estación: Cocina \(predeterminada\)/)).toBeTruthy();
+    fireEvent.click(within(bandeja).getByRole('button', { name: 'Editar en esta sucursal' }));
+    const select = within(bandeja).getByLabelText('Estación que lo prepara');
+    const options = within(select)
+      .getAllByRole('option')
+      .map((option) => option.textContent);
+    expect(options).toEqual(['Cocina (predeterminada)', 'Bar']);
+    fireEvent.change(select, { target: { value: 's2' } });
+    fireEvent.click(within(bandeja).getByRole('button', { name: 'Guardar estación' }));
+    await waitFor(() => expect(gateway.setProductStation).toHaveBeenCalledWith(scope, 'p1', 's2'));
+    expect(await screen.findByText('«Bandeja paisa» se prepara en Bar.')).toBeTruthy();
+  });
+});
+
+describe('StationsAdminPage', () => {
+  function renderStations(gateway = fakeGateway()) {
+    render(<StationsAdminPage gateway={gateway} scope={scope} branchName="Centro" />);
+    return gateway;
+  }
+
+  it('lista las estaciones con su estado en texto; la predeterminada no se archiva', async () => {
+    renderStations();
+    const list = await screen.findByRole('list', { name: 'Estaciones de la sucursal' });
+    const items = within(list).getAllByRole('listitem');
+    expect(within(items[0] as HTMLElement).getByText('Predeterminada')).toBeTruthy();
+    expect(within(items[0] as HTMLElement).queryByRole('button', { name: /Archivar/ })).toBeNull();
+    expect(within(items[2] as HTMLElement).getByText('Archivada')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Restaurar Parrilla' })).toBeTruthy();
+  });
+
+  it('crea, valida y archiva estaciones', async () => {
+    const gateway = renderStations();
+    await screen.findByRole('list', { name: 'Estaciones de la sucursal' });
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar estación' }));
+    expect(screen.getByText('Escribe el nombre de la estación.')).toBeTruthy();
+    expect(gateway.createStation).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('Nombre de la estación'), {
+      target: { value: ' Postres ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar estación' }));
+    await waitFor(() =>
+      expect(gateway.createStation).toHaveBeenCalledWith(scope, { name: 'Postres', sort: 0 }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Archivar Bar' }));
+    await waitFor(() =>
+      expect(gateway.updateStation).toHaveBeenCalledWith(scope, 's2', {
+        name: 'Bar',
+        sort: 1,
+        archived: true,
+      }),
+    );
   });
 });

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { BranchMenuPage, CatalogAdminPage } from '@tavelyo/catalog';
+import { BranchMenuPage, CatalogAdminPage, StationsAdminPage } from '@tavelyo/catalog';
 import { EmptyState } from '@tavelyo/design-system';
 import { FloorServicePage, LayoutAdminPage, PrintQrPage } from '@tavelyo/floor';
 import { BranchesAdminPage, useTenancy } from '@tavelyo/tenancy';
@@ -39,6 +39,12 @@ export const STAFF_MODULES: readonly StaffModule[] = [
     title: 'Carta de la sucursal',
     description: 'Disponibilidad, horario y precio de cada producto en esta sucursal.',
     permissions: ['catalog.manage', 'price.change'],
+  },
+  {
+    path: '/carta/estaciones',
+    title: 'Estaciones de cocina',
+    description: 'Estaciones de la sucursal (cocina caliente, bar…) y la predeterminada.',
+    permissions: ['catalog.manage'],
   },
   {
     path: '/sucursales',
@@ -175,6 +181,23 @@ export function BranchMenuRoute() {
       catalogLink={
         <Link className="tv-link-button" to="/carta">
           Carta de la empresa
+        </Link>
+      }
+    />
+  );
+}
+
+export function StationsAdminRoute() {
+  const { services } = useAppContext();
+  const { scope, branchName } = useStaffContext();
+  return (
+    <StationsAdminPage
+      gateway={services.catalogAdmin}
+      scope={scope}
+      branchName={branchName}
+      branchMenuLink={
+        <Link className="tv-link-button" to="/carta/sucursal">
+          Carta de la sucursal
         </Link>
       }
     />

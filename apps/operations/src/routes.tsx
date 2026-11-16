@@ -8,6 +8,7 @@ import {
   FloorServiceRoute,
   PrintQrRoute,
   RequirePermission,
+  StationsAdminRoute,
   TablesAdminRoute,
 } from './admin-routes.tsx';
 import { AppLayout, PublicOnly, RequireStaffContext, StaffHome } from './layout.tsx';
@@ -71,6 +72,16 @@ export const routes: RouteObject[] = [
           <RequireStaffContext>
             <RequirePermission permissions={['catalog.manage', 'price.change']}>
               <BranchMenuRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/carta/estaciones',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['catalog.manage']}>
+              <StationsAdminRoute />
             </RequirePermission>
           </RequireStaffContext>
         ),

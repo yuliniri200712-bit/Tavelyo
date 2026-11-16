@@ -118,6 +118,10 @@ const catalogAdmin: CatalogAdminGateway = {
   updateModifierOption: done,
   setAvailability: done,
   changePrice: done,
+  stations: vi.fn(async () => ok([])),
+  createStation: done,
+  updateStation: done,
+  setProductStation: done,
 };
 
 const branchAdmin: BranchAdminGateway = {
