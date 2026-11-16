@@ -125,3 +125,26 @@ Según el propietario, «todo funciona perfectamente». La carta del cliente al 
 | Navegador con emuladores y backend | `npm run test:e2e:emulators` (`customer-order.spec.ts`, Chrome y Safari de iPhone; ahora arranca también el emulador de funciones) | ✅ CI #28: carta sin sesión con alérgenos; sin mesa abierta no se pide (D-21); con el carrito abierto sube el precio y el cliente ve antes y ahora y confirma (caso 5); pago simulado rechazado y luego aprobado; al cerrar la mesa el cliente pierde el acceso y la sesión siguiente exige reabrirla (caso 12); axe sin infracciones en la carta y en el resumen; un QR inventado no muestra ninguna carta |
 
 Hallazgo en CI #26: tras aceptar un precio nuevo, la carta del teléfono seguía mostrando el anterior y lo siguiente que se agregaba salía con el precio viejo (el servidor lo habría vuelto a detectar, pero la pantalla mentía). Corregido: si `quoteOrder` informa cambios o productos no disponibles, la carta se vuelve a leer en segundo plano. CI #27 lo confirmó y la prueba se ajustó al precio nuevo.
+
+## 2026-11-16 — Bloque 7: cierre (accesibilidad, matriz de navegadores y dispositivo real)
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Teclado | `accessibility-fase-2.spec.ts` | ✅ El cliente agrega un producto con opción obligatoria, abre su pedido, lo revisa y autoriza el pago simulado solo con Tab, Espacio y Enter. ⏭️ Safari (por defecto no enfoca botones con Tab, igual que en la Fase 1) |
+| Texto ampliado y reflow | `accessibility-fase-2.spec.ts` | ✅ Sin desplazamiento horizontal a 320 px (WCAG 1.4.10) ni con el texto al 200 % a 640 px (WCAG 1.4.4) en: carta con opciones, pedido, resumen del servidor, salón con personas, mesas y QR, carta de la empresa, carta de la sucursal y sucursales. Hallazgo corregido: el selector de zona horaria ensanchaba Sucursales 51 px a 320 px; los campos del sistema de diseño ya no ensanchan la página |
+| axe | En cada recorrido (mesas, carta, sucursales, salón y cliente) | ✅ Sin infracciones WCAG 2.2 AA |
+| Matriz D-15 con emuladores y backend | `npm run test:e2e:emulators` (Chrome, Edge, Safari de escritorio, Chrome Android y Safari iPhone) | ✅ 53 superados y 2 omitidos en el equipo local (18,9 min, con los emuladores en el contenedor de Docker) y ✅ CI #30 |
+| Conjunto | `npm run check` | ✅ 538 pruebas |
+
+### Dispositivo real Android (2026-11-16)
+
+Motorola edge 50 fusion del propietario, Android 16, Chrome, por cable USB con `adb reverse` (puertos 6173, 6174, 9099, 9399 y 5001). Emuladores de Auth, SQL Connect y **Cloud Functions** en un contenedor temporal de Docker Desktop, con el backend compilado (`backend/lib`) montado de solo lectura y sus dos dependencias externas instaladas dentro del contenedor; en Windows no se instaló nada. Builds de producción de las dos apps con `vite preview`. Datos: «La Fonda de Prueba», sucursal Centro, mesa M1, carta con Bandeja paisa (opción obligatoria), Ajiaco santafereño (adiciones opcionales) y Limonada de coco.
+
+| Recorrido | Resultado |
+|---|---|
+| Mesero: Salón, abrir la mesa M1 | ✅ |
+| Cliente: carta de la mesa, opciones obligatorias y opcionales, carrito y «Revisar pedido» con el backend | ✅ |
+| Pago simulado rechazado y luego aprobado, hasta «Pedido listo» | ✅ |
+| Mesero: personas en la mesa y cierre; el cliente ya no puede pedir | ✅ |
+
+Según el propietario, «todo funciona perfectamente». Al terminar se borraron el contenedor y la imagen, se detuvieron los servidores y se quitaron los puertos del teléfono.
