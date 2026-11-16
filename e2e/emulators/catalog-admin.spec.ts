@@ -3,6 +3,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { APPS } from '../../playwright.config.ts';
+import { expectNotice } from '../support/notices.ts';
 import { createUser, TEST_PASSWORD } from '../../dataconnect/tests/support/emulator.ts';
 import {
   createProfile,
@@ -47,18 +48,18 @@ test('el propietario arma la carta y la sucursal le pone disponibilidad, horario
   await taxes.getByLabel('Nombre del impuesto').fill('Impoconsumo');
   await taxes.getByLabel('Tasa (%)').fill('8');
   await taxes.getByRole('button', { name: 'Agregar impuesto' }).click();
-  await expect(page.getByText('Impuesto «Impoconsumo» agregado.')).toBeVisible();
+  await expectNotice(page, 'Impuesto «Impoconsumo» agregado.');
 
   const newCategory = page.getByRole('region', { name: 'Nueva categoría' });
   await newCategory.getByLabel('Nombre de la categoría').fill('Platos fuertes');
   await newCategory.getByRole('button', { name: 'Agregar categoría' }).click();
-  await expect(page.getByText('Categoría «Platos fuertes» agregada.')).toBeVisible();
+  await expectNotice(page, 'Categoría «Platos fuertes» agregada.');
 
   const category = page.getByRole('region', { name: 'Platos fuertes' });
   await category.getByLabel('Nombre del producto').fill('Bandeja paisa');
   await category.getByLabel('Alérgenos declarados (opcional)').fill('huevo, leche');
   await category.getByRole('button', { name: 'Agregar producto' }).click();
-  await expect(page.getByText('Producto «Bandeja paisa» agregado.')).toBeVisible();
+  await expectNotice(page, 'Producto «Bandeja paisa» agregado.');
   const product = category.getByRole('listitem').filter({ hasText: 'Bandeja paisa' }).first();
   await expect(product.getByText('Alérgenos declarados: huevo, leche')).toBeVisible();
   await expect(product.getByText('Impoconsumo 8 % incluido')).toBeVisible();
@@ -67,7 +68,7 @@ test('el propietario arma la carta y la sucursal le pone disponibilidad, horario
   await product.getByLabel('Nombre del grupo').fill('Término de la carne');
   await product.getByLabel('Mínimo a elegir').fill('1');
   await product.getByRole('button', { name: 'Agregar grupo' }).click();
-  await expect(page.getByText('Grupo «Término de la carne» agregado.')).toBeVisible();
+  await expectNotice(page, 'Grupo «Término de la carne» agregado.');
   // El servidor también rechaza un mínimo mayor que el máximo (aquí lo detecta el cliente).
   await product.getByLabel('Nombre del grupo').fill('Salsas');
   await product.getByLabel('Mínimo a elegir').fill('3');
@@ -79,7 +80,7 @@ test('el propietario arma la carta y la sucursal le pone disponibilidad, horario
   await group.getByLabel('Nombre de la opción').fill('Con aguacate');
   await group.getByLabel('Valor adicional en pesos (opcional)').fill('5.400');
   await group.getByRole('button', { name: 'Agregar opción' }).click();
-  await expect(page.getByText('Opción «Con aguacate» agregada.')).toBeVisible();
+  await expectNotice(page, 'Opción «Con aguacate» agregada.');
   await expect(group.getByText(/\+ \$\s5\.400/)).toBeVisible();
   await expectNoAxeViolations(page);
 
@@ -96,7 +97,7 @@ test('el propietario arma la carta y la sucursal le pone disponibilidad, horario
   await item.getByLabel('Desde').fill('18:00');
   await item.getByLabel('Hasta').fill('02:00');
   await item.getByRole('button', { name: 'Guardar disponibilidad' }).click();
-  await expect(page.getByText('«Bandeja paisa» disponible en Centro.')).toBeVisible();
+  await expectNotice(page, '«Bandeja paisa» disponible en Centro.');
   await expect(item.getByText('Sin precio: no aparece en la carta')).toBeVisible();
   await expect(item.getByText(/vie y sáb · 18:00 a 02:00 \(cruza la medianoche\)/)).toBeVisible();
 
@@ -105,7 +106,7 @@ test('el propietario arma la carta y la sucursal le pone disponibilidad, horario
   await item.getByRole('button', { name: 'Cambiar precio' }).click();
   const dialog = page.getByRole('dialog', { name: '¿Cambiar el precio de Bandeja paisa?' });
   await dialog.getByRole('button', { name: 'Cambiar precio' }).click();
-  await expect(item.getByText('En la carta')).toBeVisible();
+  await expect(item.getByText('En la carta', { exact: true })).toBeVisible();
   await expect(item.getByText(/Precio: \$\s32\.000/)).toBeVisible();
   await expectNoAxeViolations(page);
 

@@ -3,6 +3,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { APPS } from '../../playwright.config.ts';
+import { expectNotice } from '../support/notices.ts';
 import { createUser, TEST_PASSWORD } from '../../dataconnect/tests/support/emulator.ts';
 import {
   createProfile,
@@ -49,7 +50,7 @@ test('el administrador crea sectores y mesas, ve e imprime el QR y lo renueva', 
   // Sector y dos mesas, validadas por el servidor.
   await page.getByLabel('Nombre del sector').fill('Terraza');
   await page.getByRole('button', { name: 'Agregar sector' }).click();
-  await expect(page.getByText('Sector «Terraza» agregado.')).toBeVisible();
+  await expectNotice(page, 'Sector «Terraza» agregado.');
   const terraza = page.getByRole('region', { name: 'Terraza' });
   for (const code of ['T1', 'T2']) {
     await terraza.getByLabel('Código de la mesa').fill(code);
@@ -59,7 +60,7 @@ test('el administrador crea sectores y mesas, ve e imprime el QR y lo renueva', 
   // El código no se repite en la sucursal (unicidad en la base).
   await terraza.getByLabel('Código de la mesa').fill('T1');
   await terraza.getByRole('button', { name: 'Agregar mesa' }).click();
-  await expect(page.getByText('Ya existe una mesa con ese código en la sucursal.')).toBeVisible();
+  await expectNotice(page, 'Ya existe una mesa con ese código en la sucursal.');
   await expectNoAxeViolations(page);
 
   // QR con la dirección de menu-web y renovación con confirmación.
@@ -80,7 +81,7 @@ test('el administrador crea sectores y mesas, ve e imprime el QR y lo renueva', 
   // Archivar una mesa la saca de la hoja de impresión.
   const t2 = terraza.getByRole('listitem').filter({ hasText: 'Mesa T2' });
   await t2.getByRole('button', { name: 'Archivar mesa' }).click();
-  await expect(page.getByText('Mesa T2 archivada.')).toBeVisible();
+  await expectNotice(page, 'Mesa T2 archivada.');
   await page.getByRole('link', { name: 'Imprimir códigos QR' }).click();
   const sheet = page.getByRole('list', { name: 'Códigos QR de las mesas' });
   await expect(sheet.getByRole('img')).toHaveCount(1);
