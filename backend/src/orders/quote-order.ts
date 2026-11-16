@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 import { err, isCurrencyCode, ok, type Result } from '@tavelyo/core';
-import type {
-  QuoteChange,
-  QuoteLineRequest,
-  QuoteOrderRequest,
-  QuoteOrderResponse,
-  QuoteSummary,
+import {
+  ORDER_LIMITS,
+  type QuoteChange,
+  type QuoteLineRequest,
+  type QuoteOrderRequest,
+  type QuoteOrderResponse,
+  type QuoteSummary,
 } from '@tavelyo/contracts';
 import { canonicalUuid, newId, type Clock } from '../shared/clock.ts';
 import { isUuid, readFields } from '../shared/input.ts';
@@ -15,10 +16,10 @@ import { priceOrder, type CatalogEntry } from './pricing.ts';
 
 /** El resumen vale este tiempo; después hay que volver a revisar el pedido. */
 export const QUOTE_TTL_MS = 15 * 60 * 1000;
-export const MAX_LINES = 50;
-export const MAX_QUANTITY = 99;
-export const MAX_OPTIONS_PER_LINE = 20;
-export const MAX_NOTE_LENGTH = 140;
+export const MAX_LINES = ORDER_LIMITS.maxLines;
+export const MAX_QUANTITY = ORDER_LIMITS.maxQuantity;
+export const MAX_OPTIONS_PER_LINE = ORDER_LIMITS.maxOptionsPerLine;
+export const MAX_NOTE_LENGTH = ORDER_LIMITS.maxNoteLength;
 
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9_-]{16,64}$/;
 const CANONICAL_NON_NEGATIVE = /^(?:0|[1-9]\d{0,17})$/;

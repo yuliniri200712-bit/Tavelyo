@@ -117,3 +117,11 @@ export interface AuthorizeQuoteResponse {
   /** Siempre true en la Fase 2: la interfaz lo rotula como pago simulado. */
   readonly simulated: boolean;
 }
+
+/** Límites de un pedido: el servidor los exige y la interfaz los respeta antes de enviar. */
+export const ORDER_LIMITS = {
+  maxLines: 50,
+  maxQuantity: 99,
+  maxOptionsPerLine: 20,
+  maxNoteLength: 140,
+} as const;

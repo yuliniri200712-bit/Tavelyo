@@ -3,7 +3,13 @@ export {
   type FirebaseEnvironment,
   type RawEnvironment,
 } from './environment.ts';
-export { createFirebaseClient, EMULATOR_PORTS, type FirebaseClient } from './firebase-client.ts';
+export {
+  createFirebaseClient,
+  createFunctionsClient,
+  EMULATOR_PORTS,
+  FUNCTIONS_REGION,
+  type FirebaseClient,
+} from './firebase-client.ts';
 export { createFirebaseAuthGateway, mapAuthError } from './auth-gateway.ts';
 export {
   createProfileGateway,
@@ -14,3 +20,8 @@ export { mapCommandError, type CommandError } from './command-errors.ts';
 export { createFloorAdminGateway, createFloorServiceGateway } from './floor-gateway.ts';
 export { createCatalogAdminGateway } from './catalog-gateway.ts';
 export { createBranchAdminGateway } from './branch-gateway.ts';
+export {
+  createCustomerGateway,
+  mapCallableError,
+  type CustomerClient,
+} from './customer-gateway.ts';

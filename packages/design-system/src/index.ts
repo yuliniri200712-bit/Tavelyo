@@ -9,6 +9,7 @@ export {
 } from './components/TavelyoButton.tsx';
 export { TextField, type TextFieldProps } from './components/TextField.tsx';
 export { CheckboxField, type CheckboxFieldProps } from './components/CheckboxField.tsx';
+export { RadioField, type RadioFieldProps } from './components/RadioField.tsx';
 export { SelectField, type SelectFieldProps } from './components/SelectField.tsx';
 export { TextAreaField, type TextAreaFieldProps } from './components/TextAreaField.tsx';
 export { StatusChip, type StatusChipProps, type StatusTone } from './components/StatusChip.tsx';

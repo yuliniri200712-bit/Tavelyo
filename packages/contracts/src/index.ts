@@ -21,6 +21,7 @@ export type {
   QuoteSummary,
   SimulatedPaymentOutcome,
 } from './customer-api.ts';
+export { ORDER_LIMITS } from './customer-api.ts';
 export {
   PaymentTimeoutError,
   type AuthorizeRequest,

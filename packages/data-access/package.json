@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Acceso a Firebase (Auth y SQL Connect): configuración por entorno, SDK generado y hooks propios",
+  "description": "Acceso a Firebase (Auth, SQL Connect y funciones del backend): configuración por entorno, SDK generado y pasarelas de cada módulo",
   "exports": {
     ".": "./src/index.ts"
   },
@@ -17,6 +17,8 @@
     "firebase": "12.19.0",
     "@tavelyo/floor": "*",
     "@tavelyo/identity": "*",
-    "@tavelyo/tenancy": "*"
+    "@tavelyo/tenancy": "*",
+    "@tavelyo/contracts": "*",
+    "@tavelyo/table-session": "*"
   }
 }

@@ -43,6 +43,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'npm run build -w @tavelyo/menu-web && npm run preview -w @tavelyo/menu-web',
+      env: EMULATOR_ENV,
       url: APPS.menuWeb,
       reuseExistingServer: !isCI,
       timeout: 180_000,
