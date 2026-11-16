@@ -5,6 +5,7 @@ import {
   BranchesAdminRoute,
   BranchMenuRoute,
   CatalogAdminRoute,
+  FloorServiceRoute,
   PrintQrRoute,
   RequirePermission,
   TablesAdminRoute,
@@ -21,6 +22,16 @@ export const routes: RouteObject[] = [
         element: (
           <RequireStaffContext>
             <StaffHome />
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/salon',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['session.open']}>
+              <FloorServiceRoute />
+            </RequirePermission>
           </RequireStaffContext>
         ),
       },

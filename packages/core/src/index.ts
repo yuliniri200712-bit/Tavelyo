@@ -16,3 +16,4 @@ export {
   type WeeklySchedule,
 } from './weekly-schedule';
 export { parseMajorAmount, toMajorInput, type MoneyInputError } from './money-input';
+export { formatLocalTime } from './time-format';

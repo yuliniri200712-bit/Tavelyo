@@ -61,3 +61,35 @@ export interface FloorAdminGateway {
   ): FloorResult<void>;
   rotateQr(scope: BranchScope, tableId: string): FloorResult<void>;
 }
+
+/** Mesa tal como la ve el mesero: sin el identificador del QR. */
+export interface FloorTable {
+  readonly id: string;
+  readonly code: string;
+  readonly seats: number;
+  /** Sesión abierta de la mesa; null si está libre. */
+  readonly session: { readonly id: string; readonly openedAt: Date } | null;
+}
+
+export interface FloorSector {
+  readonly id: string;
+  readonly name: string;
+  readonly tables: readonly FloorTable[];
+}
+
+/** Persona que se unió a la mesa desde su teléfono. El servidor no entrega su cuenta. */
+export interface SessionParticipant {
+  readonly id: string;
+  readonly joinedAt: Date;
+  readonly expiresAt: Date;
+  readonly removedAt: Date | null;
+}
+
+/** Contrato del salón para el personal en servicio (session.open y session.close). */
+export interface FloorServiceGateway {
+  floor(scope: BranchScope): FloorResult<readonly FloorSector[]>;
+  participants(scope: BranchScope, sessionId: string): FloorResult<readonly SessionParticipant[]>;
+  openTable(scope: BranchScope, tableId: string): FloorResult<void>;
+  closeSession(scope: BranchScope, sessionId: string): FloorResult<void>;
+  removeParticipant(scope: BranchScope, participantId: string): FloorResult<void>;
+}

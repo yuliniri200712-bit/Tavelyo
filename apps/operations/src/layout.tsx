@@ -10,7 +10,7 @@ import {
   TenantSelector,
   useTenancy,
 } from '@tavelyo/tenancy';
-import { ADMIN_MODULES } from './admin-routes.tsx';
+import { STAFF_MODULES } from './admin-routes.tsx';
 import { useAppContext } from './app-context.tsx';
 
 const APP_LABEL = 'Operaciones';
@@ -80,7 +80,7 @@ function StaffContextGate({ children }: { readonly children: ReactNode }) {
 export function StaffHome() {
   const { selection } = useTenancy();
   if (selection.status !== 'ready') return null;
-  const modules = ADMIN_MODULES.filter((module) =>
+  const modules = STAFF_MODULES.filter((module) =>
     module.permissions.some((permission) => selection.tenant.permissions.includes(permission)),
   );
   return (

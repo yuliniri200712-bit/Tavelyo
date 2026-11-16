@@ -3,6 +3,7 @@ import {
   createCatalogAdminGateway,
   createFirebaseAuthGateway,
   createFloorAdminGateway,
+  createFloorServiceGateway,
   createFirebaseClient,
   createProfileGateway,
   createTenancyGateway,
@@ -10,7 +11,7 @@ import {
   type RawEnvironment,
 } from '@tavelyo/data-access';
 import type { CatalogAdminGateway } from '@tavelyo/catalog';
-import type { FloorAdminGateway } from '@tavelyo/floor';
+import type { FloorAdminGateway, FloorServiceGateway } from '@tavelyo/floor';
 import type { AuthGateway, ProfileGateway } from '@tavelyo/identity';
 import type { BranchAdminGateway, TenancyGateway } from '@tavelyo/tenancy';
 
@@ -20,6 +21,7 @@ export interface Services {
   readonly profiles: ProfileGateway;
   readonly tenancy: TenancyGateway;
   readonly floorAdmin: FloorAdminGateway;
+  readonly floorService: FloorServiceGateway;
   readonly catalogAdmin: CatalogAdminGateway;
   readonly branchAdmin: BranchAdminGateway;
   /** Dirección pública de menu-web: la del QR de cada mesa. */
@@ -72,6 +74,7 @@ export function compose(env: RawEnvironment): Composition {
       profiles: createProfileGateway(client.dataConnect),
       tenancy: createTenancyGateway(client.dataConnect),
       floorAdmin: createFloorAdminGateway(client.dataConnect),
+      floorService: createFloorServiceGateway(client.dataConnect),
       catalogAdmin: createCatalogAdminGateway(client.dataConnect),
       branchAdmin: createBranchAdminGateway(client.dataConnect),
       menuWebUrl,

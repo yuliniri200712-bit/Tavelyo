@@ -2,11 +2,11 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { BranchMenuPage, CatalogAdminPage } from '@tavelyo/catalog';
 import { EmptyState } from '@tavelyo/design-system';
-import { LayoutAdminPage, PrintQrPage } from '@tavelyo/floor';
+import { FloorServicePage, LayoutAdminPage, PrintQrPage } from '@tavelyo/floor';
 import { BranchesAdminPage, useTenancy } from '@tavelyo/tenancy';
 import { useAppContext } from './app-context.tsx';
 
-export interface AdminModule {
+export interface StaffModule {
   readonly path: string;
   readonly title: string;
   readonly description: string;
@@ -14,8 +14,14 @@ export interface AdminModule {
   readonly permissions: readonly string[];
 }
 
-/** Módulos de administración del personal y los permisos que habilitan cada uno en la interfaz. */
-export const ADMIN_MODULES: readonly AdminModule[] = [
+/** Módulos del personal y los permisos que habilitan cada uno en la interfaz. */
+export const STAFF_MODULES: readonly StaffModule[] = [
+  {
+    path: '/salon',
+    title: 'Salón',
+    description: 'Mesas libres y abiertas por sector: abrir, cerrar y ver quién se unió.',
+    permissions: ['session.open'],
+  },
   {
     path: '/mesas',
     title: 'Mesas y códigos QR',
@@ -82,6 +88,20 @@ export function RequirePermission({
           Volver al inicio
         </Link>
       }
+    />
+  );
+}
+
+export function FloorServiceRoute() {
+  const { services } = useAppContext();
+  const { scope, branchName, timezone, can } = useStaffContext();
+  return (
+    <FloorServicePage
+      gateway={services.floorService}
+      scope={scope}
+      branchName={branchName}
+      timezone={timezone}
+      canClose={can('session.close')}
     />
   );
 }

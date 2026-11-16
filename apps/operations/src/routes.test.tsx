@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ok } from '@tavelyo/core';
 import { SessionProvider, type AuthGateway, type StaffUser } from '@tavelyo/identity';
 import type { CatalogAdminGateway } from '@tavelyo/catalog';
-import type { FloorAdminGateway } from '@tavelyo/floor';
+import type { FloorAdminGateway, FloorServiceGateway } from '@tavelyo/floor';
 import type { BranchAdminGateway, TenancyGateway } from '@tavelyo/tenancy';
 import { AppContext } from './app-context.tsx';
 import { routes } from './routes.tsx';
@@ -37,7 +37,7 @@ const tenancy: TenancyGateway = {
         tenantName: 'La Fonda',
         roleCode: 'waiter',
         roleName: 'Mesero',
-        permissions: [],
+        permissions: ['session.open', 'session.close'],
       },
       {
         tenantId: 'b',
@@ -86,6 +86,22 @@ const floorAdmin: FloorAdminGateway = {
   rotateQr: vi.fn(async () => ok(undefined)),
 };
 
+const floorService: FloorServiceGateway = {
+  floor: vi.fn(async () =>
+    ok([
+      {
+        id: 's1',
+        name: 'Terraza',
+        tables: [{ id: 't1', code: 'T1', seats: 2, session: null }],
+      },
+    ]),
+  ),
+  participants: vi.fn(async () => ok([])),
+  openTable: vi.fn(async () => ok(undefined)),
+  closeSession: vi.fn(async () => ok(undefined)),
+  removeParticipant: vi.fn(async () => ok(undefined)),
+};
+
 const done = vi.fn(async () => ok(undefined));
 const catalogAdmin: CatalogAdminGateway = {
   catalog: vi.fn(async () => ok({ taxRules: [], categories: [] })),
@@ -117,6 +133,7 @@ function renderAt(path: string, user: StaffUser | null) {
     profiles: { ensureProfile: vi.fn(async () => ok(undefined)) },
     tenancy,
     floorAdmin,
+    floorService,
     catalogAdmin,
     branchAdmin,
     menuWebUrl: 'https://carta.example',
@@ -184,6 +201,24 @@ describe('rutas de operations', () => {
     ).toBeTruthy();
     expect(await screen.findByText('Mesa T1')).toBeTruthy();
     expect(floorAdmin.layout).toHaveBeenCalledWith({ tenantId: 'c', branchId: 'c1' });
+  });
+
+  it('el mesero ve solo el salón y lo abre en su sucursal', async () => {
+    renderAt('/', ana);
+    fireEvent.click(await screen.findByRole('button', { name: 'La Fonda · Mesero' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Salón' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Salón' })).toBeTruthy();
+    expect(await screen.findByText('Mesa T1')).toBeTruthy();
+    expect(floorService.floor).toHaveBeenCalledWith({ tenantId: 'a', branchId: 'a1' });
+    expect(screen.queryByRole('link', { name: 'Mesas y códigos QR' })).toBeNull();
+  });
+
+  it('un rol sin session.open no ve el salón', async () => {
+    renderAt('/salon', ana);
+    fireEvent.click(await screen.findByRole('button', { name: 'El Puerto · Cajero' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Esta sección no está disponible para tu rol' }),
+    ).toBeTruthy();
   });
 
   it('un rol sin table.manage no ve el módulo ni la pantalla', async () => {
