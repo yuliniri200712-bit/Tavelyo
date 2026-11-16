@@ -52,10 +52,17 @@ export function TableOrderProvider({
           : { kind: error.kind },
     };
   }, [gateway, qrPublicId]);
-  const { state: menu, reload: reloadMenu } = useServerData(load);
+  const { state: menu, reload: reloadMenu, refresh: refreshMenu } = useServerData(load);
   const cart = useCart(storage, qrPublicId, now, randomUuid);
   const currency = menu.status === 'ready' && menu.data ? menu.data.currency : 'COP';
-  const checkout = useCheckout({ gateway, qrPublicId, currency, cart, randomUuid });
+  const checkout = useCheckout({
+    gateway,
+    qrPublicId,
+    currency,
+    cart,
+    randomUuid,
+    onMenuOutdated: refreshMenu,
+  });
 
   return (
     <TableOrderContext.Provider value={{ qrPublicId, menu, reloadMenu, cart, checkout, now }}>

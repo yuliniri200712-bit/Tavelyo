@@ -245,6 +245,8 @@ describe('carta y pedido del cliente', () => {
     ).toBeTruthy();
     expect(screen.getByText('El total cambió: antes $ 37.400, ahora $ 39.400.')).toBeTruthy();
     expect(gateway.authorize).not.toHaveBeenCalled();
+    // La carta en pantalla se vuelve a leer para que lo siguiente tenga el precio actual.
+    await waitFor(() => expect(gateway.menu).toHaveBeenCalledTimes(2));
 
     fireEvent.click(screen.getByRole('button', { name: 'Aceptar los importes actuales' }));
     expect(await screen.findByText('Resumen confirmado por el restaurante')).toBeTruthy();

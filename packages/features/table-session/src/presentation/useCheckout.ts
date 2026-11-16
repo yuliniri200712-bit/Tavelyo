@@ -53,6 +53,11 @@ export interface CheckoutDeps {
   readonly currency: string;
   readonly cart: CartState;
   readonly randomUuid: () => string;
+  /**
+   * El servidor informó precios o disponibilidad distintos de los de la carta en pantalla: la app
+   * la vuelve a leer para que lo siguiente que se agregue tenga los datos actuales.
+   */
+  readonly onMenuOutdated: () => void;
 }
 
 /**
@@ -60,7 +65,14 @@ export interface CheckoutDeps {
  * solo sirve para detectar si algo cambió. Cada intento tiene su clave de idempotencia; un
  * reintento del mismo carrito reutiliza la clave y recibe el mismo resumen (caso 3).
  */
-export function useCheckout({ gateway, qrPublicId, currency, cart, randomUuid }: CheckoutDeps) {
+export function useCheckout({
+  gateway,
+  qrPublicId,
+  currency,
+  cart,
+  randomUuid,
+  onMenuOutdated,
+}: CheckoutDeps) {
   const [state, setState] = useState<CheckoutState>({ step: 'editing' });
   const [message, setMessage] = useState<string | null>(null);
   const session = useRef<string | null>(null);
@@ -123,6 +135,7 @@ export function useCheckout({ gateway, qrPublicId, currency, cart, randomUuid }:
       const response = result.value;
       if (response.outcome === 'changed') {
         consumeKey();
+        onMenuOutdated();
         return setState({
           step: 'changed',
           changes: response.changes,
@@ -132,6 +145,7 @@ export function useCheckout({ gateway, qrPublicId, currency, cart, randomUuid }:
       }
       if (response.outcome === 'rejected') {
         consumeKey();
+        onMenuOutdated();
         return setState({ step: 'rejected', problems: response.problems, lines });
       }
       if (response.status === 'QUOTED') return setState({ step: 'quoted', quote: response });

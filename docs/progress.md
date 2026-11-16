@@ -59,7 +59,7 @@ D-07 Cloud Functions con TypeScript · D-12 (fuente) Plus Jakarta Sans, OFL 1.1 
 - Fases con cobros o comandas: decidir cómo se comporta el cierre por inactividad a mitad de una operación (hoy no hay ninguna) y si las pantallas de cocina quedan exentas.
 - Antes del primer despliegue (requiere autorización): verificar IAM de `executeGraphql`/suplantación en `tavelyo-e2b57`, sembrar el catálogo de roles y permisos en el entorno real (hoy solo lo hacen las pruebas), herramienta para conceder la afirmación `platform_operator` y empaquetado del backend para Cloud Build.
 - Validación de formularios en el cliente (pendiente dentro de ADR-0010; se decide en Fase 1 si hace falta).
-- Decisiones de negocio: D-01 resuelta en parte (Colombia, COP; falta D-01b, impuestos), D-02 (pasarela: el propietario busca proveedor), D-04 a D-06 y D-09 a D-11 (`requirements.md` §6).
+- Decisiones de negocio: D-01 y D-01b resueltas (Colombia, COP; precios con impuestos incluidos, tasa por empresa), D-02 (pasarela: el propietario busca proveedor), D-04, D-05, D-06 (quién ve y paga qué; el carrito ya es por persona) y D-09 a D-11 (`requirements.md` §6).
 
 ## Bloqueos
 

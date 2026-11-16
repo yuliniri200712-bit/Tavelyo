@@ -58,6 +58,9 @@ export function useServerData<T>(load: () => Promise<Outcome<T>>) {
     setVersion((v) => v + 1);
   }, []);
 
+  /** Vuelve a leer sin mostrar la carga: la pantalla sigue con los datos actuales mientras tanto. */
+  const refresh = useCallback(() => setVersion((v) => v + 1), []);
+
   /** Ejecuta un cambio; devuelve true si el servidor lo aceptó. */
   const run = useCallback(
     async (command: () => Promise<Outcome<void>>, successText: string): Promise<boolean> => {
@@ -73,7 +76,7 @@ export function useServerData<T>(load: () => Promise<Outcome<T>>) {
     [],
   );
 
-  return { state, notice, reload, run };
+  return { state, notice, reload, refresh, run };
 }
 
 export type RunCommand = ReturnType<typeof useServerData>['run'];
