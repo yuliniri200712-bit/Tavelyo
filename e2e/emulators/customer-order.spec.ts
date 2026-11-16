@@ -24,11 +24,12 @@ async function expectNoAxeViolations(page: Page) {
   expect(result.violations).toEqual([]);
 }
 
-async function addBandeja(page: Page) {
+/** Agrega una bandeja bien asada; `price` es el precio que debe mostrar la carta ("$ 32.000"). */
+async function addBandeja(page: Page, price: string) {
   await page.getByRole('button', { name: 'Agregar Bandeja paisa' }).click();
   const form = page.getByRole('form', { name: 'Elegir Bandeja paisa' });
   await form.getByLabel('Bien asada').check();
-  await form.getByRole('button', { name: named('Agregar al pedido · $ 32.000') }).click();
+  await form.getByRole('button', { name: named(`Agregar al pedido · ${price}`) }).click();
   await expectNotice(page, 'Agregaste 1 × Bandeja paisa a tu pedido.');
 }
 
@@ -57,7 +58,7 @@ test('el cliente pide desde el QR: mesa cerrada, precio cambiado, pago rechazado
   await expect(page.getByRole('heading', { level: 1, name: 'Centro' })).toBeVisible();
   await expect(page.getByText('Mesa M1', { exact: true })).toBeVisible();
   await expect(page.getByText('Alérgenos declarados: huevo')).toBeVisible();
-  await addBandeja(page);
+  await addBandeja(page, '$ 32.000');
   await expectNoAxeViolations(page);
   await page.getByRole('link', { name: named('Ver mi pedido · 1 producto · $ 32.000') }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Tu pedido' })).toBeVisible();
@@ -113,7 +114,8 @@ test('el cliente pide desde el QR: mesa cerrada, precio cambiado, pago rechazado
   expectOk(await mutate(waiter, 'CloseTableSession', { ...scope, sessionId }), 'Cerrar mesa');
   await page.getByRole('button', { name: 'Hacer otro pedido' }).click();
   await page.getByRole('link', { name: 'Volver a la carta' }).click();
-  await addBandeja(page);
+  // La carta ya muestra el precio nuevo: se volvió a leer al informar el cambio.
+  await addBandeja(page, '$ 35.000');
   await page.getByRole('link', { name: named('Ver mi pedido · 1 producto · $ 35.000') }).click();
   await page.getByRole('button', { name: 'Revisar pedido' }).click();
   await expectNotice(page, 'La mesa todavía no está abierta. Pide al mesero que la abra.');
