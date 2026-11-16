@@ -405,6 +405,16 @@ export interface OpenTableSessionVariables {
   tableId: UUIDString;
 }
 
+export interface OrderItemModifier_Key {
+  id: UUIDString;
+  __typename?: 'OrderItemModifier_Key';
+}
+
+export interface OrderItem_Key {
+  id: UUIDString;
+  __typename?: 'OrderItem_Key';
+}
+
 export interface OrderQuoteLine_Key {
   id: UUIDString;
   __typename?: 'OrderQuoteLine_Key';
@@ -413,6 +423,11 @@ export interface OrderQuoteLine_Key {
 export interface OrderQuote_Key {
   id: UUIDString;
   __typename?: 'OrderQuote_Key';
+}
+
+export interface Order_Key {
+  id: UUIDString;
+  __typename?: 'Order_Key';
 }
 
 export interface Permission_Key {
@@ -735,6 +750,11 @@ export interface ServerSetQuotePaymentVariables {
   paymentRef: string;
 }
 
+export interface ServiceRequest_Key {
+  id: UUIDString;
+  __typename?: 'ServiceRequest_Key';
+}
+
 export interface SessionParticipant_Key {
   id: UUIDString;
   __typename?: 'SessionParticipant_Key';
@@ -768,6 +788,11 @@ export interface SetProductAvailabilityVariables {
   daysMask?: number | null;
   startMinute?: number | null;
   endMinute?: number | null;
+}
+
+export interface Station_Key {
+  id: UUIDString;
+  __typename?: 'Station_Key';
 }
 
 export interface TableSession_Key {
