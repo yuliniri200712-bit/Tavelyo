@@ -3,6 +3,8 @@ import { Link } from 'react-router';
 import { BranchMenuPage, CatalogAdminPage, StationsAdminPage } from '@tavelyo/catalog';
 import { EmptyState } from '@tavelyo/design-system';
 import { FloorServicePage, LayoutAdminPage, PrintQrPage } from '@tavelyo/floor';
+import { useInactivityHold } from '@tavelyo/identity';
+import { KitchenPage } from '@tavelyo/kitchen';
 import { BranchesAdminPage, useTenancy } from '@tavelyo/tenancy';
 import { useAppContext } from './app-context.tsx';
 
@@ -16,6 +18,12 @@ export interface StaffModule {
 
 /** Módulos del personal y los permisos que habilitan cada uno en la interfaz. */
 export const STAFF_MODULES: readonly StaffModule[] = [
+  {
+    path: '/cocina',
+    title: 'Cocina',
+    description: 'Cola de tu estación en tiempo real: empezar, marcar listo y cancelar con motivo.',
+    permissions: ['kitchen.advance'],
+  },
   {
     path: '/salon',
     title: 'Salón',
@@ -108,6 +116,21 @@ export function FloorServiceRoute() {
       branchName={branchName}
       timezone={timezone}
       canClose={can('session.close')}
+    />
+  );
+}
+
+export function KitchenRoute() {
+  const { services } = useAppContext();
+  const { scope, branchName, timezone } = useStaffContext();
+  // D-25: la pantalla de cocina no se cierra por inactividad mientras está visible.
+  useInactivityHold();
+  return (
+    <KitchenPage
+      gateway={services.kitchen}
+      scope={scope}
+      branchName={branchName}
+      timezone={timezone}
     />
   );
 }

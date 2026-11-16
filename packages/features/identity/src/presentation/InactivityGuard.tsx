@@ -8,6 +8,7 @@ import {
   type InactivityPhase,
   type InactivityPolicy,
 } from '../application/inactivity.ts';
+import { useInactivityHolds } from './InactivityHold.tsx';
 import { useSession } from './SessionProvider.tsx';
 
 /** Interacciones que cuentan como actividad (mover el puntero sin tocar no cuenta). */
@@ -75,6 +76,7 @@ interface InactivityWatchProps {
 
 function InactivityWatch({ uid, policy, store, now }: InactivityWatchProps) {
   const { signOut } = useSession();
+  const holds = useInactivityHolds();
   // Referencia estable: el vigilante no se reinicia si cambia el valor del contexto.
   const signOutRef = useRef(signOut);
   useEffect(() => {
@@ -105,6 +107,14 @@ function InactivityWatch({ uid, policy, store, now }: InactivityWatchProps) {
   }, []);
 
   const check = useCallback(() => {
+    // Una pantalla visible que retiene el cierre (cocina, D-25) cuenta como actividad.
+    if (
+      holds?.isHeld() &&
+      document.visibilityState === 'visible' &&
+      phaseRef.current === 'active'
+    ) {
+      record();
+    }
     const at = now();
     lastOwn.current = latestActivity(lastOwn.current, store.read(uid), at);
     const next = inactivityPhase(lastOwn.current, at, policy);
@@ -120,7 +130,7 @@ function InactivityWatch({ uid, policy, store, now }: InactivityWatchProps) {
         ? previous
         : next,
     );
-  }, [expire, now, policy, store, uid]);
+  }, [expire, holds, now, policy, record, store, uid]);
 
   useEffect(() => {
     // Al abrir la app con una sesión recordada, la última actividad guardada decide.

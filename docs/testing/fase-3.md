@@ -50,4 +50,17 @@ Hallazgos del bloque:
 
 Hallazgo: las pruebas nuevas sentaron más de 20 personas en la misma mesa y el límite por mesa de `joinTableSession` las detuvo, como debía. Cada grupo nuevo usa su propia mesa.
 
-Pendiente de verificar en los bloques siguientes: las suscripciones (`@refresh`) con el SDK web en el navegador, y la reconexión de cocina (caso 11).
+## 2026-11-16 — Bloque 4: estaciones y pantalla de cocina en tiempo real
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Estaciones (4a) | `npx vitest run packages/features/catalog` | ✅ Lista con estado en texto, la predeterminada sin «Archivar», validación al crear, archivar; estación de cada producto en la carta de la sucursal, solo entre las activas y sin consultarlas si falta `catalog.manage`. CI #40 en verde |
+| Lógica de la cola | `npx vitest run packages/features/kitchen` | ✅ 4 pruebas: minutos de espera (nunca negativos), resumen en texto, pedidos nuevos con su mesa y motivo de cancelación |
+| Pantalla de cocina | ídem (`KitchenPage.test.tsx`) | ✅ 7 pruebas: detalle de la línea con alérgenos y sin importes, «Empezar» con la versión vista y nueva lectura, «Esta línea ya cambió», pedido nuevo con aviso, marca y sonido opcional, sin conexión con los botones bloqueados y reintento, elección y recuerdo de la estación, cancelación con motivo y aviso de merma |
+| D-25 | `npx vitest run packages/features/identity` | ✅ 3 pruebas nuevas: con la cocina visible no avisa ni cierra en 40 minutos; con la pestaña oculta cierra a los 15; al salir de la cocina vuelve el cierre normal |
+| **Tiempo real en navegador (caso 11)** | `npx playwright test --config playwright.emulators.config.ts kitchen-realtime` | ✅ **5 navegadores** de D-15. Cocina ve el pedido sin recargar, con aviso y marca de «Nuevo»; «Empezar» y «Listo» cambian la línea; sin red bloquea los botones; al volver recupera el pedido hecho mientras estaba sin conexión. axe sin infracciones |
+| Conjunto | `npm run check` | ✅ 609 pruebas unitarias |
+
+Hallazgo: en el SDK web 12.19 la suscripción funciona sin `clientCache` (ADR-0007, implementación), así que se conserva ADR-0008 §8: no se guardan datos que haya que vaciar al cerrar sesión.
+
+Pendiente de verificar en los bloques siguientes: TalkBack y el Android real (bloque 7).

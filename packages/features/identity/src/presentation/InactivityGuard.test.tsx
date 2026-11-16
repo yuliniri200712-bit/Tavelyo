@@ -4,6 +4,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { ok } from '@tavelyo/core';
 import type { ActivityStore, AuthGateway, StaffUser } from '../domain/index.ts';
 import { InactivityGuard } from './InactivityGuard.tsx';
+import { InactivityHoldProvider, useInactivityHold } from './InactivityHold.tsx';
 import { SessionProvider, useSession } from './SessionProvider.tsx';
 
 const MINUTE = 60_000;
@@ -165,5 +166,62 @@ describe('InactivityGuard', () => {
     expect(store.values.has('u1')).toBe(true);
     await act(() => auth.signOut());
     expect(store.values.has('u1')).toBe(false);
+  });
+});
+
+/** Pantalla que retiene el cierre mientras está montada, como la de cocina (D-25). */
+function KitchenLikeScreen({ active }: { readonly active: boolean }) {
+  useInactivityHold(active);
+  return null;
+}
+
+function renderHeld(active: boolean) {
+  const auth = signedInAuth();
+  const view = render(
+    <SessionProvider auth={auth} profiles={{ ensureProfile: vi.fn(async () => ok(undefined)) }}>
+      <InactivityHoldProvider>
+        <InactivityGuard store={memoryStore()} />
+        <KitchenLikeScreen active={active} />
+      </InactivityHoldProvider>
+    </SessionProvider>,
+  );
+  return { auth, view };
+}
+
+function setVisibility(state: 'visible' | 'hidden') {
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
+}
+
+describe('retención del cierre por inactividad (D-25)', () => {
+  afterEach(() => setVisibility('visible'));
+
+  it('con la pantalla de cocina visible no avisa ni cierra la sesión', async () => {
+    setVisibility('visible');
+    const { auth } = renderHeld(true);
+    await advance(40 * MINUTE);
+    expect(dialog()?.open).toBe(false);
+    expect(auth.signOut).not.toHaveBeenCalled();
+  });
+
+  it('con la pestaña oculta, la inactividad vuelve a contar', async () => {
+    const { auth } = renderHeld(true);
+    setVisibility('hidden');
+    await advance(15 * MINUTE + 1_000);
+    expect(auth.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('al salir de la pantalla de cocina, vuelve el cierre a los 15 minutos', async () => {
+    const { auth, view } = renderHeld(true);
+    await advance(30 * MINUTE);
+    view.rerender(
+      <SessionProvider auth={auth} profiles={{ ensureProfile: vi.fn(async () => ok(undefined)) }}>
+        <InactivityHoldProvider>
+          <InactivityGuard store={memoryStore()} />
+          <KitchenLikeScreen active={false} />
+        </InactivityHoldProvider>
+      </SessionProvider>,
+    );
+    await advance(15 * MINUTE + 1_000);
+    expect(auth.signOut).toHaveBeenCalled();
   });
 });

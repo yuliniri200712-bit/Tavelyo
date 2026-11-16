@@ -1,0 +1,21 @@
+{
+  "name": "@tavelyo/kitchen",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cocina: cola de cada estación en tiempo real, «Empezar», «Listo» y cancelar con motivo",
+  "exports": {
+    ".": "./src/index.ts",
+    "./domain": "./src/domain/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@tavelyo/core": "*",
+    "@tavelyo/design-system": "*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.7"
+  }
+}

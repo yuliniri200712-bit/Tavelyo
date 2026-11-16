@@ -6,6 +6,7 @@ import { ok } from '@tavelyo/core';
 import { SessionProvider, type AuthGateway, type StaffUser } from '@tavelyo/identity';
 import type { CatalogAdminGateway } from '@tavelyo/catalog';
 import type { FloorAdminGateway, FloorServiceGateway } from '@tavelyo/floor';
+import type { KitchenGateway } from '@tavelyo/kitchen';
 import type { BranchAdminGateway, TenancyGateway } from '@tavelyo/tenancy';
 import { AppContext } from './app-context.tsx';
 import { routes } from './routes.tsx';
@@ -130,6 +131,15 @@ const branchAdmin: BranchAdminGateway = {
   updateBranch: done,
 };
 
+const kitchen: KitchenGateway = {
+  stations: vi.fn(async () => ok([])),
+  queue: vi.fn(async () => ok([])),
+  watchQueue: vi.fn(() => () => undefined),
+  start: done,
+  finish: done,
+  cancel: done,
+};
+
 function renderAt(path: string, user: StaffUser | null) {
   const auth = fakeAuth(user);
   const services = {
@@ -140,6 +150,7 @@ function renderAt(path: string, user: StaffUser | null) {
     floorService,
     catalogAdmin,
     branchAdmin,
+    kitchen,
     menuWebUrl: 'https://carta.example',
     usesEmulators: true,
   };

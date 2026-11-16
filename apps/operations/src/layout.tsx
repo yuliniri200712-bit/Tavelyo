@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from 'react';
 import { Link, Navigate, Outlet } from 'react-router';
 import { Card, LoadingState, StatusChip } from '@tavelyo/design-system';
-import { InactivityGuard, useSession } from '@tavelyo/identity';
+import { InactivityGuard, InactivityHoldProvider, useSession } from '@tavelyo/identity';
 import { PwaShell } from '@tavelyo/pwa-shell';
 import {
   ContextBar,
@@ -47,8 +47,10 @@ export function AppLayout() {
           />
         }
       >
-        <InactivityGuard />
-        <Outlet />
+        <InactivityHoldProvider>
+          <InactivityGuard />
+          <Outlet />
+        </InactivityHoldProvider>
       </PwaShell>
     </TenancyProvider>
   );

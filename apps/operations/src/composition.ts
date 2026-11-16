@@ -5,6 +5,7 @@ import {
   createFloorAdminGateway,
   createFloorServiceGateway,
   createFirebaseClient,
+  createKitchenGateway,
   createProfileGateway,
   createTenancyGateway,
   parseFirebaseEnvironment,
@@ -13,6 +14,7 @@ import {
 import type { CatalogAdminGateway } from '@tavelyo/catalog';
 import type { FloorAdminGateway, FloorServiceGateway } from '@tavelyo/floor';
 import type { AuthGateway, ProfileGateway } from '@tavelyo/identity';
+import type { KitchenGateway } from '@tavelyo/kitchen';
 import type { BranchAdminGateway, TenancyGateway } from '@tavelyo/tenancy';
 
 /** Dependencias de la app, inyectadas por contexto (ADR-0010). */
@@ -24,6 +26,7 @@ export interface Services {
   readonly floorService: FloorServiceGateway;
   readonly catalogAdmin: CatalogAdminGateway;
   readonly branchAdmin: BranchAdminGateway;
+  readonly kitchen: KitchenGateway;
   /** Dirección pública de menu-web: la del QR de cada mesa. */
   readonly menuWebUrl: string;
   readonly usesEmulators: boolean;
@@ -77,6 +80,7 @@ export function compose(env: RawEnvironment): Composition {
       floorService: createFloorServiceGateway(client.dataConnect),
       catalogAdmin: createCatalogAdminGateway(client.dataConnect),
       branchAdmin: createBranchAdminGateway(client.dataConnect),
+      kitchen: createKitchenGateway(client.dataConnect),
       menuWebUrl,
       usesEmulators: environment.value.useEmulators,
     },
