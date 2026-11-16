@@ -90,3 +90,20 @@ Recorrido de `catalog-admin.spec.ts`: el propietario crea un impuesto, una categ
 | Autorización de `TenantBranches` | `npm run test:integration` (`salon-carta.int.test.ts`) | ✅ CI #21: el propietario ve sus sucursales archivadas incluidas y no las de otra empresa; administrador de sucursal y mesero sin `tenant.settings`; otra empresa sin membresía |
 | Navegador con emuladores | `npm run test:e2e:emulators` (`branches-admin.spec.ts`) | ✅ CI #21: crear, archivar con confirmación y restaurar; la sucursal actual no se archiva; la nueva aparece al cambiar de contexto; el administrador de sucursal no ve el módulo |
 | SDK generado | CI (`dataconnect:sdk:generate` + `git diff`) | ✅ CI #21: el SDK escrito a mano siguiendo el formato del generador coincide byte a byte con el del generador real (la CLI no corre en el equipo local) |
+
+## 2026-11-15 — Bloque 4: dispositivo real Android
+
+Dispositivo del propietario: **Motorola edge 50 fusion, Android 16, Chrome**. Conexión por cable USB con `adb reverse` (puertos 6174, 9099 y 9399), como en la Fase 1. Build de producción de `operations` con `vite preview --host 127.0.0.1`.
+
+Entorno: Windows bloquea el ejecutable del emulador de SQL Connect (Control inteligente de aplicaciones, ahora activado; el 2026-11-14 estaba en evaluación). Sin cambiar esa configuración ni instalar nada en Windows, los emuladores de Auth y SQL Connect se ejecutaron en un contenedor temporal de Docker Desktop (imagen oficial `node:24-bookworm-slim`, `firebase-tools@15.30.2`, escuchando en `0.0.0.0` dentro del contenedor y publicados solo en `127.0.0.1`). El esquema se copió dentro del contenedor (montaje de solo lectura), así que no se escribió nada en el repositorio. Datos: empresa «La Fonda de Prueba» (Centro y Norte), con propietario, administrador de Centro y mesero de Centro, sembrados con las ayudas de `dataconnect/tests/support`. Al terminar se borraron el contenedor y la imagen y se quitaron los puertos del teléfono.
+
+| Recorrido | Resultado |
+|---|---|
+| Propietario: sucursales (crear, archivar con confirmación, restaurar; la actual no se archiva; la nueva aparece al cambiar de contexto) | ✅ |
+| Propietario: carta de la empresa (impuesto en porcentaje, categoría, producto, grupo de opciones con valor adicional) | ✅ |
+| Propietario: carta de la sucursal (precio con confirmación, agotado y disponible, horario que cruza la medianoche) | ✅ |
+| Propietario: sectores, mesas, QR, renovación y hoja de impresión | ✅ |
+| Administrador de sucursal: mesas y cartas; la de la empresa solo para consultar; sin «Sucursales» | ✅ |
+| Mesero: sin módulos de administración | ✅ |
+
+Según el propietario, «todo funciona perfectamente». La carta del cliente al escanear el QR llega en el bloque 6 y no se probó.
