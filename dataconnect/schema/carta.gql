@@ -89,6 +89,10 @@ type ProductBranch @table(key: ["productId", "branchId"]) {
   daysMask: Int
   startMinute: Int
   endMinute: Int
+  "Estación que lo prepara (Fase 3). Sin estación, va a la predeterminada de la sucursal."
+  stationId: UUID
+  station: Station
+    @ref(fields: ["stationId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
   updatedAt: Timestamp! @default(expr: "request.time")
 }
 

@@ -15,6 +15,7 @@ export const OrderQuoteStatus = {
   AUTHORIZED: "AUTHORIZED",
   DECLINED: "DECLINED",
   EXPIRED: "EXPIRED",
+  RELEASE_PENDING: "RELEASE_PENDING",
 }
 
 export const connectorConfig = {

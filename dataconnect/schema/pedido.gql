@@ -1,11 +1,14 @@
-# Resumen verificable de pedido (Fase 2): lo calcula y lo guarda solo el backend
-# (operaciones NO_ACCESS, ADR-0011). La Fase 3 envía a cocina a partir de un resumen vigente.
+# Resumen verificable de pedido (Fase 2) y pedido enviado a cocina (Fase 3). Ambos los escribe solo
+# el backend (operaciones NO_ACCESS, ADR-0011): un pedido nace únicamente de un resumen cuya
+# preautorización confirmó el servidor (D-04).
 
 enum OrderQuoteStatus {
   QUOTED
   AUTHORIZED
   DECLINED
   EXPIRED
+  "Autorizado, pero no se pudo enviar a cocina (mesa cerrada, persona retirada…): la retención queda para liberar (Fase 4)."
+  RELEASE_PENDING
 }
 
 """
@@ -39,6 +42,11 @@ type OrderQuote
   status: OrderQuoteStatus!
   "Referencia del adaptador de pago (simulado en la Fase 2)."
   paymentRef: String
+  "Versión del texto de preautorización que aceptó el cliente (RF-PA-02, Fase 3)."
+  consentTextVersion: String
+  consentedAt: Timestamp
+  "Cuándo se confirmó la autorización: la conciliación busca resúmenes autorizados sin pedido."
+  authorizedAt: Timestamp
   createdAt: Timestamp! @default(expr: "request.time")
   expiresAt: Timestamp!
 }
@@ -65,4 +73,106 @@ type OrderQuoteLine @table @unique(fields: ["quoteId", "position"]) {
   lineTotalMinor: Int64!
   taxMinor: Int64!
   note: String
+}
+
+"""
+Estado de una línea en cocina y en la entrega (architecture/state-machines.md §1). Solo avanza:
+no se retrocede (D-26); un error se corrige cancelando con motivo.
+"""
+enum OrderItemStatus {
+  RECEIVED
+  IN_PREPARATION
+  READY
+  PICKED_UP
+  DELIVERED
+  CANCELLED
+}
+
+"""
+Pedido enviado a cocina. Lo crea solo el backend tras confirmar la preautorización de su resumen
+(D-04). quoteId es único: un resumen da como máximo un pedido, aunque se pulse dos veces o se
+reintente (caso 3). Los importes son los del resumen. El estado no se guarda: se deriva de sus
+líneas (packages/core, order-status.ts). La tabla se llama customer_order porque «order» es una
+palabra reservada de SQL.
+"""
+type Order @table(name: "customer_order") @unique(fields: ["id", "tenantId", "branchId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  sessionId: UUID!
+  session: TableSession!
+    @ref(fields: ["sessionId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  "Quien lo pidió: cada persona ve solo sus pedidos (D-06)."
+  participantId: UUID!
+  participant: SessionParticipant!
+    @ref(
+      fields: ["participantId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  quoteId: UUID! @unique
+  quote: OrderQuote!
+    @ref(fields: ["quoteId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  submittedAt: Timestamp! @default(expr: "request.time")
+}
+
+"""
+Línea del pedido: instantánea inmutable de la línea del resumen (nombre, alérgenos declarados,
+cantidad, importes y nota) más su estación y su estado. version sube con cada cambio de estado:
+cada operación comprueba el estado y la versión que vio quien la pide, y si otra persona se
+adelantó, la rechaza (RNF-05, caso 4). Como ningún estado se repite (D-26), las marcas de tiempo
+de cada estado son su historial completo; quién hizo cada cambio queda en AuditEvent.
+"""
+type OrderItem
+  @table
+  @unique(fields: ["id", "tenantId", "branchId"])
+  @unique(fields: ["orderId", "position"])
+  @index(fields: ["tenantId", "branchId", "status", "stationId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  orderId: UUID!
+  order: Order!
+    @ref(fields: ["orderId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  position: Int!
+  productId: UUID!
+  product: Product! @ref(fields: ["productId", "tenantId"], references: ["id", "tenantId"])
+  "Estación que la prepara, fijada al enviar el pedido: un cambio posterior en la carta no la mueve."
+  stationId: UUID!
+  station: Station!
+    @ref(fields: ["stationId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  productNameSnapshot: String!
+  "Alérgenos declarados por el restaurante al enviar el pedido; cocina siempre los ve (PM §7)."
+  allergensSnapshot: [String!]
+  quantity: Int!
+  unitPriceMinor: Int64!
+  modifiersMinor: Int64!
+  lineTotalMinor: Int64!
+  taxMinor: Int64!
+  note: String
+  status: OrderItemStatus!
+  version: Int! @default(value: 1)
+  createdAt: Timestamp! @default(expr: "request.time")
+  startedAt: Timestamp
+  readyAt: Timestamp
+  pickedUpAt: Timestamp
+  deliveredAt: Timestamp
+  cancelledAt: Timestamp
+  cancelReason: String
+  "Cancelada después de empezar a prepararla: cuenta como merma (se valoriza en la Fase 5)."
+  wasted: Boolean
+}
+
+"Opción elegida en una línea, con su nombre y su importe en el momento del pedido."
+type OrderItemModifier @table @unique(fields: ["itemId", "position"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  itemId: UUID!
+  item: OrderItem!
+    @ref(fields: ["itemId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  position: Int!
+  optionId: UUID!
+  option: ModifierOption! @ref(fields: ["optionId", "tenantId"], references: ["id", "tenantId"])
+  nameSnapshot: String!
+  priceDeltaMinor: Int64!
 }

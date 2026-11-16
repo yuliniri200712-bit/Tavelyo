@@ -80,3 +80,46 @@ type SessionParticipant
   removedAt: Timestamp
   removedBy: String
 }
+
+enum ServiceRequestKind {
+  CALL_WAITER
+  REQUEST_BILL
+}
+
+enum ServiceRequestStatus {
+  PENDING
+  ATTENDED
+}
+
+"""
+Solicitud de un cliente al personal: «Llamar al mesero» o «Pedir la cuenta» (Fase 3). La crea
+solo el backend, que aplica los límites (riesgo T11); el personal la marca como atendida. Pedir
+la cuenta solo avisa al mesero: la cuenta es de la Fase 4.
+"""
+type ServiceRequest
+  @table
+  @unique(fields: ["id", "tenantId", "branchId"])
+  @index(fields: ["tenantId", "branchId", "status", "createdAt"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  sessionId: UUID!
+  session: TableSession!
+    @ref(fields: ["sessionId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  participantId: UUID!
+  participant: SessionParticipant!
+    @ref(
+      fields: ["participantId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  kind: ServiceRequestKind!
+  status: ServiceRequestStatus!
+  """
+  Vale «<sessionId>:<kind>» mientras está pendiente y null al atenderla: su unicidad deja una
+  sola solicitud pendiente de cada tipo por mesa, así que repetirla no llena la lista del mesero.
+  """
+  pendingKey: String @unique
+  createdAt: Timestamp! @default(expr: "request.time")
+  attendedAt: Timestamp
+  attendedBy: String
+}

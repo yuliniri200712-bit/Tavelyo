@@ -41,6 +41,12 @@ Por D-04, todo pedido está sujeto a garantía. Mientras no haya pasarela real (
 | D-25 | **Cierre por inactividad en la pantalla de cocina:** hoy toda sesión se cierra a los 15 minutos sin uso (D-19), y cocina mira la pantalla sin tocarla | **La pantalla de cocina no se cierra por inactividad mientras está visible.** El resto de la app sigue con los 15 minutos, y cerrar la sesión sigue disponible |
 | D-26 | **Retroceder un estado** (por ejemplo, de «en preparación» a «recibido»): ¿se permite? | **No.** Un error se corrige cancelando la línea con motivo (y, si hace falta, con un pedido nuevo). Queda todo auditado |
 
+### Tomadas en el bloque 1 (2026-11-16, dentro del alcance aprobado)
+
+- **Permiso nuevo `service_request.handle`** para marcar una solicitud como atendida: propietario, administrador de sucursal, mesero y cajero (la matriz solo tenía `service_request.create`, del cliente).
+- **Estaciones con `catalog.manage`:** crearlas, archivarlas y asignar productos se hace junto con la carta de la sucursal.
+- **Sin `KitchenTicket` ni `StateEvent`:** la línea lleva su estación y una marca de tiempo por estado; como ningún estado se repite (D-26), son su historial, y el actor queda en `AuditEvent` (`architecture/data-model.md`).
+
 ## 3. Diseño propuesto
 
 ### Del resumen autorizado al pedido

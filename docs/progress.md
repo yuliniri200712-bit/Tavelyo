@@ -4,7 +4,17 @@
 
 ## Fase actual
 
-**Fase 3 — Pedidos: autorizada** por el propietario el 2026-11-16, con el plan [`plans/fase-3.md`](plans/fase-3.md) y las decisiones D-04 (aclarada), D-23, D-24, D-25 y D-26. Rama: `fase-3-pedidos`. Siguiente paso: bloque 1 (decisiones y esquema).
+**Fase 3 — Pedidos: autorizada** por el propietario el 2026-11-16, con el plan [`plans/fase-3.md`](plans/fase-3.md) y las decisiones D-04 (aclarada), D-23, D-24, D-25 y D-26. Rama: `fase-3-pedidos`.
+
+| Bloque del plan | Estado |
+|---|---|
+| 1. Decisiones y esquema | 🔄 D-23 a D-26 registradas. Esquema nuevo: `Station` (`cocina.gql`, una predeterminada por sucursal con `defaultForBranchId` único), estación en `ProductBranch`, `Order` (tabla `customer_order`, un pedido por resumen con `quoteId` único), `OrderItem` (instantánea, estado, `version` y marcas de tiempo de cada estado), `OrderItemModifier` y `ServiceRequest` (una pendiente de cada tipo por mesa con `pendingKey` único). `OrderQuote` suma la versión del texto aceptado, `consentedAt`, `authorizedAt` y el estado `RELEASE_PENDING`. Máquina de estados de la línea y estado derivado del pedido en `packages/core` (`order-status.ts`, 15 pruebas). Permiso nuevo `service_request.handle`. 7 pruebas de capacidades en el emulador (`capacidades-fase-3.int.test.ts`), en verificación en CI |
+| 2. Conectores y autorización | Pendiente |
+| 3. Backend | Pendiente |
+| 4. Operaciones, administración y cocina | Pendiente |
+| 5. Operaciones, meseros | Pendiente |
+| 6. Cliente (`menu-web`) | Pendiente |
+| 7. Cierre | Pendiente |
 
 **Fase 2 — Salón y carta: cerrada** con aprobación del propietario el 2026-11-16 e integrada en `main`. Autorizada el 2026-11-14. Rama: `fase-2-salon-carta`. Plan: [`plans/fase-2.md`](plans/fase-2.md). Decisiones: D-01b, D-21, D-22, D-06 (carrito) y ADR-0011.
 

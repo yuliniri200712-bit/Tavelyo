@@ -42,6 +42,7 @@ Leyenda: ✅ permitido · 🔸 permitido con tope, motivo o autenticación refor
 | `delivery.pickup` / `delivery.deliver` | — | — | ✅ | — | — | — |
 | `delivery.skip_sequence` | ✅ | 🔸 | — | — | — | — |
 | `service_request.create` | — | — | — | — | — | ✅ |
+| `service_request.handle` (marcar como atendida) | ✅ | ✅ | ✅ | — | ✅ | — |
 | `bill.read` | ✅ | ✅ | ✅ sin datos de pago | — | ✅ | ✅ propia cuenta |
 | `bill.split` | ✅ | ✅ | — | — | ✅ | — |
 | `bill.discount` | ✅ | 🔸 | — | — | 🔸 tope | — |
@@ -70,6 +71,7 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 
 - Catálogo en código: `packages/contracts/src/authorization.ts`. Una prueba compara cada rol con la tabla de la sección 3 de este documento (✅ y 🔸 conceden); si cambia una sin la otra, CI falla. `service_request.create` es del cliente y no forma parte del catálogo del personal.
 - Permiso añadido: **`audit.read`** (ver el registro de auditoría), solo para el propietario.
+- Permiso añadido en la Fase 3 (bloque 1, 2026-11-16): **`service_request.handle`** (marcar como atendida una solicitud de servicio), para propietario, administrador de sucursal, mesero y cajero. La matriz solo tenía el del cliente (`service_request.create`). Las estaciones de cocina y la asignación de productos se gestionan con **`catalog.manage`**, porque se editan junto con la carta de la sucursal.
 - Rangos: propietario 100, administrador de sucursal 80, cajero 40, mesero 30, cocina 30. Nadie agrega, modifica, asigna sucursales ni revoca a alguien de rango igual o superior al propio, ni asigna un rol igual o superior (incluye cambiar el propio rol).
 - Gestión del personal: `staff.invite` cubre agregar, listar y revocar; `role.assign` cubre cambiar el rol y asignar o quitar sucursales. Quien no es propietario solo asigna sucursales que tiene asignadas.
 - Pendiente de fases siguientes: invitar por correo (requiere el backend para buscar al usuario), reactivar una membresía revocada y roles personalizados por empresa.
