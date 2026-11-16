@@ -12,7 +12,14 @@ This README will guide you through the process of using the generated JavaScript
   - [*BranchCatalog*](#branchcatalog)
   - [*PublicMenu*](#publicmenu)
   - [*MyParticipation*](#myparticipation)
+  - [*MyOrders*](#myorders)
+  - [*BranchStations*](#branchstations)
+  - [*KitchenStations*](#kitchenstations)
+  - [*KitchenQueue*](#kitchenqueue)
   - [*BranchLayout*](#branchlayout)
+  - [*PickupQueue*](#pickupqueue)
+  - [*SessionOrders*](#sessionorders)
+  - [*PendingServiceRequests*](#pendingservicerequests)
   - [*MyProfile*](#myprofile)
   - [*MyMemberships*](#mymemberships)
   - [*MyBranches*](#mybranches)
@@ -25,6 +32,8 @@ This README will guide you through the process of using the generated JavaScript
   - [*ServerProductsForQuote*](#serverproductsforquote)
   - [*ServerQuoteByKey*](#serverquotebykey)
   - [*ServerQuoteForPayment*](#serverquoteforpayment)
+  - [*ServerOrderByQuote*](#serverorderbyquote)
+  - [*ServerStationsForOrder*](#serverstationsfororder)
   - [*TenantBranches*](#tenantbranches)
 - [**Mutations**](#mutations)
   - [*CreateTaxRule*](#createtaxrule)
@@ -39,6 +48,11 @@ This README will guide you through the process of using the generated JavaScript
   - [*UpdateModifierOption*](#updatemodifieroption)
   - [*SetProductAvailability*](#setproductavailability)
   - [*ChangePrice*](#changeprice)
+  - [*CreateStation*](#createstation)
+  - [*UpdateStation*](#updatestation)
+  - [*SetProductStation*](#setproductstation)
+  - [*StartOrderItem*](#startorderitem)
+  - [*FinishOrderItem*](#finishorderitem)
   - [*CreateSector*](#createsector)
   - [*UpdateSector*](#updatesector)
   - [*CreateTable*](#createtable)
@@ -50,6 +64,11 @@ This README will guide you through the process of using the generated JavaScript
   - [*RevokeMember*](#revokemember)
   - [*AssignMemberBranch*](#assignmemberbranch)
   - [*UnassignMemberBranch*](#unassignmemberbranch)
+  - [*PickUpOrderItem*](#pickuporderitem)
+  - [*DeliverOrderItem*](#deliverorderitem)
+  - [*DeliverOrderItemDirectly*](#deliverorderitemdirectly)
+  - [*CancelOrderItem*](#cancelorderitem)
+  - [*AttendServiceRequest*](#attendservicerequest)
   - [*OpenTableSession*](#opentablesession)
   - [*CloseTableSession*](#closetablesession)
   - [*RemoveParticipant*](#removeparticipant)
@@ -57,6 +76,9 @@ This README will guide you through the process of using the generated JavaScript
   - [*ServerRenewParticipant*](#serverrenewparticipant)
   - [*ServerSetQuotePayment*](#serversetquotepayment)
   - [*ServerHitRateLimit*](#serverhitratelimit)
+  - [*ServerCreateDefaultStation*](#servercreatedefaultstation)
+  - [*ServerSendOrderToKitchen*](#serversendordertokitchen)
+  - [*ServerCreateServiceRequest*](#servercreateservicerequest)
   - [*CreateBranch*](#createbranch)
   - [*UpdateBranch*](#updatebranch)
 
@@ -299,6 +321,7 @@ The `data` property is an object of type `BranchCatalogData`, which is defined i
 export interface BranchCatalogData {
   productBranches: ({
     productId: UUIDString;
+    stationId?: UUIDString | null;
     available: boolean;
     daysMask?: number | null;
     startMinute?: number | null;
@@ -576,6 +599,7 @@ The `data` property is an object of type `MyParticipationData`, which is defined
 export interface MyParticipationData {
   sessionParticipants: ({
     id: UUIDString;
+    branchId: UUIDString;
     expiresAt: TimestampString;
     session: {
       status: TableSessionStatus;
@@ -646,6 +670,506 @@ console.log(data.sessionParticipants);
 executeQuery(ref).then((response) => {
   const data = response.data;
   console.log(data.sessionParticipants);
+});
+```
+
+## MyOrders
+You can execute the `MyOrders` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+myOrders(vars: MyOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<MyOrdersData, MyOrdersVariables>;
+
+interface MyOrdersRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: MyOrdersVariables): QueryRef<MyOrdersData, MyOrdersVariables>;
+}
+export const myOrdersRef: MyOrdersRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+myOrders(dc: DataConnect, vars: MyOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<MyOrdersData, MyOrdersVariables>;
+
+interface MyOrdersRef {
+  ...
+  (dc: DataConnect, vars: MyOrdersVariables): QueryRef<MyOrdersData, MyOrdersVariables>;
+}
+export const myOrdersRef: MyOrdersRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the myOrdersRef:
+```typescript
+const name = myOrdersRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `MyOrders` query requires an argument of type `MyOrdersVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface MyOrdersVariables {
+  sessionId: UUIDString;
+  branchId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `MyOrders` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `MyOrdersData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface MyOrdersData {
+  orders: ({
+    id: UUIDString;
+    sentToKitchenAt?: TimestampString | null;
+    quote: {
+      currency: string;
+      totalMinor: Int64String;
+    };
+    orderItems_on_order: ({
+      id: UUIDString;
+      status: OrderItemStatus;
+      quantity: number;
+      productNameSnapshot: string;
+      lineTotalMinor: Int64String;
+      note?: string | null;
+      orderItemModifiers_on_item: ({
+        nameSnapshot: string;
+      })[];
+    } & OrderItem_Key)[];
+  } & Order_Key)[];
+}
+```
+### Using `MyOrders`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, myOrders, MyOrdersVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `MyOrders` query requires an argument of type `MyOrdersVariables`:
+const myOrdersVars: MyOrdersVariables = {
+  sessionId: ..., 
+  branchId: ..., 
+};
+
+// Call the `myOrders()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await myOrders(myOrdersVars);
+// Variables can be defined inline as well.
+const { data } = await myOrders({ sessionId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await myOrders(dataConnect, myOrdersVars);
+
+console.log(data.orders);
+
+// Or, you can use the `Promise` API.
+myOrders(myOrdersVars).then((response) => {
+  const data = response.data;
+  console.log(data.orders);
+});
+```
+
+### Using `MyOrders`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, myOrdersRef, MyOrdersVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `MyOrders` query requires an argument of type `MyOrdersVariables`:
+const myOrdersVars: MyOrdersVariables = {
+  sessionId: ..., 
+  branchId: ..., 
+};
+
+// Call the `myOrdersRef()` function to get a reference to the query.
+const ref = myOrdersRef(myOrdersVars);
+// Variables can be defined inline as well.
+const ref = myOrdersRef({ sessionId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = myOrdersRef(dataConnect, myOrdersVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.orders);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orders);
+});
+```
+
+## BranchStations
+You can execute the `BranchStations` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+branchStations(vars: BranchStationsVariables, options?: ExecuteQueryOptions): QueryPromise<BranchStationsData, BranchStationsVariables>;
+
+interface BranchStationsRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: BranchStationsVariables): QueryRef<BranchStationsData, BranchStationsVariables>;
+}
+export const branchStationsRef: BranchStationsRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+branchStations(dc: DataConnect, vars: BranchStationsVariables, options?: ExecuteQueryOptions): QueryPromise<BranchStationsData, BranchStationsVariables>;
+
+interface BranchStationsRef {
+  ...
+  (dc: DataConnect, vars: BranchStationsVariables): QueryRef<BranchStationsData, BranchStationsVariables>;
+}
+export const branchStationsRef: BranchStationsRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the branchStationsRef:
+```typescript
+const name = branchStationsRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `BranchStations` query requires an argument of type `BranchStationsVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface BranchStationsVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `BranchStations` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `BranchStationsData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface BranchStationsData {
+  stations: ({
+    id: UUIDString;
+    name: string;
+    sort: number;
+    defaultForBranchId?: UUIDString | null;
+    archivedAt?: TimestampString | null;
+  } & Station_Key)[];
+}
+```
+### Using `BranchStations`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, branchStations, BranchStationsVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `BranchStations` query requires an argument of type `BranchStationsVariables`:
+const branchStationsVars: BranchStationsVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `branchStations()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await branchStations(branchStationsVars);
+// Variables can be defined inline as well.
+const { data } = await branchStations({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await branchStations(dataConnect, branchStationsVars);
+
+console.log(data.stations);
+
+// Or, you can use the `Promise` API.
+branchStations(branchStationsVars).then((response) => {
+  const data = response.data;
+  console.log(data.stations);
+});
+```
+
+### Using `BranchStations`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, branchStationsRef, BranchStationsVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `BranchStations` query requires an argument of type `BranchStationsVariables`:
+const branchStationsVars: BranchStationsVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `branchStationsRef()` function to get a reference to the query.
+const ref = branchStationsRef(branchStationsVars);
+// Variables can be defined inline as well.
+const ref = branchStationsRef({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = branchStationsRef(dataConnect, branchStationsVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.stations);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.stations);
+});
+```
+
+## KitchenStations
+You can execute the `KitchenStations` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+kitchenStations(vars: KitchenStationsVariables, options?: ExecuteQueryOptions): QueryPromise<KitchenStationsData, KitchenStationsVariables>;
+
+interface KitchenStationsRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: KitchenStationsVariables): QueryRef<KitchenStationsData, KitchenStationsVariables>;
+}
+export const kitchenStationsRef: KitchenStationsRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+kitchenStations(dc: DataConnect, vars: KitchenStationsVariables, options?: ExecuteQueryOptions): QueryPromise<KitchenStationsData, KitchenStationsVariables>;
+
+interface KitchenStationsRef {
+  ...
+  (dc: DataConnect, vars: KitchenStationsVariables): QueryRef<KitchenStationsData, KitchenStationsVariables>;
+}
+export const kitchenStationsRef: KitchenStationsRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the kitchenStationsRef:
+```typescript
+const name = kitchenStationsRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `KitchenStations` query requires an argument of type `KitchenStationsVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface KitchenStationsVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `KitchenStations` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `KitchenStationsData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface KitchenStationsData {
+  stations: ({
+    id: UUIDString;
+    name: string;
+    defaultForBranchId?: UUIDString | null;
+  } & Station_Key)[];
+}
+```
+### Using `KitchenStations`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, kitchenStations, KitchenStationsVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `KitchenStations` query requires an argument of type `KitchenStationsVariables`:
+const kitchenStationsVars: KitchenStationsVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `kitchenStations()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await kitchenStations(kitchenStationsVars);
+// Variables can be defined inline as well.
+const { data } = await kitchenStations({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await kitchenStations(dataConnect, kitchenStationsVars);
+
+console.log(data.stations);
+
+// Or, you can use the `Promise` API.
+kitchenStations(kitchenStationsVars).then((response) => {
+  const data = response.data;
+  console.log(data.stations);
+});
+```
+
+### Using `KitchenStations`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, kitchenStationsRef, KitchenStationsVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `KitchenStations` query requires an argument of type `KitchenStationsVariables`:
+const kitchenStationsVars: KitchenStationsVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `kitchenStationsRef()` function to get a reference to the query.
+const ref = kitchenStationsRef(kitchenStationsVars);
+// Variables can be defined inline as well.
+const ref = kitchenStationsRef({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = kitchenStationsRef(dataConnect, kitchenStationsVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.stations);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.stations);
+});
+```
+
+## KitchenQueue
+You can execute the `KitchenQueue` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+kitchenQueue(vars: KitchenQueueVariables, options?: ExecuteQueryOptions): QueryPromise<KitchenQueueData, KitchenQueueVariables>;
+
+interface KitchenQueueRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: KitchenQueueVariables): QueryRef<KitchenQueueData, KitchenQueueVariables>;
+}
+export const kitchenQueueRef: KitchenQueueRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+kitchenQueue(dc: DataConnect, vars: KitchenQueueVariables, options?: ExecuteQueryOptions): QueryPromise<KitchenQueueData, KitchenQueueVariables>;
+
+interface KitchenQueueRef {
+  ...
+  (dc: DataConnect, vars: KitchenQueueVariables): QueryRef<KitchenQueueData, KitchenQueueVariables>;
+}
+export const kitchenQueueRef: KitchenQueueRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the kitchenQueueRef:
+```typescript
+const name = kitchenQueueRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `KitchenQueue` query requires an argument of type `KitchenQueueVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface KitchenQueueVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  stationId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `KitchenQueue` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `KitchenQueueData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface KitchenQueueData {
+  orderItems: ({
+    id: UUIDString;
+    version: number;
+    status: OrderItemStatus;
+    quantity: number;
+    productNameSnapshot: string;
+    allergensSnapshot?: string[] | null;
+    note?: string | null;
+    startedAt?: TimestampString | null;
+    orderItemModifiers_on_item: ({
+      nameSnapshot: string;
+    })[];
+    order: {
+      id: UUIDString;
+      sentToKitchenAt?: TimestampString | null;
+      session: {
+        table: {
+          code: string;
+        };
+      };
+    } & Order_Key;
+  } & OrderItem_Key)[];
+}
+```
+### Using `KitchenQueue`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, kitchenQueue, KitchenQueueVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `KitchenQueue` query requires an argument of type `KitchenQueueVariables`:
+const kitchenQueueVars: KitchenQueueVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  stationId: ..., 
+};
+
+// Call the `kitchenQueue()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await kitchenQueue(kitchenQueueVars);
+// Variables can be defined inline as well.
+const { data } = await kitchenQueue({ tenantId: ..., branchId: ..., stationId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await kitchenQueue(dataConnect, kitchenQueueVars);
+
+console.log(data.orderItems);
+
+// Or, you can use the `Promise` API.
+kitchenQueue(kitchenQueueVars).then((response) => {
+  const data = response.data;
+  console.log(data.orderItems);
+});
+```
+
+### Using `KitchenQueue`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, kitchenQueueRef, KitchenQueueVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `KitchenQueue` query requires an argument of type `KitchenQueueVariables`:
+const kitchenQueueVars: KitchenQueueVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  stationId: ..., 
+};
+
+// Call the `kitchenQueueRef()` function to get a reference to the query.
+const ref = kitchenQueueRef(kitchenQueueVars);
+// Variables can be defined inline as well.
+const ref = kitchenQueueRef({ tenantId: ..., branchId: ..., stationId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = kitchenQueueRef(dataConnect, kitchenQueueVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.orderItems);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orderItems);
 });
 ```
 
@@ -770,6 +1294,393 @@ console.log(data.sectors);
 executeQuery(ref).then((response) => {
   const data = response.data;
   console.log(data.sectors);
+});
+```
+
+## PickupQueue
+You can execute the `PickupQueue` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+pickupQueue(vars: PickupQueueVariables, options?: ExecuteQueryOptions): QueryPromise<PickupQueueData, PickupQueueVariables>;
+
+interface PickupQueueRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: PickupQueueVariables): QueryRef<PickupQueueData, PickupQueueVariables>;
+}
+export const pickupQueueRef: PickupQueueRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+pickupQueue(dc: DataConnect, vars: PickupQueueVariables, options?: ExecuteQueryOptions): QueryPromise<PickupQueueData, PickupQueueVariables>;
+
+interface PickupQueueRef {
+  ...
+  (dc: DataConnect, vars: PickupQueueVariables): QueryRef<PickupQueueData, PickupQueueVariables>;
+}
+export const pickupQueueRef: PickupQueueRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the pickupQueueRef:
+```typescript
+const name = pickupQueueRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `PickupQueue` query requires an argument of type `PickupQueueVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface PickupQueueVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `PickupQueue` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `PickupQueueData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface PickupQueueData {
+  orderItems: ({
+    id: UUIDString;
+    version: number;
+    status: OrderItemStatus;
+    quantity: number;
+    productNameSnapshot: string;
+    note?: string | null;
+    readyAt?: TimestampString | null;
+    pickedUpAt?: TimestampString | null;
+    orderItemModifiers_on_item: ({
+      nameSnapshot: string;
+    })[];
+    station: {
+      name: string;
+    };
+    order: {
+      session: {
+        id: UUIDString;
+        table: {
+          code: string;
+        };
+      } & TableSession_Key;
+    };
+  } & OrderItem_Key)[];
+}
+```
+### Using `PickupQueue`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, pickupQueue, PickupQueueVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `PickupQueue` query requires an argument of type `PickupQueueVariables`:
+const pickupQueueVars: PickupQueueVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `pickupQueue()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await pickupQueue(pickupQueueVars);
+// Variables can be defined inline as well.
+const { data } = await pickupQueue({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await pickupQueue(dataConnect, pickupQueueVars);
+
+console.log(data.orderItems);
+
+// Or, you can use the `Promise` API.
+pickupQueue(pickupQueueVars).then((response) => {
+  const data = response.data;
+  console.log(data.orderItems);
+});
+```
+
+### Using `PickupQueue`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, pickupQueueRef, PickupQueueVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `PickupQueue` query requires an argument of type `PickupQueueVariables`:
+const pickupQueueVars: PickupQueueVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `pickupQueueRef()` function to get a reference to the query.
+const ref = pickupQueueRef(pickupQueueVars);
+// Variables can be defined inline as well.
+const ref = pickupQueueRef({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = pickupQueueRef(dataConnect, pickupQueueVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.orderItems);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orderItems);
+});
+```
+
+## SessionOrders
+You can execute the `SessionOrders` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+sessionOrders(vars: SessionOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<SessionOrdersData, SessionOrdersVariables>;
+
+interface SessionOrdersRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: SessionOrdersVariables): QueryRef<SessionOrdersData, SessionOrdersVariables>;
+}
+export const sessionOrdersRef: SessionOrdersRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+sessionOrders(dc: DataConnect, vars: SessionOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<SessionOrdersData, SessionOrdersVariables>;
+
+interface SessionOrdersRef {
+  ...
+  (dc: DataConnect, vars: SessionOrdersVariables): QueryRef<SessionOrdersData, SessionOrdersVariables>;
+}
+export const sessionOrdersRef: SessionOrdersRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the sessionOrdersRef:
+```typescript
+const name = sessionOrdersRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `SessionOrders` query requires an argument of type `SessionOrdersVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface SessionOrdersVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `SessionOrders` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `SessionOrdersData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface SessionOrdersData {
+  orders: ({
+    id: UUIDString;
+    sentToKitchenAt?: TimestampString | null;
+    orderItems_on_order: ({
+      id: UUIDString;
+      version: number;
+      status: OrderItemStatus;
+      quantity: number;
+      productNameSnapshot: string;
+      note?: string | null;
+      cancelReason?: string | null;
+      orderItemModifiers_on_item: ({
+        nameSnapshot: string;
+      })[];
+    } & OrderItem_Key)[];
+  } & Order_Key)[];
+}
+```
+### Using `SessionOrders`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, sessionOrders, SessionOrdersVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `SessionOrders` query requires an argument of type `SessionOrdersVariables`:
+const sessionOrdersVars: SessionOrdersVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+};
+
+// Call the `sessionOrders()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await sessionOrders(sessionOrdersVars);
+// Variables can be defined inline as well.
+const { data } = await sessionOrders({ tenantId: ..., branchId: ..., sessionId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await sessionOrders(dataConnect, sessionOrdersVars);
+
+console.log(data.orders);
+
+// Or, you can use the `Promise` API.
+sessionOrders(sessionOrdersVars).then((response) => {
+  const data = response.data;
+  console.log(data.orders);
+});
+```
+
+### Using `SessionOrders`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, sessionOrdersRef, SessionOrdersVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `SessionOrders` query requires an argument of type `SessionOrdersVariables`:
+const sessionOrdersVars: SessionOrdersVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+};
+
+// Call the `sessionOrdersRef()` function to get a reference to the query.
+const ref = sessionOrdersRef(sessionOrdersVars);
+// Variables can be defined inline as well.
+const ref = sessionOrdersRef({ tenantId: ..., branchId: ..., sessionId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = sessionOrdersRef(dataConnect, sessionOrdersVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.orders);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orders);
+});
+```
+
+## PendingServiceRequests
+You can execute the `PendingServiceRequests` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+pendingServiceRequests(vars: PendingServiceRequestsVariables, options?: ExecuteQueryOptions): QueryPromise<PendingServiceRequestsData, PendingServiceRequestsVariables>;
+
+interface PendingServiceRequestsRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: PendingServiceRequestsVariables): QueryRef<PendingServiceRequestsData, PendingServiceRequestsVariables>;
+}
+export const pendingServiceRequestsRef: PendingServiceRequestsRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+pendingServiceRequests(dc: DataConnect, vars: PendingServiceRequestsVariables, options?: ExecuteQueryOptions): QueryPromise<PendingServiceRequestsData, PendingServiceRequestsVariables>;
+
+interface PendingServiceRequestsRef {
+  ...
+  (dc: DataConnect, vars: PendingServiceRequestsVariables): QueryRef<PendingServiceRequestsData, PendingServiceRequestsVariables>;
+}
+export const pendingServiceRequestsRef: PendingServiceRequestsRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the pendingServiceRequestsRef:
+```typescript
+const name = pendingServiceRequestsRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `PendingServiceRequests` query requires an argument of type `PendingServiceRequestsVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface PendingServiceRequestsVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `PendingServiceRequests` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `PendingServiceRequestsData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface PendingServiceRequestsData {
+  serviceRequests: ({
+    id: UUIDString;
+    kind: ServiceRequestKind;
+    createdAt: TimestampString;
+    session: {
+      id: UUIDString;
+      table: {
+        code: string;
+      };
+    } & TableSession_Key;
+  } & ServiceRequest_Key)[];
+}
+```
+### Using `PendingServiceRequests`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, pendingServiceRequests, PendingServiceRequestsVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `PendingServiceRequests` query requires an argument of type `PendingServiceRequestsVariables`:
+const pendingServiceRequestsVars: PendingServiceRequestsVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `pendingServiceRequests()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await pendingServiceRequests(pendingServiceRequestsVars);
+// Variables can be defined inline as well.
+const { data } = await pendingServiceRequests({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await pendingServiceRequests(dataConnect, pendingServiceRequestsVars);
+
+console.log(data.serviceRequests);
+
+// Or, you can use the `Promise` API.
+pendingServiceRequests(pendingServiceRequestsVars).then((response) => {
+  const data = response.data;
+  console.log(data.serviceRequests);
+});
+```
+
+### Using `PendingServiceRequests`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, pendingServiceRequestsRef, PendingServiceRequestsVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `PendingServiceRequests` query requires an argument of type `PendingServiceRequestsVariables`:
+const pendingServiceRequestsVars: PendingServiceRequestsVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `pendingServiceRequestsRef()` function to get a reference to the query.
+const ref = pendingServiceRequestsRef(pendingServiceRequestsVars);
+// Variables can be defined inline as well.
+const ref = pendingServiceRequestsRef({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = pendingServiceRequestsRef(dataConnect, pendingServiceRequestsVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.serviceRequests);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.serviceRequests);
 });
 ```
 
@@ -1387,6 +2298,15 @@ export interface FloorViewData {
       tableSessions_on_table: ({
         id: UUIDString;
         openedAt: TimestampString;
+        orders_on_session: ({
+          orderItems_on_order: ({
+            status: OrderItemStatus;
+          })[];
+        })[];
+        serviceRequests_on_session: ({
+          kind: ServiceRequestKind;
+          createdAt: TimestampString;
+        })[];
       } & TableSession_Key)[];
     } & DiningTable_Key)[];
   } & Sector_Key)[];
@@ -2230,6 +3150,246 @@ console.log(data.orderQuotes);
 executeQuery(ref).then((response) => {
   const data = response.data;
   console.log(data.orderQuotes);
+});
+```
+
+## ServerOrderByQuote
+You can execute the `ServerOrderByQuote` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+serverOrderByQuote(vars: ServerOrderByQuoteVariables, options?: ExecuteQueryOptions): QueryPromise<ServerOrderByQuoteData, ServerOrderByQuoteVariables>;
+
+interface ServerOrderByQuoteRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerOrderByQuoteVariables): QueryRef<ServerOrderByQuoteData, ServerOrderByQuoteVariables>;
+}
+export const serverOrderByQuoteRef: ServerOrderByQuoteRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+serverOrderByQuote(dc: DataConnect, vars: ServerOrderByQuoteVariables, options?: ExecuteQueryOptions): QueryPromise<ServerOrderByQuoteData, ServerOrderByQuoteVariables>;
+
+interface ServerOrderByQuoteRef {
+  ...
+  (dc: DataConnect, vars: ServerOrderByQuoteVariables): QueryRef<ServerOrderByQuoteData, ServerOrderByQuoteVariables>;
+}
+export const serverOrderByQuoteRef: ServerOrderByQuoteRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverOrderByQuoteRef:
+```typescript
+const name = serverOrderByQuoteRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `ServerOrderByQuote` query requires an argument of type `ServerOrderByQuoteVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface ServerOrderByQuoteVariables {
+  quoteId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `ServerOrderByQuote` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `ServerOrderByQuoteData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface ServerOrderByQuoteData {
+  orders: ({
+    id: UUIDString;
+    sentToKitchenAt?: TimestampString | null;
+  } & Order_Key)[];
+}
+```
+### Using `ServerOrderByQuote`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, serverOrderByQuote, ServerOrderByQuoteVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerOrderByQuote` query requires an argument of type `ServerOrderByQuoteVariables`:
+const serverOrderByQuoteVars: ServerOrderByQuoteVariables = {
+  quoteId: ..., 
+};
+
+// Call the `serverOrderByQuote()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await serverOrderByQuote(serverOrderByQuoteVars);
+// Variables can be defined inline as well.
+const { data } = await serverOrderByQuote({ quoteId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await serverOrderByQuote(dataConnect, serverOrderByQuoteVars);
+
+console.log(data.orders);
+
+// Or, you can use the `Promise` API.
+serverOrderByQuote(serverOrderByQuoteVars).then((response) => {
+  const data = response.data;
+  console.log(data.orders);
+});
+```
+
+### Using `ServerOrderByQuote`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, serverOrderByQuoteRef, ServerOrderByQuoteVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerOrderByQuote` query requires an argument of type `ServerOrderByQuoteVariables`:
+const serverOrderByQuoteVars: ServerOrderByQuoteVariables = {
+  quoteId: ..., 
+};
+
+// Call the `serverOrderByQuoteRef()` function to get a reference to the query.
+const ref = serverOrderByQuoteRef(serverOrderByQuoteVars);
+// Variables can be defined inline as well.
+const ref = serverOrderByQuoteRef({ quoteId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = serverOrderByQuoteRef(dataConnect, serverOrderByQuoteVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.orders);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orders);
+});
+```
+
+## ServerStationsForOrder
+You can execute the `ServerStationsForOrder` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+serverStationsForOrder(vars: ServerStationsForOrderVariables, options?: ExecuteQueryOptions): QueryPromise<ServerStationsForOrderData, ServerStationsForOrderVariables>;
+
+interface ServerStationsForOrderRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerStationsForOrderVariables): QueryRef<ServerStationsForOrderData, ServerStationsForOrderVariables>;
+}
+export const serverStationsForOrderRef: ServerStationsForOrderRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+serverStationsForOrder(dc: DataConnect, vars: ServerStationsForOrderVariables, options?: ExecuteQueryOptions): QueryPromise<ServerStationsForOrderData, ServerStationsForOrderVariables>;
+
+interface ServerStationsForOrderRef {
+  ...
+  (dc: DataConnect, vars: ServerStationsForOrderVariables): QueryRef<ServerStationsForOrderData, ServerStationsForOrderVariables>;
+}
+export const serverStationsForOrderRef: ServerStationsForOrderRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverStationsForOrderRef:
+```typescript
+const name = serverStationsForOrderRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `ServerStationsForOrder` query requires an argument of type `ServerStationsForOrderVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface ServerStationsForOrderVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  productIds: UUIDString[];
+}
+```
+### Return Type
+Recall that executing the `ServerStationsForOrder` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `ServerStationsForOrderData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface ServerStationsForOrderData {
+  productBranches: ({
+    productId: UUIDString;
+    station?: {
+      id: UUIDString;
+      archivedAt?: TimestampString | null;
+    } & Station_Key;
+  })[];
+  defaultStation: ({
+    id: UUIDString;
+  } & Station_Key)[];
+}
+```
+### Using `ServerStationsForOrder`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, serverStationsForOrder, ServerStationsForOrderVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerStationsForOrder` query requires an argument of type `ServerStationsForOrderVariables`:
+const serverStationsForOrderVars: ServerStationsForOrderVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  productIds: ..., 
+};
+
+// Call the `serverStationsForOrder()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await serverStationsForOrder(serverStationsForOrderVars);
+// Variables can be defined inline as well.
+const { data } = await serverStationsForOrder({ tenantId: ..., branchId: ..., productIds: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await serverStationsForOrder(dataConnect, serverStationsForOrderVars);
+
+console.log(data.productBranches);
+console.log(data.defaultStation);
+
+// Or, you can use the `Promise` API.
+serverStationsForOrder(serverStationsForOrderVars).then((response) => {
+  const data = response.data;
+  console.log(data.productBranches);
+  console.log(data.defaultStation);
+});
+```
+
+### Using `ServerStationsForOrder`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, serverStationsForOrderRef, ServerStationsForOrderVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerStationsForOrder` query requires an argument of type `ServerStationsForOrderVariables`:
+const serverStationsForOrderVars: ServerStationsForOrderVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  productIds: ..., 
+};
+
+// Call the `serverStationsForOrderRef()` function to get a reference to the query.
+const ref = serverStationsForOrderRef(serverStationsForOrderVars);
+// Variables can be defined inline as well.
+const ref = serverStationsForOrderRef({ tenantId: ..., branchId: ..., productIds: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = serverStationsForOrderRef(dataConnect, serverStationsForOrderVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.productBranches);
+console.log(data.defaultStation);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.productBranches);
+  console.log(data.defaultStation);
 });
 ```
 
@@ -3904,6 +5064,627 @@ executeMutation(ref).then((response) => {
 });
 ```
 
+## CreateStation
+You can execute the `CreateStation` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+createStation(vars: CreateStationVariables): MutationPromise<CreateStationData, CreateStationVariables>;
+
+interface CreateStationRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: CreateStationVariables): MutationRef<CreateStationData, CreateStationVariables>;
+}
+export const createStationRef: CreateStationRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+createStation(dc: DataConnect, vars: CreateStationVariables): MutationPromise<CreateStationData, CreateStationVariables>;
+
+interface CreateStationRef {
+  ...
+  (dc: DataConnect, vars: CreateStationVariables): MutationRef<CreateStationData, CreateStationVariables>;
+}
+export const createStationRef: CreateStationRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the createStationRef:
+```typescript
+const name = createStationRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `CreateStation` mutation requires an argument of type `CreateStationVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface CreateStationVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  name: string;
+  sort: number;
+}
+```
+### Return Type
+Recall that executing the `CreateStation` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `CreateStationData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface CreateStationData {
+  station_insert: Station_Key;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `CreateStation`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, createStation, CreateStationVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `CreateStation` mutation requires an argument of type `CreateStationVariables`:
+const createStationVars: CreateStationVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  name: ..., 
+  sort: ..., 
+};
+
+// Call the `createStation()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await createStation(createStationVars);
+// Variables can be defined inline as well.
+const { data } = await createStation({ tenantId: ..., branchId: ..., name: ..., sort: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await createStation(dataConnect, createStationVars);
+
+console.log(data.station_insert);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+createStation(createStationVars).then((response) => {
+  const data = response.data;
+  console.log(data.station_insert);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `CreateStation`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, createStationRef, CreateStationVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `CreateStation` mutation requires an argument of type `CreateStationVariables`:
+const createStationVars: CreateStationVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  name: ..., 
+  sort: ..., 
+};
+
+// Call the `createStationRef()` function to get a reference to the mutation.
+const ref = createStationRef(createStationVars);
+// Variables can be defined inline as well.
+const ref = createStationRef({ tenantId: ..., branchId: ..., name: ..., sort: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = createStationRef(dataConnect, createStationVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.station_insert);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.station_insert);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## UpdateStation
+You can execute the `UpdateStation` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+updateStation(vars: UpdateStationVariables): MutationPromise<UpdateStationData, UpdateStationVariables>;
+
+interface UpdateStationRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: UpdateStationVariables): MutationRef<UpdateStationData, UpdateStationVariables>;
+}
+export const updateStationRef: UpdateStationRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+updateStation(dc: DataConnect, vars: UpdateStationVariables): MutationPromise<UpdateStationData, UpdateStationVariables>;
+
+interface UpdateStationRef {
+  ...
+  (dc: DataConnect, vars: UpdateStationVariables): MutationRef<UpdateStationData, UpdateStationVariables>;
+}
+export const updateStationRef: UpdateStationRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the updateStationRef:
+```typescript
+const name = updateStationRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `UpdateStation` mutation requires an argument of type `UpdateStationVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface UpdateStationVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  stationId: UUIDString;
+  name: string;
+  sort: number;
+  archived: boolean;
+}
+```
+### Return Type
+Recall that executing the `UpdateStation` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `UpdateStationData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface UpdateStationData {
+  station_update?: Station_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `UpdateStation`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, updateStation, UpdateStationVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `UpdateStation` mutation requires an argument of type `UpdateStationVariables`:
+const updateStationVars: UpdateStationVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  stationId: ..., 
+  name: ..., 
+  sort: ..., 
+  archived: ..., 
+};
+
+// Call the `updateStation()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await updateStation(updateStationVars);
+// Variables can be defined inline as well.
+const { data } = await updateStation({ tenantId: ..., branchId: ..., stationId: ..., name: ..., sort: ..., archived: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await updateStation(dataConnect, updateStationVars);
+
+console.log(data.station_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+updateStation(updateStationVars).then((response) => {
+  const data = response.data;
+  console.log(data.station_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `UpdateStation`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, updateStationRef, UpdateStationVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `UpdateStation` mutation requires an argument of type `UpdateStationVariables`:
+const updateStationVars: UpdateStationVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  stationId: ..., 
+  name: ..., 
+  sort: ..., 
+  archived: ..., 
+};
+
+// Call the `updateStationRef()` function to get a reference to the mutation.
+const ref = updateStationRef(updateStationVars);
+// Variables can be defined inline as well.
+const ref = updateStationRef({ tenantId: ..., branchId: ..., stationId: ..., name: ..., sort: ..., archived: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = updateStationRef(dataConnect, updateStationVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.station_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.station_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## SetProductStation
+You can execute the `SetProductStation` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+setProductStation(vars: SetProductStationVariables): MutationPromise<SetProductStationData, SetProductStationVariables>;
+
+interface SetProductStationRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: SetProductStationVariables): MutationRef<SetProductStationData, SetProductStationVariables>;
+}
+export const setProductStationRef: SetProductStationRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+setProductStation(dc: DataConnect, vars: SetProductStationVariables): MutationPromise<SetProductStationData, SetProductStationVariables>;
+
+interface SetProductStationRef {
+  ...
+  (dc: DataConnect, vars: SetProductStationVariables): MutationRef<SetProductStationData, SetProductStationVariables>;
+}
+export const setProductStationRef: SetProductStationRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the setProductStationRef:
+```typescript
+const name = setProductStationRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `SetProductStation` mutation requires an argument of type `SetProductStationVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface SetProductStationVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  productId: UUIDString;
+  stationId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `SetProductStation` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `SetProductStationData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface SetProductStationData {
+  productBranch_update?: ProductBranch_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `SetProductStation`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, setProductStation, SetProductStationVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `SetProductStation` mutation requires an argument of type `SetProductStationVariables`:
+const setProductStationVars: SetProductStationVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  productId: ..., 
+  stationId: ..., 
+};
+
+// Call the `setProductStation()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await setProductStation(setProductStationVars);
+// Variables can be defined inline as well.
+const { data } = await setProductStation({ tenantId: ..., branchId: ..., productId: ..., stationId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await setProductStation(dataConnect, setProductStationVars);
+
+console.log(data.productBranch_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+setProductStation(setProductStationVars).then((response) => {
+  const data = response.data;
+  console.log(data.productBranch_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `SetProductStation`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, setProductStationRef, SetProductStationVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `SetProductStation` mutation requires an argument of type `SetProductStationVariables`:
+const setProductStationVars: SetProductStationVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  productId: ..., 
+  stationId: ..., 
+};
+
+// Call the `setProductStationRef()` function to get a reference to the mutation.
+const ref = setProductStationRef(setProductStationVars);
+// Variables can be defined inline as well.
+const ref = setProductStationRef({ tenantId: ..., branchId: ..., productId: ..., stationId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = setProductStationRef(dataConnect, setProductStationVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.productBranch_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.productBranch_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## StartOrderItem
+You can execute the `StartOrderItem` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+startOrderItem(vars: StartOrderItemVariables): MutationPromise<StartOrderItemData, StartOrderItemVariables>;
+
+interface StartOrderItemRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: StartOrderItemVariables): MutationRef<StartOrderItemData, StartOrderItemVariables>;
+}
+export const startOrderItemRef: StartOrderItemRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+startOrderItem(dc: DataConnect, vars: StartOrderItemVariables): MutationPromise<StartOrderItemData, StartOrderItemVariables>;
+
+interface StartOrderItemRef {
+  ...
+  (dc: DataConnect, vars: StartOrderItemVariables): MutationRef<StartOrderItemData, StartOrderItemVariables>;
+}
+export const startOrderItemRef: StartOrderItemRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the startOrderItemRef:
+```typescript
+const name = startOrderItemRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `StartOrderItem` mutation requires an argument of type `StartOrderItemVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface StartOrderItemVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
+}
+```
+### Return Type
+Recall that executing the `StartOrderItem` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `StartOrderItemData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface StartOrderItemData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `StartOrderItem`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, startOrderItem, StartOrderItemVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `StartOrderItem` mutation requires an argument of type `StartOrderItemVariables`:
+const startOrderItemVars: StartOrderItemVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+};
+
+// Call the `startOrderItem()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await startOrderItem(startOrderItemVars);
+// Variables can be defined inline as well.
+const { data } = await startOrderItem({ tenantId: ..., branchId: ..., itemId: ..., version: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await startOrderItem(dataConnect, startOrderItemVars);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+startOrderItem(startOrderItemVars).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `StartOrderItem`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, startOrderItemRef, StartOrderItemVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `StartOrderItem` mutation requires an argument of type `StartOrderItemVariables`:
+const startOrderItemVars: StartOrderItemVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+};
+
+// Call the `startOrderItemRef()` function to get a reference to the mutation.
+const ref = startOrderItemRef(startOrderItemVars);
+// Variables can be defined inline as well.
+const ref = startOrderItemRef({ tenantId: ..., branchId: ..., itemId: ..., version: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = startOrderItemRef(dataConnect, startOrderItemVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## FinishOrderItem
+You can execute the `FinishOrderItem` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+finishOrderItem(vars: FinishOrderItemVariables): MutationPromise<FinishOrderItemData, FinishOrderItemVariables>;
+
+interface FinishOrderItemRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: FinishOrderItemVariables): MutationRef<FinishOrderItemData, FinishOrderItemVariables>;
+}
+export const finishOrderItemRef: FinishOrderItemRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+finishOrderItem(dc: DataConnect, vars: FinishOrderItemVariables): MutationPromise<FinishOrderItemData, FinishOrderItemVariables>;
+
+interface FinishOrderItemRef {
+  ...
+  (dc: DataConnect, vars: FinishOrderItemVariables): MutationRef<FinishOrderItemData, FinishOrderItemVariables>;
+}
+export const finishOrderItemRef: FinishOrderItemRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the finishOrderItemRef:
+```typescript
+const name = finishOrderItemRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `FinishOrderItem` mutation requires an argument of type `FinishOrderItemVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface FinishOrderItemVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
+}
+```
+### Return Type
+Recall that executing the `FinishOrderItem` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `FinishOrderItemData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface FinishOrderItemData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `FinishOrderItem`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, finishOrderItem, FinishOrderItemVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `FinishOrderItem` mutation requires an argument of type `FinishOrderItemVariables`:
+const finishOrderItemVars: FinishOrderItemVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+};
+
+// Call the `finishOrderItem()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await finishOrderItem(finishOrderItemVars);
+// Variables can be defined inline as well.
+const { data } = await finishOrderItem({ tenantId: ..., branchId: ..., itemId: ..., version: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await finishOrderItem(dataConnect, finishOrderItemVars);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+finishOrderItem(finishOrderItemVars).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `FinishOrderItem`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, finishOrderItemRef, FinishOrderItemVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `FinishOrderItem` mutation requires an argument of type `FinishOrderItemVariables`:
+const finishOrderItemVars: FinishOrderItemVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+};
+
+// Call the `finishOrderItemRef()` function to get a reference to the mutation.
+const ref = finishOrderItemRef(finishOrderItemVars);
+// Variables can be defined inline as well.
+const ref = finishOrderItemRef({ tenantId: ..., branchId: ..., itemId: ..., version: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = finishOrderItemRef(dataConnect, finishOrderItemVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
 ## CreateSector
 You can execute the `CreateSector` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
 ```typescript
@@ -5243,6 +7024,624 @@ executeMutation(ref).then((response) => {
 });
 ```
 
+## PickUpOrderItem
+You can execute the `PickUpOrderItem` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+pickUpOrderItem(vars: PickUpOrderItemVariables): MutationPromise<PickUpOrderItemData, PickUpOrderItemVariables>;
+
+interface PickUpOrderItemRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: PickUpOrderItemVariables): MutationRef<PickUpOrderItemData, PickUpOrderItemVariables>;
+}
+export const pickUpOrderItemRef: PickUpOrderItemRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+pickUpOrderItem(dc: DataConnect, vars: PickUpOrderItemVariables): MutationPromise<PickUpOrderItemData, PickUpOrderItemVariables>;
+
+interface PickUpOrderItemRef {
+  ...
+  (dc: DataConnect, vars: PickUpOrderItemVariables): MutationRef<PickUpOrderItemData, PickUpOrderItemVariables>;
+}
+export const pickUpOrderItemRef: PickUpOrderItemRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the pickUpOrderItemRef:
+```typescript
+const name = pickUpOrderItemRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `PickUpOrderItem` mutation requires an argument of type `PickUpOrderItemVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface PickUpOrderItemVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
+}
+```
+### Return Type
+Recall that executing the `PickUpOrderItem` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `PickUpOrderItemData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface PickUpOrderItemData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `PickUpOrderItem`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, pickUpOrderItem, PickUpOrderItemVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `PickUpOrderItem` mutation requires an argument of type `PickUpOrderItemVariables`:
+const pickUpOrderItemVars: PickUpOrderItemVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+};
+
+// Call the `pickUpOrderItem()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await pickUpOrderItem(pickUpOrderItemVars);
+// Variables can be defined inline as well.
+const { data } = await pickUpOrderItem({ tenantId: ..., branchId: ..., itemId: ..., version: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await pickUpOrderItem(dataConnect, pickUpOrderItemVars);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+pickUpOrderItem(pickUpOrderItemVars).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `PickUpOrderItem`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, pickUpOrderItemRef, PickUpOrderItemVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `PickUpOrderItem` mutation requires an argument of type `PickUpOrderItemVariables`:
+const pickUpOrderItemVars: PickUpOrderItemVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+};
+
+// Call the `pickUpOrderItemRef()` function to get a reference to the mutation.
+const ref = pickUpOrderItemRef(pickUpOrderItemVars);
+// Variables can be defined inline as well.
+const ref = pickUpOrderItemRef({ tenantId: ..., branchId: ..., itemId: ..., version: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = pickUpOrderItemRef(dataConnect, pickUpOrderItemVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## DeliverOrderItem
+You can execute the `DeliverOrderItem` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+deliverOrderItem(vars: DeliverOrderItemVariables): MutationPromise<DeliverOrderItemData, DeliverOrderItemVariables>;
+
+interface DeliverOrderItemRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: DeliverOrderItemVariables): MutationRef<DeliverOrderItemData, DeliverOrderItemVariables>;
+}
+export const deliverOrderItemRef: DeliverOrderItemRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+deliverOrderItem(dc: DataConnect, vars: DeliverOrderItemVariables): MutationPromise<DeliverOrderItemData, DeliverOrderItemVariables>;
+
+interface DeliverOrderItemRef {
+  ...
+  (dc: DataConnect, vars: DeliverOrderItemVariables): MutationRef<DeliverOrderItemData, DeliverOrderItemVariables>;
+}
+export const deliverOrderItemRef: DeliverOrderItemRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the deliverOrderItemRef:
+```typescript
+const name = deliverOrderItemRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `DeliverOrderItem` mutation requires an argument of type `DeliverOrderItemVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface DeliverOrderItemVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
+}
+```
+### Return Type
+Recall that executing the `DeliverOrderItem` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `DeliverOrderItemData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface DeliverOrderItemData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `DeliverOrderItem`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, deliverOrderItem, DeliverOrderItemVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `DeliverOrderItem` mutation requires an argument of type `DeliverOrderItemVariables`:
+const deliverOrderItemVars: DeliverOrderItemVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+};
+
+// Call the `deliverOrderItem()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await deliverOrderItem(deliverOrderItemVars);
+// Variables can be defined inline as well.
+const { data } = await deliverOrderItem({ tenantId: ..., branchId: ..., itemId: ..., version: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await deliverOrderItem(dataConnect, deliverOrderItemVars);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+deliverOrderItem(deliverOrderItemVars).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `DeliverOrderItem`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, deliverOrderItemRef, DeliverOrderItemVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `DeliverOrderItem` mutation requires an argument of type `DeliverOrderItemVariables`:
+const deliverOrderItemVars: DeliverOrderItemVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+};
+
+// Call the `deliverOrderItemRef()` function to get a reference to the mutation.
+const ref = deliverOrderItemRef(deliverOrderItemVars);
+// Variables can be defined inline as well.
+const ref = deliverOrderItemRef({ tenantId: ..., branchId: ..., itemId: ..., version: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = deliverOrderItemRef(dataConnect, deliverOrderItemVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## DeliverOrderItemDirectly
+You can execute the `DeliverOrderItemDirectly` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+deliverOrderItemDirectly(vars: DeliverOrderItemDirectlyVariables): MutationPromise<DeliverOrderItemDirectlyData, DeliverOrderItemDirectlyVariables>;
+
+interface DeliverOrderItemDirectlyRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: DeliverOrderItemDirectlyVariables): MutationRef<DeliverOrderItemDirectlyData, DeliverOrderItemDirectlyVariables>;
+}
+export const deliverOrderItemDirectlyRef: DeliverOrderItemDirectlyRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+deliverOrderItemDirectly(dc: DataConnect, vars: DeliverOrderItemDirectlyVariables): MutationPromise<DeliverOrderItemDirectlyData, DeliverOrderItemDirectlyVariables>;
+
+interface DeliverOrderItemDirectlyRef {
+  ...
+  (dc: DataConnect, vars: DeliverOrderItemDirectlyVariables): MutationRef<DeliverOrderItemDirectlyData, DeliverOrderItemDirectlyVariables>;
+}
+export const deliverOrderItemDirectlyRef: DeliverOrderItemDirectlyRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the deliverOrderItemDirectlyRef:
+```typescript
+const name = deliverOrderItemDirectlyRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `DeliverOrderItemDirectly` mutation requires an argument of type `DeliverOrderItemDirectlyVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface DeliverOrderItemDirectlyVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
+  reason: string;
+}
+```
+### Return Type
+Recall that executing the `DeliverOrderItemDirectly` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `DeliverOrderItemDirectlyData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface DeliverOrderItemDirectlyData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `DeliverOrderItemDirectly`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, deliverOrderItemDirectly, DeliverOrderItemDirectlyVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `DeliverOrderItemDirectly` mutation requires an argument of type `DeliverOrderItemDirectlyVariables`:
+const deliverOrderItemDirectlyVars: DeliverOrderItemDirectlyVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+  reason: ..., 
+};
+
+// Call the `deliverOrderItemDirectly()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await deliverOrderItemDirectly(deliverOrderItemDirectlyVars);
+// Variables can be defined inline as well.
+const { data } = await deliverOrderItemDirectly({ tenantId: ..., branchId: ..., itemId: ..., version: ..., reason: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await deliverOrderItemDirectly(dataConnect, deliverOrderItemDirectlyVars);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+deliverOrderItemDirectly(deliverOrderItemDirectlyVars).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `DeliverOrderItemDirectly`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, deliverOrderItemDirectlyRef, DeliverOrderItemDirectlyVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `DeliverOrderItemDirectly` mutation requires an argument of type `DeliverOrderItemDirectlyVariables`:
+const deliverOrderItemDirectlyVars: DeliverOrderItemDirectlyVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+  reason: ..., 
+};
+
+// Call the `deliverOrderItemDirectlyRef()` function to get a reference to the mutation.
+const ref = deliverOrderItemDirectlyRef(deliverOrderItemDirectlyVars);
+// Variables can be defined inline as well.
+const ref = deliverOrderItemDirectlyRef({ tenantId: ..., branchId: ..., itemId: ..., version: ..., reason: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = deliverOrderItemDirectlyRef(dataConnect, deliverOrderItemDirectlyVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## CancelOrderItem
+You can execute the `CancelOrderItem` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+cancelOrderItem(vars: CancelOrderItemVariables): MutationPromise<CancelOrderItemData, CancelOrderItemVariables>;
+
+interface CancelOrderItemRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: CancelOrderItemVariables): MutationRef<CancelOrderItemData, CancelOrderItemVariables>;
+}
+export const cancelOrderItemRef: CancelOrderItemRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+cancelOrderItem(dc: DataConnect, vars: CancelOrderItemVariables): MutationPromise<CancelOrderItemData, CancelOrderItemVariables>;
+
+interface CancelOrderItemRef {
+  ...
+  (dc: DataConnect, vars: CancelOrderItemVariables): MutationRef<CancelOrderItemData, CancelOrderItemVariables>;
+}
+export const cancelOrderItemRef: CancelOrderItemRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the cancelOrderItemRef:
+```typescript
+const name = cancelOrderItemRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `CancelOrderItem` mutation requires an argument of type `CancelOrderItemVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface CancelOrderItemVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
+  reason: string;
+}
+```
+### Return Type
+Recall that executing the `CancelOrderItem` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `CancelOrderItemData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface CancelOrderItemData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `CancelOrderItem`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, cancelOrderItem, CancelOrderItemVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `CancelOrderItem` mutation requires an argument of type `CancelOrderItemVariables`:
+const cancelOrderItemVars: CancelOrderItemVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+  reason: ..., 
+};
+
+// Call the `cancelOrderItem()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await cancelOrderItem(cancelOrderItemVars);
+// Variables can be defined inline as well.
+const { data } = await cancelOrderItem({ tenantId: ..., branchId: ..., itemId: ..., version: ..., reason: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await cancelOrderItem(dataConnect, cancelOrderItemVars);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+cancelOrderItem(cancelOrderItemVars).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `CancelOrderItem`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, cancelOrderItemRef, CancelOrderItemVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `CancelOrderItem` mutation requires an argument of type `CancelOrderItemVariables`:
+const cancelOrderItemVars: CancelOrderItemVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  itemId: ..., 
+  version: ..., 
+  reason: ..., 
+};
+
+// Call the `cancelOrderItemRef()` function to get a reference to the mutation.
+const ref = cancelOrderItemRef(cancelOrderItemVars);
+// Variables can be defined inline as well.
+const ref = cancelOrderItemRef({ tenantId: ..., branchId: ..., itemId: ..., version: ..., reason: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = cancelOrderItemRef(dataConnect, cancelOrderItemVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.orderItem_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## AttendServiceRequest
+You can execute the `AttendServiceRequest` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+attendServiceRequest(vars: AttendServiceRequestVariables): MutationPromise<AttendServiceRequestData, AttendServiceRequestVariables>;
+
+interface AttendServiceRequestRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: AttendServiceRequestVariables): MutationRef<AttendServiceRequestData, AttendServiceRequestVariables>;
+}
+export const attendServiceRequestRef: AttendServiceRequestRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+attendServiceRequest(dc: DataConnect, vars: AttendServiceRequestVariables): MutationPromise<AttendServiceRequestData, AttendServiceRequestVariables>;
+
+interface AttendServiceRequestRef {
+  ...
+  (dc: DataConnect, vars: AttendServiceRequestVariables): MutationRef<AttendServiceRequestData, AttendServiceRequestVariables>;
+}
+export const attendServiceRequestRef: AttendServiceRequestRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the attendServiceRequestRef:
+```typescript
+const name = attendServiceRequestRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `AttendServiceRequest` mutation requires an argument of type `AttendServiceRequestVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface AttendServiceRequestVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  requestId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `AttendServiceRequest` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `AttendServiceRequestData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface AttendServiceRequestData {
+  serviceRequest_update?: ServiceRequest_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `AttendServiceRequest`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, attendServiceRequest, AttendServiceRequestVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `AttendServiceRequest` mutation requires an argument of type `AttendServiceRequestVariables`:
+const attendServiceRequestVars: AttendServiceRequestVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  requestId: ..., 
+};
+
+// Call the `attendServiceRequest()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await attendServiceRequest(attendServiceRequestVars);
+// Variables can be defined inline as well.
+const { data } = await attendServiceRequest({ tenantId: ..., branchId: ..., requestId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await attendServiceRequest(dataConnect, attendServiceRequestVars);
+
+console.log(data.serviceRequest_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+attendServiceRequest(attendServiceRequestVars).then((response) => {
+  const data = response.data;
+  console.log(data.serviceRequest_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `AttendServiceRequest`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, attendServiceRequestRef, AttendServiceRequestVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `AttendServiceRequest` mutation requires an argument of type `AttendServiceRequestVariables`:
+const attendServiceRequestVars: AttendServiceRequestVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  requestId: ..., 
+};
+
+// Call the `attendServiceRequestRef()` function to get a reference to the mutation.
+const ref = attendServiceRequestRef(attendServiceRequestVars);
+// Variables can be defined inline as well.
+const ref = attendServiceRequestRef({ tenantId: ..., branchId: ..., requestId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = attendServiceRequestRef(dataConnect, attendServiceRequestVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.serviceRequest_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.serviceRequest_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
 ## OpenTableSession
 You can execute the `OpenTableSession` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
 ```typescript
@@ -6094,6 +8493,373 @@ executeMutation(ref).then((response) => {
 });
 ```
 
+## ServerCreateDefaultStation
+You can execute the `ServerCreateDefaultStation` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+serverCreateDefaultStation(vars: ServerCreateDefaultStationVariables): MutationPromise<ServerCreateDefaultStationData, ServerCreateDefaultStationVariables>;
+
+interface ServerCreateDefaultStationRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerCreateDefaultStationVariables): MutationRef<ServerCreateDefaultStationData, ServerCreateDefaultStationVariables>;
+}
+export const serverCreateDefaultStationRef: ServerCreateDefaultStationRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+serverCreateDefaultStation(dc: DataConnect, vars: ServerCreateDefaultStationVariables): MutationPromise<ServerCreateDefaultStationData, ServerCreateDefaultStationVariables>;
+
+interface ServerCreateDefaultStationRef {
+  ...
+  (dc: DataConnect, vars: ServerCreateDefaultStationVariables): MutationRef<ServerCreateDefaultStationData, ServerCreateDefaultStationVariables>;
+}
+export const serverCreateDefaultStationRef: ServerCreateDefaultStationRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverCreateDefaultStationRef:
+```typescript
+const name = serverCreateDefaultStationRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `ServerCreateDefaultStation` mutation requires an argument of type `ServerCreateDefaultStationVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface ServerCreateDefaultStationVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `ServerCreateDefaultStation` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `ServerCreateDefaultStationData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface ServerCreateDefaultStationData {
+  station_insert: Station_Key;
+}
+```
+### Using `ServerCreateDefaultStation`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, serverCreateDefaultStation, ServerCreateDefaultStationVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerCreateDefaultStation` mutation requires an argument of type `ServerCreateDefaultStationVariables`:
+const serverCreateDefaultStationVars: ServerCreateDefaultStationVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `serverCreateDefaultStation()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await serverCreateDefaultStation(serverCreateDefaultStationVars);
+// Variables can be defined inline as well.
+const { data } = await serverCreateDefaultStation({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await serverCreateDefaultStation(dataConnect, serverCreateDefaultStationVars);
+
+console.log(data.station_insert);
+
+// Or, you can use the `Promise` API.
+serverCreateDefaultStation(serverCreateDefaultStationVars).then((response) => {
+  const data = response.data;
+  console.log(data.station_insert);
+});
+```
+
+### Using `ServerCreateDefaultStation`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, serverCreateDefaultStationRef, ServerCreateDefaultStationVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerCreateDefaultStation` mutation requires an argument of type `ServerCreateDefaultStationVariables`:
+const serverCreateDefaultStationVars: ServerCreateDefaultStationVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `serverCreateDefaultStationRef()` function to get a reference to the mutation.
+const ref = serverCreateDefaultStationRef(serverCreateDefaultStationVars);
+// Variables can be defined inline as well.
+const ref = serverCreateDefaultStationRef({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = serverCreateDefaultStationRef(dataConnect, serverCreateDefaultStationVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.station_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.station_insert);
+});
+```
+
+## ServerSendOrderToKitchen
+You can execute the `ServerSendOrderToKitchen` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+serverSendOrderToKitchen(vars: ServerSendOrderToKitchenVariables): MutationPromise<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
+
+interface ServerSendOrderToKitchenRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerSendOrderToKitchenVariables): MutationRef<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
+}
+export const serverSendOrderToKitchenRef: ServerSendOrderToKitchenRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+serverSendOrderToKitchen(dc: DataConnect, vars: ServerSendOrderToKitchenVariables): MutationPromise<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
+
+interface ServerSendOrderToKitchenRef {
+  ...
+  (dc: DataConnect, vars: ServerSendOrderToKitchenVariables): MutationRef<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
+}
+export const serverSendOrderToKitchenRef: ServerSendOrderToKitchenRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverSendOrderToKitchenRef:
+```typescript
+const name = serverSendOrderToKitchenRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `ServerSendOrderToKitchen` mutation requires an argument of type `ServerSendOrderToKitchenVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface ServerSendOrderToKitchenVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  orderId: UUIDString;
+  authUid: string;
+}
+```
+### Return Type
+Recall that executing the `ServerSendOrderToKitchen` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `ServerSendOrderToKitchenData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface ServerSendOrderToKitchenData {
+  order_update?: Order_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `ServerSendOrderToKitchen`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, serverSendOrderToKitchen, ServerSendOrderToKitchenVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerSendOrderToKitchen` mutation requires an argument of type `ServerSendOrderToKitchenVariables`:
+const serverSendOrderToKitchenVars: ServerSendOrderToKitchenVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  orderId: ..., 
+  authUid: ..., 
+};
+
+// Call the `serverSendOrderToKitchen()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await serverSendOrderToKitchen(serverSendOrderToKitchenVars);
+// Variables can be defined inline as well.
+const { data } = await serverSendOrderToKitchen({ tenantId: ..., branchId: ..., sessionId: ..., orderId: ..., authUid: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await serverSendOrderToKitchen(dataConnect, serverSendOrderToKitchenVars);
+
+console.log(data.order_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+serverSendOrderToKitchen(serverSendOrderToKitchenVars).then((response) => {
+  const data = response.data;
+  console.log(data.order_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `ServerSendOrderToKitchen`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, serverSendOrderToKitchenRef, ServerSendOrderToKitchenVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerSendOrderToKitchen` mutation requires an argument of type `ServerSendOrderToKitchenVariables`:
+const serverSendOrderToKitchenVars: ServerSendOrderToKitchenVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  orderId: ..., 
+  authUid: ..., 
+};
+
+// Call the `serverSendOrderToKitchenRef()` function to get a reference to the mutation.
+const ref = serverSendOrderToKitchenRef(serverSendOrderToKitchenVars);
+// Variables can be defined inline as well.
+const ref = serverSendOrderToKitchenRef({ tenantId: ..., branchId: ..., sessionId: ..., orderId: ..., authUid: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = serverSendOrderToKitchenRef(dataConnect, serverSendOrderToKitchenVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.order_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.order_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## ServerCreateServiceRequest
+You can execute the `ServerCreateServiceRequest` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+serverCreateServiceRequest(vars: ServerCreateServiceRequestVariables): MutationPromise<ServerCreateServiceRequestData, ServerCreateServiceRequestVariables>;
+
+interface ServerCreateServiceRequestRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerCreateServiceRequestVariables): MutationRef<ServerCreateServiceRequestData, ServerCreateServiceRequestVariables>;
+}
+export const serverCreateServiceRequestRef: ServerCreateServiceRequestRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+serverCreateServiceRequest(dc: DataConnect, vars: ServerCreateServiceRequestVariables): MutationPromise<ServerCreateServiceRequestData, ServerCreateServiceRequestVariables>;
+
+interface ServerCreateServiceRequestRef {
+  ...
+  (dc: DataConnect, vars: ServerCreateServiceRequestVariables): MutationRef<ServerCreateServiceRequestData, ServerCreateServiceRequestVariables>;
+}
+export const serverCreateServiceRequestRef: ServerCreateServiceRequestRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverCreateServiceRequestRef:
+```typescript
+const name = serverCreateServiceRequestRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `ServerCreateServiceRequest` mutation requires an argument of type `ServerCreateServiceRequestVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface ServerCreateServiceRequestVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  participantId: UUIDString;
+  authUid: string;
+  kind: ServiceRequestKind;
+}
+```
+### Return Type
+Recall that executing the `ServerCreateServiceRequest` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `ServerCreateServiceRequestData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface ServerCreateServiceRequestData {
+  serviceRequest_insert: ServiceRequest_Key;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `ServerCreateServiceRequest`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, serverCreateServiceRequest, ServerCreateServiceRequestVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerCreateServiceRequest` mutation requires an argument of type `ServerCreateServiceRequestVariables`:
+const serverCreateServiceRequestVars: ServerCreateServiceRequestVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  participantId: ..., 
+  authUid: ..., 
+  kind: ..., 
+};
+
+// Call the `serverCreateServiceRequest()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await serverCreateServiceRequest(serverCreateServiceRequestVars);
+// Variables can be defined inline as well.
+const { data } = await serverCreateServiceRequest({ tenantId: ..., branchId: ..., sessionId: ..., participantId: ..., authUid: ..., kind: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await serverCreateServiceRequest(dataConnect, serverCreateServiceRequestVars);
+
+console.log(data.serviceRequest_insert);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+serverCreateServiceRequest(serverCreateServiceRequestVars).then((response) => {
+  const data = response.data;
+  console.log(data.serviceRequest_insert);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `ServerCreateServiceRequest`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, serverCreateServiceRequestRef, ServerCreateServiceRequestVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerCreateServiceRequest` mutation requires an argument of type `ServerCreateServiceRequestVariables`:
+const serverCreateServiceRequestVars: ServerCreateServiceRequestVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  participantId: ..., 
+  authUid: ..., 
+  kind: ..., 
+};
+
+// Call the `serverCreateServiceRequestRef()` function to get a reference to the mutation.
+const ref = serverCreateServiceRequestRef(serverCreateServiceRequestVars);
+// Variables can be defined inline as well.
+const ref = serverCreateServiceRequestRef({ tenantId: ..., branchId: ..., sessionId: ..., participantId: ..., authUid: ..., kind: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = serverCreateServiceRequestRef(dataConnect, serverCreateServiceRequestVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.serviceRequest_insert);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.serviceRequest_insert);
+  console.log(data.auditEvent_insert);
+});
+```
+
 ## CreateBranch
 You can execute the `CreateBranch` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
 ```typescript
@@ -6141,6 +8907,7 @@ The `data` property is an object of type `CreateBranchData`, which is defined in
 ```typescript
 export interface CreateBranchData {
   branch_insert: Branch_Key;
+  station_insert: Station_Key;
   auditEvent_insert: AuditEvent_Key;
 }
 ```
@@ -6169,12 +8936,14 @@ const dataConnect = getDataConnect(connectorConfig);
 const { data } = await createBranch(dataConnect, createBranchVars);
 
 console.log(data.branch_insert);
+console.log(data.station_insert);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
 createBranch(createBranchVars).then((response) => {
   const data = response.data;
   console.log(data.branch_insert);
+  console.log(data.station_insert);
   console.log(data.auditEvent_insert);
 });
 ```
@@ -6207,12 +8976,14 @@ const ref = createBranchRef(dataConnect, createBranchVars);
 const { data } = await executeMutation(ref);
 
 console.log(data.branch_insert);
+console.log(data.station_insert);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
 executeMutation(ref).then((response) => {
   const data = response.data;
   console.log(data.branch_insert);
+  console.log(data.station_insert);
   console.log(data.auditEvent_insert);
 });
 ```

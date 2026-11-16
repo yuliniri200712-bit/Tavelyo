@@ -90,11 +90,93 @@ query MyParticipation($sessionId: UUID!) @auth(level: USER_ANON) {
     limit: 1
   ) {
     id
+    branchId
     expiresAt
     session {
       status
       table {
         code
+      }
+    }
+  }
+}
+
+# «Mis pedidos» (D-06): solo los de quien consulta, en su participación vigente de una sesión
+# abierta y ya enviados a cocina, con el estado de cada línea. branchId acota el refresco a la
+# sucursal de la mesa (ADR-0007) y debe coincidir con la de la sesión.
+query MyOrders($sessionId: UUID!, $branchId: UUID!)
+@auth(level: USER_ANON)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerSendOrderToKitchen"
+    condition: "request.variables.sessionId == mutation.variables.sessionId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "StartOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "FinishOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "PickUpOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "DeliverOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "DeliverOrderItemDirectly"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "CancelOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+) {
+  orders(
+    where: {
+      _and: [
+        { sessionId: { eq: $sessionId } }
+        { branchId: { eq: $branchId } }
+        { sentToKitchenAt: { isNull: false } }
+        { participant: { authUid: { eq_expr: "auth.uid" } } }
+        { participant: { removedAt: { isNull: true } } }
+        { participant: { expiresAt: { gt_expr: "request.time" } } }
+        { session: { status: { eq: OPEN } } }
+      ]
+    }
+    orderBy: [{ sentToKitchenAt: ASC }]
+  ) {
+    id
+    sentToKitchenAt
+    quote {
+      currency
+      totalMinor
+    }
+    orderItems_on_order(orderBy: [{ position: ASC }]) {
+      id
+      status
+      quantity
+      productNameSnapshot
+      lineTotalMinor
+      note
+      orderItemModifiers_on_item(orderBy: [{ position: ASC }]) {
+        nameSnapshot
       }
     }
   }

@@ -12,6 +12,16 @@ const MembershipStatus = {
 }
 exports.MembershipStatus = MembershipStatus;
 
+const OrderItemStatus = {
+  RECEIVED: "RECEIVED",
+  IN_PREPARATION: "IN_PREPARATION",
+  READY: "READY",
+  PICKED_UP: "PICKED_UP",
+  DELIVERED: "DELIVERED",
+  CANCELLED: "CANCELLED",
+}
+exports.OrderItemStatus = OrderItemStatus;
+
 const OrderQuoteStatus = {
   QUOTED: "QUOTED",
   AUTHORIZED: "AUTHORIZED",
@@ -20,6 +30,12 @@ const OrderQuoteStatus = {
   RELEASE_PENDING: "RELEASE_PENDING",
 }
 exports.OrderQuoteStatus = OrderQuoteStatus;
+
+const ServiceRequestKind = {
+  CALL_WAITER: "CALL_WAITER",
+  REQUEST_BILL: "REQUEST_BILL",
+}
+exports.ServiceRequestKind = ServiceRequestKind;
 
 const connectorConfig = {
   connector: 'tavelyo',
@@ -256,6 +272,136 @@ exports.myParticipation = function myParticipation(dcOrVars, varsOrOptions, opti
 }
 ;
 
+const myOrdersRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'MyOrders', inputVars);
+}
+myOrdersRef.operationName = 'MyOrders';
+exports.myOrdersRef = myOrdersRef;
+
+exports.myOrders = function myOrders(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(myOrdersRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const branchStationsRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'BranchStations', inputVars);
+}
+branchStationsRef.operationName = 'BranchStations';
+exports.branchStationsRef = branchStationsRef;
+
+exports.branchStations = function branchStations(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(branchStationsRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const createStationRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'CreateStation', inputVars);
+}
+createStationRef.operationName = 'CreateStation';
+exports.createStationRef = createStationRef;
+
+exports.createStation = function createStation(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(createStationRef(dcInstance, inputVars));
+}
+;
+
+const updateStationRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'UpdateStation', inputVars);
+}
+updateStationRef.operationName = 'UpdateStation';
+exports.updateStationRef = updateStationRef;
+
+exports.updateStation = function updateStation(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(updateStationRef(dcInstance, inputVars));
+}
+;
+
+const setProductStationRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'SetProductStation', inputVars);
+}
+setProductStationRef.operationName = 'SetProductStation';
+exports.setProductStationRef = setProductStationRef;
+
+exports.setProductStation = function setProductStation(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(setProductStationRef(dcInstance, inputVars));
+}
+;
+
+const kitchenStationsRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'KitchenStations', inputVars);
+}
+kitchenStationsRef.operationName = 'KitchenStations';
+exports.kitchenStationsRef = kitchenStationsRef;
+
+exports.kitchenStations = function kitchenStations(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(kitchenStationsRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const kitchenQueueRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'KitchenQueue', inputVars);
+}
+kitchenQueueRef.operationName = 'KitchenQueue';
+exports.kitchenQueueRef = kitchenQueueRef;
+
+exports.kitchenQueue = function kitchenQueue(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(kitchenQueueRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const startOrderItemRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'StartOrderItem', inputVars);
+}
+startOrderItemRef.operationName = 'StartOrderItem';
+exports.startOrderItemRef = startOrderItemRef;
+
+exports.startOrderItem = function startOrderItem(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(startOrderItemRef(dcInstance, inputVars));
+}
+;
+
+const finishOrderItemRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'FinishOrderItem', inputVars);
+}
+finishOrderItemRef.operationName = 'FinishOrderItem';
+exports.finishOrderItemRef = finishOrderItemRef;
+
+exports.finishOrderItem = function finishOrderItem(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(finishOrderItemRef(dcInstance, inputVars));
+}
+;
+
 const branchLayoutRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();
@@ -422,6 +568,121 @@ exports.unassignMemberBranchRef = unassignMemberBranchRef;
 exports.unassignMemberBranch = function unassignMemberBranch(dcOrVars, vars) {
   const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
   return executeMutation(unassignMemberBranchRef(dcInstance, inputVars));
+}
+;
+
+const pickupQueueRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'PickupQueue', inputVars);
+}
+pickupQueueRef.operationName = 'PickupQueue';
+exports.pickupQueueRef = pickupQueueRef;
+
+exports.pickupQueue = function pickupQueue(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(pickupQueueRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const sessionOrdersRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'SessionOrders', inputVars);
+}
+sessionOrdersRef.operationName = 'SessionOrders';
+exports.sessionOrdersRef = sessionOrdersRef;
+
+exports.sessionOrders = function sessionOrders(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(sessionOrdersRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const pickUpOrderItemRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'PickUpOrderItem', inputVars);
+}
+pickUpOrderItemRef.operationName = 'PickUpOrderItem';
+exports.pickUpOrderItemRef = pickUpOrderItemRef;
+
+exports.pickUpOrderItem = function pickUpOrderItem(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(pickUpOrderItemRef(dcInstance, inputVars));
+}
+;
+
+const deliverOrderItemRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'DeliverOrderItem', inputVars);
+}
+deliverOrderItemRef.operationName = 'DeliverOrderItem';
+exports.deliverOrderItemRef = deliverOrderItemRef;
+
+exports.deliverOrderItem = function deliverOrderItem(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(deliverOrderItemRef(dcInstance, inputVars));
+}
+;
+
+const deliverOrderItemDirectlyRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'DeliverOrderItemDirectly', inputVars);
+}
+deliverOrderItemDirectlyRef.operationName = 'DeliverOrderItemDirectly';
+exports.deliverOrderItemDirectlyRef = deliverOrderItemDirectlyRef;
+
+exports.deliverOrderItemDirectly = function deliverOrderItemDirectly(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(deliverOrderItemDirectlyRef(dcInstance, inputVars));
+}
+;
+
+const cancelOrderItemRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'CancelOrderItem', inputVars);
+}
+cancelOrderItemRef.operationName = 'CancelOrderItem';
+exports.cancelOrderItemRef = cancelOrderItemRef;
+
+exports.cancelOrderItem = function cancelOrderItem(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(cancelOrderItemRef(dcInstance, inputVars));
+}
+;
+
+const pendingServiceRequestsRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'PendingServiceRequests', inputVars);
+}
+pendingServiceRequestsRef.operationName = 'PendingServiceRequests';
+exports.pendingServiceRequestsRef = pendingServiceRequestsRef;
+
+exports.pendingServiceRequests = function pendingServiceRequests(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(pendingServiceRequestsRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const attendServiceRequestRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'AttendServiceRequest', inputVars);
+}
+attendServiceRequestRef.operationName = 'AttendServiceRequest';
+exports.attendServiceRequestRef = attendServiceRequestRef;
+
+exports.attendServiceRequest = function attendServiceRequest(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(attendServiceRequestRef(dcInstance, inputVars));
 }
 ;
 
@@ -700,6 +961,78 @@ exports.serverHitRateLimitRef = serverHitRateLimitRef;
 exports.serverHitRateLimit = function serverHitRateLimit(dcOrVars, vars) {
   const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
   return executeMutation(serverHitRateLimitRef(dcInstance, inputVars));
+}
+;
+
+const serverOrderByQuoteRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerOrderByQuote', inputVars);
+}
+serverOrderByQuoteRef.operationName = 'ServerOrderByQuote';
+exports.serverOrderByQuoteRef = serverOrderByQuoteRef;
+
+exports.serverOrderByQuote = function serverOrderByQuote(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverOrderByQuoteRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverStationsForOrderRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerStationsForOrder', inputVars);
+}
+serverStationsForOrderRef.operationName = 'ServerStationsForOrder';
+exports.serverStationsForOrderRef = serverStationsForOrderRef;
+
+exports.serverStationsForOrder = function serverStationsForOrder(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverStationsForOrderRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverCreateDefaultStationRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerCreateDefaultStation', inputVars);
+}
+serverCreateDefaultStationRef.operationName = 'ServerCreateDefaultStation';
+exports.serverCreateDefaultStationRef = serverCreateDefaultStationRef;
+
+exports.serverCreateDefaultStation = function serverCreateDefaultStation(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverCreateDefaultStationRef(dcInstance, inputVars));
+}
+;
+
+const serverSendOrderToKitchenRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerSendOrderToKitchen', inputVars);
+}
+serverSendOrderToKitchenRef.operationName = 'ServerSendOrderToKitchen';
+exports.serverSendOrderToKitchenRef = serverSendOrderToKitchenRef;
+
+exports.serverSendOrderToKitchen = function serverSendOrderToKitchen(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverSendOrderToKitchenRef(dcInstance, inputVars));
+}
+;
+
+const serverCreateServiceRequestRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerCreateServiceRequest', inputVars);
+}
+serverCreateServiceRequestRef.operationName = 'ServerCreateServiceRequest';
+exports.serverCreateServiceRequestRef = serverCreateServiceRequestRef;
+
+exports.serverCreateServiceRequest = function serverCreateServiceRequest(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverCreateServiceRequestRef(dcInstance, inputVars));
 }
 ;
 

@@ -18,12 +18,26 @@ export enum MembershipStatus {
   REVOKED = "REVOKED",
 };
 
+export enum OrderItemStatus {
+  RECEIVED = "RECEIVED",
+  IN_PREPARATION = "IN_PREPARATION",
+  READY = "READY",
+  PICKED_UP = "PICKED_UP",
+  DELIVERED = "DELIVERED",
+  CANCELLED = "CANCELLED",
+};
+
 export enum OrderQuoteStatus {
   QUOTED = "QUOTED",
   AUTHORIZED = "AUTHORIZED",
   DECLINED = "DECLINED",
   EXPIRED = "EXPIRED",
   RELEASE_PENDING = "RELEASE_PENDING",
+};
+
+export enum ServiceRequestKind {
+  CALL_WAITER = "CALL_WAITER",
+  REQUEST_BILL = "REQUEST_BILL",
 };
 
 
@@ -50,6 +64,17 @@ export interface AssignMemberBranchVariables {
   branchId: UUIDString;
 }
 
+export interface AttendServiceRequestData {
+  serviceRequest_update?: ServiceRequest_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface AttendServiceRequestVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  requestId: UUIDString;
+}
+
 export interface AuditEvent_Key {
   id: UUIDString;
   __typename?: 'AuditEvent_Key';
@@ -58,6 +83,7 @@ export interface AuditEvent_Key {
 export interface BranchCatalogData {
   productBranches: ({
     productId: UUIDString;
+    stationId?: UUIDString | null;
     available: boolean;
     daysMask?: number | null;
     startMinute?: number | null;
@@ -97,9 +123,37 @@ export interface BranchLayoutVariables {
   branchId: UUIDString;
 }
 
+export interface BranchStationsData {
+  stations: ({
+    id: UUIDString;
+    name: string;
+    sort: number;
+    defaultForBranchId?: UUIDString | null;
+    archivedAt?: TimestampString | null;
+  } & Station_Key)[];
+}
+
+export interface BranchStationsVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+
 export interface Branch_Key {
   id: UUIDString;
   __typename?: 'Branch_Key';
+}
+
+export interface CancelOrderItemData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface CancelOrderItemVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
+  reason: string;
 }
 
 export interface CatalogAdminData {
@@ -188,6 +242,7 @@ export interface CloseTableSessionVariables {
 
 export interface CreateBranchData {
   branch_insert: Branch_Key;
+  station_insert: Station_Key;
   auditEvent_insert: AuditEvent_Key;
 }
 
@@ -263,6 +318,18 @@ export interface CreateSectorVariables {
   sort: number;
 }
 
+export interface CreateStationData {
+  station_insert: Station_Key;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface CreateStationVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  name: string;
+  sort: number;
+}
+
 export interface CreateTableData {
   diningTable_insert: DiningTable_Key;
   auditEvent_insert: AuditEvent_Key;
@@ -287,9 +354,46 @@ export interface CreateTaxRuleVariables {
   rateBp: number;
 }
 
+export interface DeliverOrderItemData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface DeliverOrderItemDirectlyData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface DeliverOrderItemDirectlyVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
+  reason: string;
+}
+
+export interface DeliverOrderItemVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
+}
+
 export interface DiningTable_Key {
   id: UUIDString;
   __typename?: 'DiningTable_Key';
+}
+
+export interface FinishOrderItemData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface FinishOrderItemVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
 }
 
 export interface FloorViewData {
@@ -303,12 +407,65 @@ export interface FloorViewData {
       tableSessions_on_table: ({
         id: UUIDString;
         openedAt: TimestampString;
+        orders_on_session: ({
+          orderItems_on_order: ({
+            status: OrderItemStatus;
+          })[];
+        })[];
+        serviceRequests_on_session: ({
+          kind: ServiceRequestKind;
+          createdAt: TimestampString;
+        })[];
       } & TableSession_Key)[];
     } & DiningTable_Key)[];
   } & Sector_Key)[];
 }
 
 export interface FloorViewVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+
+export interface KitchenQueueData {
+  orderItems: ({
+    id: UUIDString;
+    version: number;
+    status: OrderItemStatus;
+    quantity: number;
+    productNameSnapshot: string;
+    allergensSnapshot?: string[] | null;
+    note?: string | null;
+    startedAt?: TimestampString | null;
+    orderItemModifiers_on_item: ({
+      nameSnapshot: string;
+    })[];
+    order: {
+      id: UUIDString;
+      sentToKitchenAt?: TimestampString | null;
+      session: {
+        table: {
+          code: string;
+        };
+      };
+    } & Order_Key;
+  } & OrderItem_Key)[];
+}
+
+export interface KitchenQueueVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  stationId: UUIDString;
+}
+
+export interface KitchenStationsData {
+  stations: ({
+    id: UUIDString;
+    name: string;
+    defaultForBranchId?: UUIDString | null;
+  } & Station_Key)[];
+}
+
+export interface KitchenStationsVariables {
   tenantId: UUIDString;
   branchId: UUIDString;
 }
@@ -370,9 +527,37 @@ export interface MyMembershipsData {
   })[];
 }
 
+export interface MyOrdersData {
+  orders: ({
+    id: UUIDString;
+    sentToKitchenAt?: TimestampString | null;
+    quote: {
+      currency: string;
+      totalMinor: Int64String;
+    };
+    orderItems_on_order: ({
+      id: UUIDString;
+      status: OrderItemStatus;
+      quantity: number;
+      productNameSnapshot: string;
+      lineTotalMinor: Int64String;
+      note?: string | null;
+      orderItemModifiers_on_item: ({
+        nameSnapshot: string;
+      })[];
+    } & OrderItem_Key)[];
+  } & Order_Key)[];
+}
+
+export interface MyOrdersVariables {
+  sessionId: UUIDString;
+  branchId: UUIDString;
+}
+
 export interface MyParticipationData {
   sessionParticipants: ({
     id: UUIDString;
+    branchId: UUIDString;
     expiresAt: TimestampString;
     session: {
       status: TableSessionStatus;
@@ -430,9 +615,72 @@ export interface Order_Key {
   __typename?: 'Order_Key';
 }
 
+export interface PendingServiceRequestsData {
+  serviceRequests: ({
+    id: UUIDString;
+    kind: ServiceRequestKind;
+    createdAt: TimestampString;
+    session: {
+      id: UUIDString;
+      table: {
+        code: string;
+      };
+    } & TableSession_Key;
+  } & ServiceRequest_Key)[];
+}
+
+export interface PendingServiceRequestsVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+
 export interface Permission_Key {
   code: string;
   __typename?: 'Permission_Key';
+}
+
+export interface PickUpOrderItemData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface PickUpOrderItemVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
+}
+
+export interface PickupQueueData {
+  orderItems: ({
+    id: UUIDString;
+    version: number;
+    status: OrderItemStatus;
+    quantity: number;
+    productNameSnapshot: string;
+    note?: string | null;
+    readyAt?: TimestampString | null;
+    pickedUpAt?: TimestampString | null;
+    orderItemModifiers_on_item: ({
+      nameSnapshot: string;
+    })[];
+    station: {
+      name: string;
+    };
+    order: {
+      session: {
+        id: UUIDString;
+        table: {
+          code: string;
+        };
+      } & TableSession_Key;
+    };
+  } & OrderItem_Key)[];
+}
+
+export interface PickupQueueVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
 }
 
 export interface Price_Key {
@@ -558,6 +806,29 @@ export interface Sector_Key {
   __typename?: 'Sector_Key';
 }
 
+export interface ServerCreateDefaultStationData {
+  station_insert: Station_Key;
+}
+
+export interface ServerCreateDefaultStationVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+
+export interface ServerCreateServiceRequestData {
+  serviceRequest_insert: ServiceRequest_Key;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerCreateServiceRequestVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  participantId: UUIDString;
+  authUid: string;
+  kind: ServiceRequestKind;
+}
+
 export interface ServerHitRateLimitData {
   rateLimitHit_insert: RateLimitHit_Key;
   query?: {
@@ -610,6 +881,17 @@ export interface ServerOpenSessionByQrData {
 export interface ServerOpenSessionByQrVariables {
   qrPublicId: UUIDString;
   authUid: string;
+}
+
+export interface ServerOrderByQuoteData {
+  orders: ({
+    id: UUIDString;
+    sentToKitchenAt?: TimestampString | null;
+  } & Order_Key)[];
+}
+
+export interface ServerOrderByQuoteVariables {
+  quoteId: UUIDString;
 }
 
 export interface ServerProductsForQuoteData {
@@ -737,6 +1019,19 @@ export interface ServerRenewParticipantVariables {
   expiresAt: TimestampString;
 }
 
+export interface ServerSendOrderToKitchenData {
+  order_update?: Order_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerSendOrderToKitchenVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  orderId: UUIDString;
+  authUid: string;
+}
+
 export interface ServerSetQuotePaymentData {
   orderQuote_update?: OrderQuote_Key | null;
   auditEvent_insert: AuditEvent_Key;
@@ -750,9 +1045,53 @@ export interface ServerSetQuotePaymentVariables {
   paymentRef: string;
 }
 
+export interface ServerStationsForOrderData {
+  productBranches: ({
+    productId: UUIDString;
+    station?: {
+      id: UUIDString;
+      archivedAt?: TimestampString | null;
+    } & Station_Key;
+  })[];
+  defaultStation: ({
+    id: UUIDString;
+  } & Station_Key)[];
+}
+
+export interface ServerStationsForOrderVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  productIds: UUIDString[];
+}
+
 export interface ServiceRequest_Key {
   id: UUIDString;
   __typename?: 'ServiceRequest_Key';
+}
+
+export interface SessionOrdersData {
+  orders: ({
+    id: UUIDString;
+    sentToKitchenAt?: TimestampString | null;
+    orderItems_on_order: ({
+      id: UUIDString;
+      version: number;
+      status: OrderItemStatus;
+      quantity: number;
+      productNameSnapshot: string;
+      note?: string | null;
+      cancelReason?: string | null;
+      orderItemModifiers_on_item: ({
+        nameSnapshot: string;
+      })[];
+    } & OrderItem_Key)[];
+  } & Order_Key)[];
+}
+
+export interface SessionOrdersVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
 }
 
 export interface SessionParticipant_Key {
@@ -788,6 +1127,30 @@ export interface SetProductAvailabilityVariables {
   daysMask?: number | null;
   startMinute?: number | null;
   endMinute?: number | null;
+}
+
+export interface SetProductStationData {
+  productBranch_update?: ProductBranch_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface SetProductStationVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  productId: UUIDString;
+  stationId: UUIDString;
+}
+
+export interface StartOrderItemData {
+  orderItem_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface StartOrderItemVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  itemId: UUIDString;
+  version: number;
 }
 
 export interface Station_Key {
@@ -958,6 +1321,20 @@ export interface UpdateSectorVariables {
   tenantId: UUIDString;
   branchId: UUIDString;
   sectorId: UUIDString;
+  name: string;
+  sort: number;
+  archived: boolean;
+}
+
+export interface UpdateStationData {
+  station_update?: Station_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface UpdateStationVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  stationId: UUIDString;
   name: string;
   sort: number;
   archived: boolean;
@@ -1196,6 +1573,114 @@ export const myParticipationRef: MyParticipationRef;
 export function myParticipation(vars: MyParticipationVariables, options?: ExecuteQueryOptions): QueryPromise<MyParticipationData, MyParticipationVariables>;
 export function myParticipation(dc: DataConnect, vars: MyParticipationVariables, options?: ExecuteQueryOptions): QueryPromise<MyParticipationData, MyParticipationVariables>;
 
+interface MyOrdersRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: MyOrdersVariables): QueryRef<MyOrdersData, MyOrdersVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: MyOrdersVariables): QueryRef<MyOrdersData, MyOrdersVariables>;
+  operationName: string;
+}
+export const myOrdersRef: MyOrdersRef;
+
+export function myOrders(vars: MyOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<MyOrdersData, MyOrdersVariables>;
+export function myOrders(dc: DataConnect, vars: MyOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<MyOrdersData, MyOrdersVariables>;
+
+interface BranchStationsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: BranchStationsVariables): QueryRef<BranchStationsData, BranchStationsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: BranchStationsVariables): QueryRef<BranchStationsData, BranchStationsVariables>;
+  operationName: string;
+}
+export const branchStationsRef: BranchStationsRef;
+
+export function branchStations(vars: BranchStationsVariables, options?: ExecuteQueryOptions): QueryPromise<BranchStationsData, BranchStationsVariables>;
+export function branchStations(dc: DataConnect, vars: BranchStationsVariables, options?: ExecuteQueryOptions): QueryPromise<BranchStationsData, BranchStationsVariables>;
+
+interface CreateStationRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: CreateStationVariables): MutationRef<CreateStationData, CreateStationVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: CreateStationVariables): MutationRef<CreateStationData, CreateStationVariables>;
+  operationName: string;
+}
+export const createStationRef: CreateStationRef;
+
+export function createStation(vars: CreateStationVariables): MutationPromise<CreateStationData, CreateStationVariables>;
+export function createStation(dc: DataConnect, vars: CreateStationVariables): MutationPromise<CreateStationData, CreateStationVariables>;
+
+interface UpdateStationRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: UpdateStationVariables): MutationRef<UpdateStationData, UpdateStationVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: UpdateStationVariables): MutationRef<UpdateStationData, UpdateStationVariables>;
+  operationName: string;
+}
+export const updateStationRef: UpdateStationRef;
+
+export function updateStation(vars: UpdateStationVariables): MutationPromise<UpdateStationData, UpdateStationVariables>;
+export function updateStation(dc: DataConnect, vars: UpdateStationVariables): MutationPromise<UpdateStationData, UpdateStationVariables>;
+
+interface SetProductStationRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: SetProductStationVariables): MutationRef<SetProductStationData, SetProductStationVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: SetProductStationVariables): MutationRef<SetProductStationData, SetProductStationVariables>;
+  operationName: string;
+}
+export const setProductStationRef: SetProductStationRef;
+
+export function setProductStation(vars: SetProductStationVariables): MutationPromise<SetProductStationData, SetProductStationVariables>;
+export function setProductStation(dc: DataConnect, vars: SetProductStationVariables): MutationPromise<SetProductStationData, SetProductStationVariables>;
+
+interface KitchenStationsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: KitchenStationsVariables): QueryRef<KitchenStationsData, KitchenStationsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: KitchenStationsVariables): QueryRef<KitchenStationsData, KitchenStationsVariables>;
+  operationName: string;
+}
+export const kitchenStationsRef: KitchenStationsRef;
+
+export function kitchenStations(vars: KitchenStationsVariables, options?: ExecuteQueryOptions): QueryPromise<KitchenStationsData, KitchenStationsVariables>;
+export function kitchenStations(dc: DataConnect, vars: KitchenStationsVariables, options?: ExecuteQueryOptions): QueryPromise<KitchenStationsData, KitchenStationsVariables>;
+
+interface KitchenQueueRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: KitchenQueueVariables): QueryRef<KitchenQueueData, KitchenQueueVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: KitchenQueueVariables): QueryRef<KitchenQueueData, KitchenQueueVariables>;
+  operationName: string;
+}
+export const kitchenQueueRef: KitchenQueueRef;
+
+export function kitchenQueue(vars: KitchenQueueVariables, options?: ExecuteQueryOptions): QueryPromise<KitchenQueueData, KitchenQueueVariables>;
+export function kitchenQueue(dc: DataConnect, vars: KitchenQueueVariables, options?: ExecuteQueryOptions): QueryPromise<KitchenQueueData, KitchenQueueVariables>;
+
+interface StartOrderItemRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: StartOrderItemVariables): MutationRef<StartOrderItemData, StartOrderItemVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: StartOrderItemVariables): MutationRef<StartOrderItemData, StartOrderItemVariables>;
+  operationName: string;
+}
+export const startOrderItemRef: StartOrderItemRef;
+
+export function startOrderItem(vars: StartOrderItemVariables): MutationPromise<StartOrderItemData, StartOrderItemVariables>;
+export function startOrderItem(dc: DataConnect, vars: StartOrderItemVariables): MutationPromise<StartOrderItemData, StartOrderItemVariables>;
+
+interface FinishOrderItemRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: FinishOrderItemVariables): MutationRef<FinishOrderItemData, FinishOrderItemVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: FinishOrderItemVariables): MutationRef<FinishOrderItemData, FinishOrderItemVariables>;
+  operationName: string;
+}
+export const finishOrderItemRef: FinishOrderItemRef;
+
+export function finishOrderItem(vars: FinishOrderItemVariables): MutationPromise<FinishOrderItemData, FinishOrderItemVariables>;
+export function finishOrderItem(dc: DataConnect, vars: FinishOrderItemVariables): MutationPromise<FinishOrderItemData, FinishOrderItemVariables>;
+
 interface BranchLayoutRef {
   /* Allow users to create refs without passing in DataConnect */
   (vars: BranchLayoutVariables): QueryRef<BranchLayoutData, BranchLayoutVariables>;
@@ -1339,6 +1824,102 @@ export const unassignMemberBranchRef: UnassignMemberBranchRef;
 
 export function unassignMemberBranch(vars: UnassignMemberBranchVariables): MutationPromise<UnassignMemberBranchData, UnassignMemberBranchVariables>;
 export function unassignMemberBranch(dc: DataConnect, vars: UnassignMemberBranchVariables): MutationPromise<UnassignMemberBranchData, UnassignMemberBranchVariables>;
+
+interface PickupQueueRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: PickupQueueVariables): QueryRef<PickupQueueData, PickupQueueVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: PickupQueueVariables): QueryRef<PickupQueueData, PickupQueueVariables>;
+  operationName: string;
+}
+export const pickupQueueRef: PickupQueueRef;
+
+export function pickupQueue(vars: PickupQueueVariables, options?: ExecuteQueryOptions): QueryPromise<PickupQueueData, PickupQueueVariables>;
+export function pickupQueue(dc: DataConnect, vars: PickupQueueVariables, options?: ExecuteQueryOptions): QueryPromise<PickupQueueData, PickupQueueVariables>;
+
+interface SessionOrdersRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: SessionOrdersVariables): QueryRef<SessionOrdersData, SessionOrdersVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: SessionOrdersVariables): QueryRef<SessionOrdersData, SessionOrdersVariables>;
+  operationName: string;
+}
+export const sessionOrdersRef: SessionOrdersRef;
+
+export function sessionOrders(vars: SessionOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<SessionOrdersData, SessionOrdersVariables>;
+export function sessionOrders(dc: DataConnect, vars: SessionOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<SessionOrdersData, SessionOrdersVariables>;
+
+interface PickUpOrderItemRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: PickUpOrderItemVariables): MutationRef<PickUpOrderItemData, PickUpOrderItemVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: PickUpOrderItemVariables): MutationRef<PickUpOrderItemData, PickUpOrderItemVariables>;
+  operationName: string;
+}
+export const pickUpOrderItemRef: PickUpOrderItemRef;
+
+export function pickUpOrderItem(vars: PickUpOrderItemVariables): MutationPromise<PickUpOrderItemData, PickUpOrderItemVariables>;
+export function pickUpOrderItem(dc: DataConnect, vars: PickUpOrderItemVariables): MutationPromise<PickUpOrderItemData, PickUpOrderItemVariables>;
+
+interface DeliverOrderItemRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: DeliverOrderItemVariables): MutationRef<DeliverOrderItemData, DeliverOrderItemVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: DeliverOrderItemVariables): MutationRef<DeliverOrderItemData, DeliverOrderItemVariables>;
+  operationName: string;
+}
+export const deliverOrderItemRef: DeliverOrderItemRef;
+
+export function deliverOrderItem(vars: DeliverOrderItemVariables): MutationPromise<DeliverOrderItemData, DeliverOrderItemVariables>;
+export function deliverOrderItem(dc: DataConnect, vars: DeliverOrderItemVariables): MutationPromise<DeliverOrderItemData, DeliverOrderItemVariables>;
+
+interface DeliverOrderItemDirectlyRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: DeliverOrderItemDirectlyVariables): MutationRef<DeliverOrderItemDirectlyData, DeliverOrderItemDirectlyVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: DeliverOrderItemDirectlyVariables): MutationRef<DeliverOrderItemDirectlyData, DeliverOrderItemDirectlyVariables>;
+  operationName: string;
+}
+export const deliverOrderItemDirectlyRef: DeliverOrderItemDirectlyRef;
+
+export function deliverOrderItemDirectly(vars: DeliverOrderItemDirectlyVariables): MutationPromise<DeliverOrderItemDirectlyData, DeliverOrderItemDirectlyVariables>;
+export function deliverOrderItemDirectly(dc: DataConnect, vars: DeliverOrderItemDirectlyVariables): MutationPromise<DeliverOrderItemDirectlyData, DeliverOrderItemDirectlyVariables>;
+
+interface CancelOrderItemRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: CancelOrderItemVariables): MutationRef<CancelOrderItemData, CancelOrderItemVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: CancelOrderItemVariables): MutationRef<CancelOrderItemData, CancelOrderItemVariables>;
+  operationName: string;
+}
+export const cancelOrderItemRef: CancelOrderItemRef;
+
+export function cancelOrderItem(vars: CancelOrderItemVariables): MutationPromise<CancelOrderItemData, CancelOrderItemVariables>;
+export function cancelOrderItem(dc: DataConnect, vars: CancelOrderItemVariables): MutationPromise<CancelOrderItemData, CancelOrderItemVariables>;
+
+interface PendingServiceRequestsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: PendingServiceRequestsVariables): QueryRef<PendingServiceRequestsData, PendingServiceRequestsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: PendingServiceRequestsVariables): QueryRef<PendingServiceRequestsData, PendingServiceRequestsVariables>;
+  operationName: string;
+}
+export const pendingServiceRequestsRef: PendingServiceRequestsRef;
+
+export function pendingServiceRequests(vars: PendingServiceRequestsVariables, options?: ExecuteQueryOptions): QueryPromise<PendingServiceRequestsData, PendingServiceRequestsVariables>;
+export function pendingServiceRequests(dc: DataConnect, vars: PendingServiceRequestsVariables, options?: ExecuteQueryOptions): QueryPromise<PendingServiceRequestsData, PendingServiceRequestsVariables>;
+
+interface AttendServiceRequestRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: AttendServiceRequestVariables): MutationRef<AttendServiceRequestData, AttendServiceRequestVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: AttendServiceRequestVariables): MutationRef<AttendServiceRequestData, AttendServiceRequestVariables>;
+  operationName: string;
+}
+export const attendServiceRequestRef: AttendServiceRequestRef;
+
+export function attendServiceRequest(vars: AttendServiceRequestVariables): MutationPromise<AttendServiceRequestData, AttendServiceRequestVariables>;
+export function attendServiceRequest(dc: DataConnect, vars: AttendServiceRequestVariables): MutationPromise<AttendServiceRequestData, AttendServiceRequestVariables>;
 
 interface MyProfileRef {
   /* Allow users to create refs without passing in DataConnect */
@@ -1567,6 +2148,66 @@ export const serverHitRateLimitRef: ServerHitRateLimitRef;
 
 export function serverHitRateLimit(vars: ServerHitRateLimitVariables): MutationPromise<ServerHitRateLimitData, ServerHitRateLimitVariables>;
 export function serverHitRateLimit(dc: DataConnect, vars: ServerHitRateLimitVariables): MutationPromise<ServerHitRateLimitData, ServerHitRateLimitVariables>;
+
+interface ServerOrderByQuoteRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerOrderByQuoteVariables): QueryRef<ServerOrderByQuoteData, ServerOrderByQuoteVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerOrderByQuoteVariables): QueryRef<ServerOrderByQuoteData, ServerOrderByQuoteVariables>;
+  operationName: string;
+}
+export const serverOrderByQuoteRef: ServerOrderByQuoteRef;
+
+export function serverOrderByQuote(vars: ServerOrderByQuoteVariables, options?: ExecuteQueryOptions): QueryPromise<ServerOrderByQuoteData, ServerOrderByQuoteVariables>;
+export function serverOrderByQuote(dc: DataConnect, vars: ServerOrderByQuoteVariables, options?: ExecuteQueryOptions): QueryPromise<ServerOrderByQuoteData, ServerOrderByQuoteVariables>;
+
+interface ServerStationsForOrderRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerStationsForOrderVariables): QueryRef<ServerStationsForOrderData, ServerStationsForOrderVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerStationsForOrderVariables): QueryRef<ServerStationsForOrderData, ServerStationsForOrderVariables>;
+  operationName: string;
+}
+export const serverStationsForOrderRef: ServerStationsForOrderRef;
+
+export function serverStationsForOrder(vars: ServerStationsForOrderVariables, options?: ExecuteQueryOptions): QueryPromise<ServerStationsForOrderData, ServerStationsForOrderVariables>;
+export function serverStationsForOrder(dc: DataConnect, vars: ServerStationsForOrderVariables, options?: ExecuteQueryOptions): QueryPromise<ServerStationsForOrderData, ServerStationsForOrderVariables>;
+
+interface ServerCreateDefaultStationRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerCreateDefaultStationVariables): MutationRef<ServerCreateDefaultStationData, ServerCreateDefaultStationVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerCreateDefaultStationVariables): MutationRef<ServerCreateDefaultStationData, ServerCreateDefaultStationVariables>;
+  operationName: string;
+}
+export const serverCreateDefaultStationRef: ServerCreateDefaultStationRef;
+
+export function serverCreateDefaultStation(vars: ServerCreateDefaultStationVariables): MutationPromise<ServerCreateDefaultStationData, ServerCreateDefaultStationVariables>;
+export function serverCreateDefaultStation(dc: DataConnect, vars: ServerCreateDefaultStationVariables): MutationPromise<ServerCreateDefaultStationData, ServerCreateDefaultStationVariables>;
+
+interface ServerSendOrderToKitchenRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerSendOrderToKitchenVariables): MutationRef<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerSendOrderToKitchenVariables): MutationRef<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
+  operationName: string;
+}
+export const serverSendOrderToKitchenRef: ServerSendOrderToKitchenRef;
+
+export function serverSendOrderToKitchen(vars: ServerSendOrderToKitchenVariables): MutationPromise<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
+export function serverSendOrderToKitchen(dc: DataConnect, vars: ServerSendOrderToKitchenVariables): MutationPromise<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
+
+interface ServerCreateServiceRequestRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerCreateServiceRequestVariables): MutationRef<ServerCreateServiceRequestData, ServerCreateServiceRequestVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerCreateServiceRequestVariables): MutationRef<ServerCreateServiceRequestData, ServerCreateServiceRequestVariables>;
+  operationName: string;
+}
+export const serverCreateServiceRequestRef: ServerCreateServiceRequestRef;
+
+export function serverCreateServiceRequest(vars: ServerCreateServiceRequestVariables): MutationPromise<ServerCreateServiceRequestData, ServerCreateServiceRequestVariables>;
+export function serverCreateServiceRequest(dc: DataConnect, vars: ServerCreateServiceRequestVariables): MutationPromise<ServerCreateServiceRequestData, ServerCreateServiceRequestVariables>;
 
 interface TenantBranchesRef {
   /* Allow users to create refs without passing in DataConnect */

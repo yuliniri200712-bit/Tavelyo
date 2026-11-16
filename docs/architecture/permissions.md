@@ -101,6 +101,24 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - El cliente (`customer`) no tiene operaciones de personal: solo la carta pública por QR y su propia participación (ADR-0011).
 - Pendiente: tope o motivo en `price.change` (🔸 de la matriz), y si un administrador de sucursal puede tener productos propios de su sucursal.
 
+### Pedidos, cocina y solicitudes (Fase 3, bloque 2, 2026-11-16)
+
+| Operaciones | Permiso | Ámbito |
+|---|---|---|
+| Estaciones: listar, crear, editar, archivar y asignar productos (`BranchStations`, `CreateStation`, `UpdateStation`, `SetProductStation`) | `catalog.manage` | Sucursal asignada. La predeterminada no se archiva |
+| Estaciones activas y cola de cocina (`KitchenStations`, `KitchenQueue`); «Empezar» y «Listo» | `kitchen.advance` | Sucursal asignada. Sin importes ni datos del cliente |
+| «Listos para recoger» (`PickupQueue`) y «Recogido» | `delivery.pickup` | Sucursal asignada |
+| «Entregado» | `delivery.deliver` | Sucursal asignada |
+| Entregar sin pasar por «recogido» | `delivery.skip_sequence` y motivo (3 a 200 caracteres) | Sucursal asignada; el motivo queda en `AuditEvent` |
+| Cancelar una línea que no salió de cocina | `order_item.cancel` y motivo | Sucursal asignada; merma si ya se empezó |
+| Pedidos de una mesa y salón con líneas y solicitudes (`SessionOrders`, `FloorView`) | `session.open` | Sucursal asignada |
+| Solicitudes pendientes y «Atendida» | `service_request.handle` | Sucursal asignada; solo mesas abiertas |
+| «Mis pedidos» (`MyOrders`, `USER_ANON`) | Participación vigente propia | Solo los pedidos de quien consulta (D-06), en una sesión abierta |
+| Envío a cocina, solicitudes, estación predeterminada y consultas del pedido (`Server*`) | `NO_ACCESS` | Solo el backend |
+
+- Cada cambio de estado comprueba en el servidor el estado y la versión que vio quien lo pide; si otra persona se adelantó, se rechaza con «Esta línea ya cambió» y no se escribe nada (caso 4).
+- El propietario no tiene `kitchen.advance`, `delivery.pickup` ni `delivery.deliver` (matriz §3): esas pantallas son del personal de cocina y del salón.
+
 ## 6. Pendiente
 
 - Topes concretos de descuento y reembolso por rol (configurables por empresa).

@@ -45,6 +45,7 @@ Por D-04, todo pedido está sujeto a garantía. Mientras no haya pasarela real (
 
 - **Permiso nuevo `service_request.handle`** para marcar una solicitud como atendida: propietario, administrador de sucursal, mesero y cajero (la matriz solo tenía `service_request.create`, del cliente).
 - **Estaciones con `catalog.manage`:** crearlas, archivarlas y asignar productos se hace junto con la carta de la sucursal.
+- **Envío a cocina en dos pasos (bloque 2):** el SDK web no admite listas de entrada, así que el backend guarda el pedido con sus líneas y después lo envía con la operación `ServerSendOrderToKitchen`, que comprueba en la misma transacción el pago autorizado (D-04), la mesa abierta y la persona vigente, y avisa a las pantallas (ADR-0007). Un pedido sin enviar no aparece en ninguna pantalla.
 - **Sin `KitchenTicket` ni `StateEvent`:** la línea lleva su estación y una marca de tiempo por estado; como ningún estado se repite (D-26), son su historial, y el actor queda en `AuditEvent` (`architecture/data-model.md`).
 
 ## 3. Diseño propuesto

@@ -40,3 +40,11 @@ Cocina y meseros necesitan ver cambios en segundos. PM §3 y §9 prohíben asumi
 - Navegadores reales con *service worker* (D-15).
 - Producción: latencia, límites de suscripciones y coste con la carga de D-09.
 - Reconexión tras cortes de red.
+
+## Implementación (Fase 3, bloque 2, 2026-11-16)
+
+- **Consultas suscribibles:** `KitchenQueue`, `PickupQueue`, `SessionOrders`, `FloorView`, `PendingServiceRequests` y `MyOrders`. Cada una declara un `@refresh(onMutationExecuted)` por operación que la afecta, con `condition` por sucursal (`branchId`) o, para el aviso de pedido nuevo al cliente, por sesión (`sessionId`).
+- **`_updateMany` dentro de una operación con nombre sí refresca.** La documentación dice que `_updateMany` y `_deleteMany` no emiten las señales **implícitas** (las de consultas por clave primaria). Con `@refresh(onMutationExecuted: { operation })` explícito, el refresco depende del nombre de la operación y no de cómo escribe por dentro. Los cambios de estado de las líneas usan `_updateMany` condicionado por estado y versión (caso 4).
+- **Envío a cocina en dos pasos:** el SDK web no admite listas de entrada (`_Data`), así que el backend guarda el pedido con sus líneas mediante un documento fijo de `executeGraphql`, que no emite señal. Después lo envía con la operación del conector `ServerSendOrderToKitchen`, que comprueba la autorización (D-04) y marca `sentToKitchenAt`. Las consultas de cocina, del salón y del cliente solo muestran pedidos enviados. Así se cumple la regla 3.
+- **Recuperación (B):** la cola de cocina, «Listos para recoger» y las solicitudes son el estado pendiente completo de la sucursal, no una lista de eventos. Al abrir la pantalla, al reconectar o tras un `onErr` se vuelven a pedir completas, sin cursor (caso 11).
+- **Pendiente para el bloque 4:** activar `clientCache` en el SDK generado (requisito de las suscripciones) y crear y vaciar la caché por sesión, como pide ADR-0008 §8.

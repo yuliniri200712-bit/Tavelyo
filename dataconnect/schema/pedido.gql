@@ -113,6 +113,12 @@ type Order @table(name: "customer_order") @unique(fields: ["id", "tenantId", "br
   quote: OrderQuote!
     @ref(fields: ["quoteId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
   submittedAt: Timestamp! @default(expr: "request.time")
+  """
+  Cuándo llegó a cocina. El backend guarda el pedido con sus líneas (el SDK web no admite listas
+  de entrada) y después lo envía con ServerSendOrderToKitchen, que comprueba la autorización, la
+  mesa y la persona, y avisa a las pantallas (ADR-0007). Mientras es null, nadie lo ve.
+  """
+  sentToKitchenAt: Timestamp
 }
 
 """

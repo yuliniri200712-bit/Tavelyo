@@ -1,0 +1,480 @@
+# Estaciones y cocina (Fase 3). Mismo patrón que salon.gql (ADR-0008): membresía activa, empresa
+# activa, permiso, sucursal asignada (salvo propietario), pertenencia de los recursos a la empresa
+# y a la sucursal, y AuditEvent en la misma transacción.
+# Toda variable usada en un filtro es obligatoria: una variable omitida anula su filtro.
+#
+# Cambios de estado de una línea (state-machines.md §1): cada operación comprueba el estado y la
+# versión que vio quien la pide, actualiza solo si siguen iguales (_updateMany condicionado) y, si
+# otra persona se adelantó entre la comprobación y la escritura, el último paso lo detecta
+# (ninguna fila actualizada) y revierte todo (caso 4). Las pantallas se refrescan por el nombre de
+# la operación (@refresh), filtrado por sucursal (ADR-0007).
+
+# Estaciones de la sucursal para administrarlas, incluidas las archivadas.
+query BranchStations($tenantId: UUID!, $branchId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  stations(
+    where: { tenantId: { eq: $tenantId }, branchId: { eq: $branchId } }
+    orderBy: [{ sort: ASC }, { name: ASC }]
+  ) {
+    id
+    name
+    sort
+    defaultForBranchId
+    archivedAt
+  }
+}
+
+mutation CreateStation($tenantId: UUID!, $branchId: UUID!, $name: String!, $sort: Int!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 40 && vars.sort >= 0"
+        message: "Datos de la estación no válidos"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    branch(id: $branchId) @check(expr: "this != null", message: "Sucursal inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La sucursal no pertenece a la empresa")
+      status @check(expr: "this == 'ACTIVE'", message: "La sucursal no está activa")
+    }
+  }
+  station_insert(data: { tenantId: $tenantId, branchId: $branchId, name: $name, sort: $sort })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "station.create"
+      resourceType: "station"
+      resourceId_expr: "response.station_insert.id"
+    }
+  )
+}
+
+# Edita, archiva o restaura una estación. La predeterminada no se archiva: recibe lo que no tiene
+# estación asignada.
+mutation UpdateStation(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $stationId: UUID!
+  $name: String!
+  $sort: Int!
+  $archived: Boolean!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    station(id: $stationId)
+      @check(expr: "this != null", message: "Estación inexistente")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 40 && vars.sort >= 0"
+        message: "Datos de la estación no válidos"
+      ) {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La estación no pertenece a la empresa")
+      branchId
+        @check(expr: "this == vars.branchId", message: "La estación no pertenece a la sucursal")
+      defaultForBranchId
+        @check(
+          expr: "this == null || !vars.archived"
+          message: "La estación predeterminada no se puede archivar"
+        )
+    }
+  }
+  station_update(
+    id: $stationId
+    data: { name: $name, sort: $sort, archivedAt_expr: "vars.archived ? request.time : null" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation_expr: "vars.archived ? 'station.archive' : 'station.update'"
+      resourceType: "station"
+      resourceId_expr: "vars.stationId"
+    }
+  )
+}
+
+# Asigna un producto de la carta de la sucursal a una estación activa de la misma sucursal.
+mutation SetProductStation($tenantId: UUID!, $branchId: UUID!, $productId: UUID!, $stationId: UUID!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "catalog.manage" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: catalog.manage") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    productBranch(key: { productId: $productId, branchId: $branchId })
+      @check(expr: "this != null", message: "El producto no está en la carta de la sucursal") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "El producto no pertenece a la empresa")
+    }
+    station(id: $stationId) @check(expr: "this != null", message: "Estación inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La estación no pertenece a la empresa")
+      branchId
+        @check(expr: "this == vars.branchId", message: "La estación no pertenece a la sucursal")
+      archivedAt @check(expr: "this == null", message: "La estación está archivada")
+    }
+  }
+  productBranch_update(
+    key: { productId: $productId, branchId: $branchId }
+    data: { stationId: $stationId, updatedAt_expr: "request.time" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "product_branch.station"
+      resourceType: "product"
+      resourceId_expr: "vars.productId"
+    }
+  )
+}
+
+# Estaciones activas entre las que elige quien trabaja en cocina (D-24).
+query KitchenStations($tenantId: UUID!, $branchId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(where: { permission: { code: { eq: "kitchen.advance" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: kitchen.advance") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  stations(
+    where: {
+      tenantId: { eq: $tenantId }
+      branchId: { eq: $branchId }
+      archivedAt: { isNull: true }
+    }
+    orderBy: [{ sort: ASC }, { name: ASC }]
+  ) {
+    id
+    name
+    defaultForBranchId
+  }
+}
+
+# Cola de una estación: líneas recibidas o en preparación de pedidos ya enviados a cocina, de la
+# más antigua a la más reciente. Sin importes ni datos del cliente (permissions.md §4); con los
+# alérgenos declarados. Se refresca sola (ADR-0007) y al reconectar se vuelve a pedir completa:
+# es el estado pendiente, no una lista de eventos (caso 11).
+query KitchenQueue($tenantId: UUID!, $branchId: UUID!, $stationId: UUID!)
+@auth(level: USER)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerSendOrderToKitchen"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "StartOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "FinishOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "CancelOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(where: { permission: { code: { eq: "kitchen.advance" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: kitchen.advance") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  orderItems(
+    where: {
+      _and: [
+        { tenantId: { eq: $tenantId } }
+        { branchId: { eq: $branchId } }
+        { stationId: { eq: $stationId } }
+        { status: { in: [RECEIVED, IN_PREPARATION] } }
+        { order: { sentToKitchenAt: { isNull: false } } }
+      ]
+    }
+    orderBy: [{ createdAt: ASC }, { position: ASC }]
+    limit: 200
+  ) {
+    id
+    version
+    status
+    quantity
+    productNameSnapshot
+    allergensSnapshot
+    note
+    startedAt
+    orderItemModifiers_on_item(orderBy: [{ position: ASC }]) {
+      nameSnapshot
+    }
+    order {
+      id
+      sentToKitchenAt
+      session {
+        table {
+          code
+        }
+      }
+    }
+  }
+}
+
+# «Empezar»: de recibido a en preparación.
+mutation StartOrderItem($tenantId: UUID!, $branchId: UUID!, $itemId: UUID!, $version: Int!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "kitchen.advance" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: kitchen.advance") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    orderItem(id: $itemId) @check(expr: "this != null", message: "Línea inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "La línea no pertenece a la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "La línea no pertenece a la sucursal")
+      version @check(expr: "this == vars.version", message: "Esta línea ya cambió")
+      status @check(expr: "this == 'RECEIVED'", message: "Esta línea ya cambió")
+    }
+  }
+  orderItem_updateMany(
+    where: { id: { eq: $itemId }, version: { eq: $version }, status: { eq: RECEIVED } }
+    data: { status: IN_PREPARATION, version_update: { inc: 1 }, startedAt_expr: "request.time" }
+  )
+  applied: query @redact {
+    orderItem(id: $itemId)
+      @check(expr: "response.orderItem_updateMany == 1", message: "Esta línea ya cambió") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "order_item.start"
+      resourceType: "order_item"
+      resourceId_expr: "vars.itemId"
+    }
+  )
+}
+
+# «Listo»: de en preparación a listo para recoger.
+mutation FinishOrderItem($tenantId: UUID!, $branchId: UUID!, $itemId: UUID!, $version: Int!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "kitchen.advance" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: kitchen.advance") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    orderItem(id: $itemId) @check(expr: "this != null", message: "Línea inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "La línea no pertenece a la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "La línea no pertenece a la sucursal")
+      version @check(expr: "this == vars.version", message: "Esta línea ya cambió")
+      status @check(expr: "this == 'IN_PREPARATION'", message: "Esta línea ya cambió")
+    }
+  }
+  orderItem_updateMany(
+    where: { id: { eq: $itemId }, version: { eq: $version }, status: { eq: IN_PREPARATION } }
+    data: { status: READY, version_update: { inc: 1 }, readyAt_expr: "request.time" }
+  )
+  applied: query @redact {
+    orderItem(id: $itemId)
+      @check(expr: "response.orderItem_updateMany == 1", message: "Esta línea ya cambió") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "order_item.finish"
+      resourceType: "order_item"
+      resourceId_expr: "vars.itemId"
+    }
+  )
+}

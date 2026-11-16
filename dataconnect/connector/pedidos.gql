@@ -1,0 +1,596 @@
+# Pedidos y solicitudes para el personal del salón (Fase 3). Mismo patrón que cocina.gql: permiso,
+# sucursal asignada, pertenencia de los recursos, cambio de estado condicionado por estado y
+# versión (caso 4), AuditEvent en la misma transacción y refresco por sucursal (ADR-0007).
+# Toda variable usada en un filtro es obligatoria: una variable omitida anula su filtro.
+
+# «Listos para recoger»: líneas listas o recogidas de la sucursal, de la más antigua a la más
+# reciente, con su mesa y su estación. Sin importes.
+query PickupQueue($tenantId: UUID!, $branchId: UUID!)
+@auth(level: USER)
+@refresh(
+  onMutationExecuted: {
+    operation: "FinishOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "PickUpOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "DeliverOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "DeliverOrderItemDirectly"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "CancelOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(where: { permission: { code: { eq: "delivery.pickup" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: delivery.pickup") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  orderItems(
+    where: {
+      _and: [
+        { tenantId: { eq: $tenantId } }
+        { branchId: { eq: $branchId } }
+        { status: { in: [READY, PICKED_UP] } }
+      ]
+    }
+    orderBy: [{ readyAt: ASC }, { position: ASC }]
+    limit: 200
+  ) {
+    id
+    version
+    status
+    quantity
+    productNameSnapshot
+    note
+    readyAt
+    pickedUpAt
+    orderItemModifiers_on_item(orderBy: [{ position: ASC }]) {
+      nameSnapshot
+    }
+    station {
+      name
+    }
+    order {
+      session {
+        id
+        table {
+          code
+        }
+      }
+    }
+  }
+}
+
+# Pedidos enviados a cocina de una mesa, con el estado de cada línea (para seguirlos y cancelar).
+query SessionOrders($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!)
+@auth(level: USER)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerSendOrderToKitchen"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "StartOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "FinishOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "PickUpOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "DeliverOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "DeliverOrderItemDirectly"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "CancelOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(where: { permission: { code: { eq: "session.open" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: session.open") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  orders(
+    where: {
+      _and: [
+        { tenantId: { eq: $tenantId } }
+        { branchId: { eq: $branchId } }
+        { sessionId: { eq: $sessionId } }
+        { sentToKitchenAt: { isNull: false } }
+      ]
+    }
+    orderBy: [{ sentToKitchenAt: ASC }]
+  ) {
+    id
+    sentToKitchenAt
+    orderItems_on_order(orderBy: [{ position: ASC }]) {
+      id
+      version
+      status
+      quantity
+      productNameSnapshot
+      note
+      cancelReason
+      orderItemModifiers_on_item(orderBy: [{ position: ASC }]) {
+        nameSnapshot
+      }
+    }
+  }
+}
+
+# «Recogido»: el mesero toma la línea lista.
+mutation PickUpOrderItem($tenantId: UUID!, $branchId: UUID!, $itemId: UUID!, $version: Int!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "delivery.pickup" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: delivery.pickup") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    orderItem(id: $itemId) @check(expr: "this != null", message: "Línea inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "La línea no pertenece a la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "La línea no pertenece a la sucursal")
+      version @check(expr: "this == vars.version", message: "Esta línea ya cambió")
+      status @check(expr: "this == 'READY'", message: "Esta línea ya cambió")
+    }
+  }
+  orderItem_updateMany(
+    where: { id: { eq: $itemId }, version: { eq: $version }, status: { eq: READY } }
+    data: { status: PICKED_UP, version_update: { inc: 1 }, pickedUpAt_expr: "request.time" }
+  )
+  applied: query @redact {
+    orderItem(id: $itemId)
+      @check(expr: "response.orderItem_updateMany == 1", message: "Esta línea ya cambió") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "order_item.pick_up"
+      resourceType: "order_item"
+      resourceId_expr: "vars.itemId"
+    }
+  )
+}
+
+# «Entregado»: la línea recogida llega a la mesa.
+mutation DeliverOrderItem($tenantId: UUID!, $branchId: UUID!, $itemId: UUID!, $version: Int!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "delivery.deliver" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: delivery.deliver") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    orderItem(id: $itemId) @check(expr: "this != null", message: "Línea inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "La línea no pertenece a la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "La línea no pertenece a la sucursal")
+      version @check(expr: "this == vars.version", message: "Esta línea ya cambió")
+      status @check(expr: "this == 'PICKED_UP'", message: "Esta línea ya cambió")
+    }
+  }
+  orderItem_updateMany(
+    where: { id: { eq: $itemId }, version: { eq: $version }, status: { eq: PICKED_UP } }
+    data: { status: DELIVERED, version_update: { inc: 1 }, deliveredAt_expr: "request.time" }
+  )
+  applied: query @redact {
+    orderItem(id: $itemId)
+      @check(expr: "response.orderItem_updateMany == 1", message: "Esta línea ya cambió") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "order_item.deliver"
+      resourceType: "order_item"
+      resourceId_expr: "vars.itemId"
+    }
+  )
+}
+
+# Entrega una línea lista sin pasar por «recogido»: exige delivery.skip_sequence y motivo.
+mutation DeliverOrderItemDirectly(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $itemId: UUID!
+  $version: Int!
+  $reason: String!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.reason.trim()) >= 3 && size(vars.reason) <= 200"
+        message: "Escribe el motivo (entre 3 y 200 caracteres)"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "delivery.skip_sequence" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: delivery.skip_sequence") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    orderItem(id: $itemId) @check(expr: "this != null", message: "Línea inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "La línea no pertenece a la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "La línea no pertenece a la sucursal")
+      version @check(expr: "this == vars.version", message: "Esta línea ya cambió")
+      status @check(expr: "this == 'READY'", message: "Esta línea ya cambió")
+    }
+  }
+  orderItem_updateMany(
+    where: { id: { eq: $itemId }, version: { eq: $version }, status: { eq: READY } }
+    data: { status: DELIVERED, version_update: { inc: 1 }, deliveredAt_expr: "request.time" }
+  )
+  applied: query @redact {
+    orderItem(id: $itemId)
+      @check(expr: "response.orderItem_updateMany == 1", message: "Esta línea ya cambió") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "order_item.deliver_skipping_pick_up"
+      resourceType: "order_item"
+      resourceId_expr: "vars.itemId"
+      reason: $reason
+    }
+  )
+}
+
+# Cancela una línea que todavía no salió de cocina, con motivo (D-26). Si ya se empezó a
+# preparar, queda como merma. No devuelve dinero en esta fase (lo autorizado sigue reservado).
+mutation CancelOrderItem(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $itemId: UUID!
+  $version: Int!
+  $reason: String!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.reason.trim()) >= 3 && size(vars.reason) <= 200"
+        message: "Escribe el motivo (entre 3 y 200 caracteres)"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "order_item.cancel" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: order_item.cancel") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    orderItem(id: $itemId) @check(expr: "this != null", message: "Línea inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "La línea no pertenece a la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "La línea no pertenece a la sucursal")
+      version @check(expr: "this == vars.version", message: "Esta línea ya cambió")
+      status
+        @check(
+          expr: "this in ['RECEIVED', 'IN_PREPARATION', 'READY']"
+          message: "Esta línea ya salió de cocina y no se puede cancelar"
+        )
+    }
+  }
+  orderItem_updateMany(
+    where: {
+      id: { eq: $itemId }
+      version: { eq: $version }
+      status: { in: [RECEIVED, IN_PREPARATION, READY] }
+    }
+    data: {
+      status: CANCELLED
+      version_update: { inc: 1 }
+      cancelledAt_expr: "request.time"
+      cancelReason: $reason
+      wasted_expr: "response.query.orderItem.status != 'RECEIVED'"
+    }
+  )
+  applied: query @redact {
+    orderItem(id: $itemId)
+      @check(expr: "response.orderItem_updateMany == 1", message: "Esta línea ya cambió") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "order_item.cancel"
+      resourceType: "order_item"
+      resourceId_expr: "vars.itemId"
+      reason: $reason
+    }
+  )
+}
+
+# Solicitudes pendientes de las mesas abiertas de la sucursal, de la más antigua a la más reciente.
+query PendingServiceRequests($tenantId: UUID!, $branchId: UUID!)
+@auth(level: USER)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerCreateServiceRequest"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "AttendServiceRequest"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "CloseTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(where: { permission: { code: { eq: "service_request.handle" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: service_request.handle") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  serviceRequests(
+    where: {
+      _and: [
+        { tenantId: { eq: $tenantId } }
+        { branchId: { eq: $branchId } }
+        { status: { eq: PENDING } }
+        { session: { status: { eq: OPEN } } }
+      ]
+    }
+    orderBy: [{ createdAt: ASC }]
+    limit: 200
+  ) {
+    id
+    kind
+    createdAt
+    session {
+      id
+      table {
+        code
+      }
+    }
+  }
+}
+
+# «Atendida»: la solicitud sale de la lista y la mesa puede volver a pedirla.
+mutation AttendServiceRequest($tenantId: UUID!, $branchId: UUID!, $requestId: UUID!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "service_request.handle" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: service_request.handle") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    serviceRequest(id: $requestId) @check(expr: "this != null", message: "Solicitud inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La solicitud no pertenece a la empresa")
+      branchId
+        @check(expr: "this == vars.branchId", message: "La solicitud no pertenece a la sucursal")
+      status @check(expr: "this == 'PENDING'", message: "Esta solicitud ya fue atendida")
+    }
+  }
+  serviceRequest_update(
+    id: $requestId
+    data: {
+      status: ATTENDED
+      pendingKey: null
+      attendedAt_expr: "request.time"
+      attendedBy_expr: "auth.uid"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "service_request.attend"
+      resourceType: "service_request"
+      resourceId_expr: "vars.requestId"
+    }
+  )
+}

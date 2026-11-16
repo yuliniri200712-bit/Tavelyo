@@ -41,7 +41,7 @@ const SELF_ONLY = new Set(['MyProfile', 'UpsertMyProfile', 'MyMemberships']);
 /** Únicas operaciones públicas: la carta por QR (ADR-0011 §2). */
 const PUBLIC_OPERATIONS = new Set(['PublicMenu']);
 /** Operaciones del cliente con sesión anónima: comprueban su participación por auth.uid. */
-const CUSTOMER_OPERATIONS = new Set(['MyParticipation']);
+const CUSTOMER_OPERATIONS = new Set(['MyParticipation', 'MyOrders']);
 /** Operaciones de sucursal del propietario (ADR-0011 §6). */
 const BRANCH_OPERATIONS = new Set(['CreateBranch', 'UpdateBranch']);
 /**

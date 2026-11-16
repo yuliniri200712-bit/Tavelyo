@@ -64,6 +64,16 @@ mutation CreateBranch($tenantId: UUID!, $name: String!, $currency: String!, $tim
       status: ACTIVE
     }
   )
+  # Toda sucursal nace con su estación predeterminada (Fase 3): recibe lo que no tiene estación.
+  station_insert(
+    data: {
+      tenantId: $tenantId
+      branchId_expr: "response.branch_insert.id"
+      name: "Cocina"
+      sort: 0
+      defaultForBranchId_expr: "response.branch_insert.id"
+    }
+  )
   auditEvent_insert(
     data: {
       tenantId: $tenantId
