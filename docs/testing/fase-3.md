@@ -39,4 +39,15 @@ Hallazgos del bloque:
 - **El emulador genera el SDK al cargar el conector** y necesita el `package.json` de `packages/data-access` en su copia de trabajo; sin él se detiene sin un error claro. Se añadió a la copia del contenedor.
 - En local, las pruebas del backend necesitan `FIREBASE_AUTH_EMULATOR_HOST`, `DATA_CONNECT_EMULATOR_HOST` y `GCLOUD_PROJECT`, que en CI define `emulators:exec`. Esa variable de SQL Connect hace fallar la prueba de pasarelas del SDK web, así que en local las dos suites se ejecutan por separado.
 
+## 2026-11-16 — Bloque 3: backend del envío a cocina y solicitudes
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Backend, unitarias | `npx vitest run backend/src` | ✅ 101 pruebas. `authorizeQuote` (6): versión del texto, envío tras autorizar, rechazado y con acción pendiente sin pedido, reintento sin cobro doble, retención para liberar y mesa cerrada. Envío a cocina (9): estación y alérgenos por línea, opciones en orden, pedido ya enviado, recuperación, choque de unicidad y estación predeterminada creada. `requestService` (4) |
+| Backend, integración | `npx vitest run --config vitest.integration.config.ts backend/tests` | ✅ 47 pruebas con las funciones reales. Nuevas: el pedido llega a la cola de cocina con sus líneas y el consentimiento queda guardado; **dos pulsaciones simultáneas dan un solo pedido**; sin autorización no hay pedido; texto viejo rechazado; **recuperación tras las dos caídas simuladas**; la persona retirada antes del envío deja el resumen `RELEASE_PENDING`; solicitudes con aviso repetido y personas ajenas |
+| Recorridos del cliente | `npx playwright test --config playwright.emulators.config.ts --project=chrome customer-order accessibility-fase-2` | ✅ 4 en Chrome, con el texto de la preautorización en la tarjeta de pago |
+| Conjunto | `npm run check` / integración de SQL Connect | ✅ 592 unitarias / 98 |
+
+Hallazgo: las pruebas nuevas sentaron más de 20 personas en la misma mesa y el límite por mesa de `joinTableSession` las detuvo, como debía. Cada grupo nuevo usa su propia mesa.
+
 Pendiente de verificar en los bloques siguientes: las suscripciones (`@refresh`) con el SDK web en el navegador, y la reconexión de cocina (caso 11).

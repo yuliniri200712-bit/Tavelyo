@@ -176,43 +176,67 @@ query ServerQuoteByKey($participantId: UUID!, $idempotencyKey: String!) @auth(le
 # El resumen con sus líneas lo guarda el backend con executeGraphql (documento fijo en
 # backend/src/data/order-quotes.ts): el SDK web generado no admite listas de tipo _Data.
 
-# Resumen de un cliente para autorizar su pago: solo el suyo, con la mesa todavía abierta.
+# Resumen de un cliente para autorizar su pago y enviarlo a cocina: solo el suyo, con sus líneas.
+# Devuelve el estado de la mesa y de la participación en lugar de filtrarlos: un resumen ya
+# autorizado de una mesa que se cerró debe quedar para liberar (Fase 3), no desaparecer.
 query ServerQuoteForPayment($quoteId: UUID!, $authUid: String!) @auth(level: NO_ACCESS) {
   orderQuotes(
-    where: {
-      _and: [
-        { id: { eq: $quoteId } }
-        {
-          participant: {
-            authUid: { eq: $authUid }
-            removedAt: { isNull: true }
-            expiresAt: { gt_expr: "request.time" }
-          }
-        }
-        { session: { status: { eq: OPEN } } }
-      ]
-    }
+    where: { _and: [{ id: { eq: $quoteId } }, { participant: { authUid: { eq: $authUid } } }] }
     limit: 1
   ) {
     id
     tenantId
+    branchId
+    sessionId
+    participantId
     status
     currency
     totalMinor
     expiresAt
     paymentRef
+    session {
+      status
+    }
+    participant {
+      removedAt
+      expiresAt
+    }
+    orderQuoteLines_on_quote(orderBy: [{ position: ASC }]) {
+      position
+      productId
+      priceId
+      productNameSnapshot
+      quantity
+      unitPriceMinor
+      modifiersSnapshot
+      modifiersMinor
+      lineTotalMinor
+      taxMinor
+      note
+    }
   }
 }
 
-# Resultado de la autorización (simulada en la Fase 2), auditado.
+# Resultado de la autorización (simulada mientras no haya pasarela, D-02), con la versión del texto
+# de preautorización que aceptó el cliente (RF-PA-02), auditado.
 mutation ServerSetQuotePayment(
   $quoteId: UUID!
   $tenantId: UUID!
   $authUid: String!
   $status: OrderQuoteStatus!
   $paymentRef: String!
+  $consentTextVersion: String!
 ) @auth(level: NO_ACCESS) @transaction {
-  orderQuote_update(id: $quoteId, data: { status: $status, paymentRef: $paymentRef })
+  orderQuote_update(
+    id: $quoteId
+    data: {
+      status: $status
+      paymentRef: $paymentRef
+      consentTextVersion: $consentTextVersion
+      consentedAt_expr: "request.time"
+      authorizedAt_expr: "vars.status == 'AUTHORIZED' ? request.time : null"
+    }
+  )
   auditEvent_insert(
     data: {
       tenantId: $tenantId
@@ -248,9 +272,9 @@ query ServerOrderByQuote($quoteId: UUID!) @auth(level: NO_ACCESS) {
   }
 }
 
-# Estación de cada producto en la sucursal y la estación predeterminada, para fijar la de cada
-# línea al crear el pedido.
-query ServerStationsForOrder($tenantId: UUID!, $branchId: UUID!, $productIds: [UUID!]!)
+# Estación y alérgenos declarados de cada producto en la sucursal, y la estación predeterminada,
+# para fijar la estación de cada línea y su instantánea de alérgenos al crear el pedido.
+query ServerProductsForOrder($tenantId: UUID!, $branchId: UUID!, $productIds: [UUID!]!)
 @auth(level: NO_ACCESS) {
   productBranches(
     where: {
@@ -263,6 +287,9 @@ query ServerStationsForOrder($tenantId: UUID!, $branchId: UUID!, $productIds: [U
     station {
       id
       archivedAt
+    }
+    product {
+      allergensDeclared
     }
   }
   defaultStation: stations(
@@ -334,6 +361,29 @@ mutation ServerSendOrderToKitchen(
       operation: "order.send_to_kitchen"
       resourceType: "order"
       resourceId_expr: "vars.orderId"
+    }
+  )
+}
+
+# Un resumen autorizado que no se pudo enviar a cocina (la mesa se cerró, la persona ya no está o
+# venció): la retención queda para liberar (Fase 4, con la pasarela real).
+mutation ServerMarkQuoteReleasePending($quoteId: UUID!, $tenantId: UUID!, $authUid: String!)
+@auth(level: NO_ACCESS)
+@transaction {
+  query @redact {
+    orderQuote(id: $quoteId) @check(expr: "this != null", message: "Resumen inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El resumen no es de la empresa")
+      status @check(expr: "this == 'AUTHORIZED'", message: "El resumen no está autorizado")
+    }
+  }
+  orderQuote_update(id: $quoteId, data: { status: RELEASE_PENDING })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "order_quote.release_pending"
+      resourceType: "order_quote"
+      resourceId_expr: "vars.quoteId"
     }
   )
 }

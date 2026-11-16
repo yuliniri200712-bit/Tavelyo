@@ -858,6 +858,17 @@ export interface ServerInsertParticipantVariables {
   expiresAt: TimestampString;
 }
 
+export interface ServerMarkQuoteReleasePendingData {
+  orderQuote_update?: OrderQuote_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerMarkQuoteReleasePendingVariables {
+  quoteId: UUIDString;
+  tenantId: UUIDString;
+  authUid: string;
+}
+
 export interface ServerOpenSessionByQrData {
   diningTables: ({
     id: UUIDString;
@@ -892,6 +903,28 @@ export interface ServerOrderByQuoteData {
 
 export interface ServerOrderByQuoteVariables {
   quoteId: UUIDString;
+}
+
+export interface ServerProductsForOrderData {
+  productBranches: ({
+    productId: UUIDString;
+    station?: {
+      id: UUIDString;
+      archivedAt?: TimestampString | null;
+    } & Station_Key;
+    product: {
+      allergensDeclared?: string[] | null;
+    };
+  })[];
+  defaultStation: ({
+    id: UUIDString;
+  } & Station_Key)[];
+}
+
+export interface ServerProductsForOrderVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  productIds: UUIDString[];
 }
 
 export interface ServerProductsForQuoteData {
@@ -997,11 +1030,34 @@ export interface ServerQuoteForPaymentData {
   orderQuotes: ({
     id: UUIDString;
     tenantId: UUIDString;
+    branchId: UUIDString;
+    sessionId: UUIDString;
+    participantId: UUIDString;
     status: OrderQuoteStatus;
     currency: string;
     totalMinor: Int64String;
     expiresAt: TimestampString;
     paymentRef?: string | null;
+    session: {
+      status: TableSessionStatus;
+    };
+    participant: {
+      removedAt?: TimestampString | null;
+      expiresAt: TimestampString;
+    };
+    orderQuoteLines_on_quote: ({
+      position: number;
+      productId: UUIDString;
+      priceId: UUIDString;
+      productNameSnapshot: string;
+      quantity: number;
+      unitPriceMinor: Int64String;
+      modifiersSnapshot?: string[] | null;
+      modifiersMinor: Int64String;
+      lineTotalMinor: Int64String;
+      taxMinor: Int64String;
+      note?: string | null;
+    })[];
   } & OrderQuote_Key)[];
 }
 
@@ -1043,25 +1099,7 @@ export interface ServerSetQuotePaymentVariables {
   authUid: string;
   status: OrderQuoteStatus;
   paymentRef: string;
-}
-
-export interface ServerStationsForOrderData {
-  productBranches: ({
-    productId: UUIDString;
-    station?: {
-      id: UUIDString;
-      archivedAt?: TimestampString | null;
-    } & Station_Key;
-  })[];
-  defaultStation: ({
-    id: UUIDString;
-  } & Station_Key)[];
-}
-
-export interface ServerStationsForOrderVariables {
-  tenantId: UUIDString;
-  branchId: UUIDString;
-  productIds: UUIDString[];
+  consentTextVersion: string;
 }
 
 export interface ServiceRequest_Key {
@@ -2161,17 +2199,17 @@ export const serverOrderByQuoteRef: ServerOrderByQuoteRef;
 export function serverOrderByQuote(vars: ServerOrderByQuoteVariables, options?: ExecuteQueryOptions): QueryPromise<ServerOrderByQuoteData, ServerOrderByQuoteVariables>;
 export function serverOrderByQuote(dc: DataConnect, vars: ServerOrderByQuoteVariables, options?: ExecuteQueryOptions): QueryPromise<ServerOrderByQuoteData, ServerOrderByQuoteVariables>;
 
-interface ServerStationsForOrderRef {
+interface ServerProductsForOrderRef {
   /* Allow users to create refs without passing in DataConnect */
-  (vars: ServerStationsForOrderVariables): QueryRef<ServerStationsForOrderData, ServerStationsForOrderVariables>;
+  (vars: ServerProductsForOrderVariables): QueryRef<ServerProductsForOrderData, ServerProductsForOrderVariables>;
   /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect, vars: ServerStationsForOrderVariables): QueryRef<ServerStationsForOrderData, ServerStationsForOrderVariables>;
+  (dc: DataConnect, vars: ServerProductsForOrderVariables): QueryRef<ServerProductsForOrderData, ServerProductsForOrderVariables>;
   operationName: string;
 }
-export const serverStationsForOrderRef: ServerStationsForOrderRef;
+export const serverProductsForOrderRef: ServerProductsForOrderRef;
 
-export function serverStationsForOrder(vars: ServerStationsForOrderVariables, options?: ExecuteQueryOptions): QueryPromise<ServerStationsForOrderData, ServerStationsForOrderVariables>;
-export function serverStationsForOrder(dc: DataConnect, vars: ServerStationsForOrderVariables, options?: ExecuteQueryOptions): QueryPromise<ServerStationsForOrderData, ServerStationsForOrderVariables>;
+export function serverProductsForOrder(vars: ServerProductsForOrderVariables, options?: ExecuteQueryOptions): QueryPromise<ServerProductsForOrderData, ServerProductsForOrderVariables>;
+export function serverProductsForOrder(dc: DataConnect, vars: ServerProductsForOrderVariables, options?: ExecuteQueryOptions): QueryPromise<ServerProductsForOrderData, ServerProductsForOrderVariables>;
 
 interface ServerCreateDefaultStationRef {
   /* Allow users to create refs without passing in DataConnect */
@@ -2196,6 +2234,18 @@ export const serverSendOrderToKitchenRef: ServerSendOrderToKitchenRef;
 
 export function serverSendOrderToKitchen(vars: ServerSendOrderToKitchenVariables): MutationPromise<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
 export function serverSendOrderToKitchen(dc: DataConnect, vars: ServerSendOrderToKitchenVariables): MutationPromise<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
+
+interface ServerMarkQuoteReleasePendingRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerMarkQuoteReleasePendingVariables): MutationRef<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerMarkQuoteReleasePendingVariables): MutationRef<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
+  operationName: string;
+}
+export const serverMarkQuoteReleasePendingRef: ServerMarkQuoteReleasePendingRef;
+
+export function serverMarkQuoteReleasePending(vars: ServerMarkQuoteReleasePendingVariables): MutationPromise<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
+export function serverMarkQuoteReleasePending(dc: DataConnect, vars: ServerMarkQuoteReleasePendingVariables): MutationPromise<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
 
 interface ServerCreateServiceRequestRef {
   /* Allow users to create refs without passing in DataConnect */

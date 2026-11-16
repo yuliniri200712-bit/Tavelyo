@@ -1,6 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import { formatLocalTime, formatMoney } from '@tavelyo/core';
-import type { QuoteSummary, SimulatedPaymentOutcome } from '@tavelyo/contracts';
+import {
+  preauthorizationConsentText,
+  type QuoteSummary,
+  type SimulatedPaymentOutcome,
+} from '@tavelyo/contracts';
 import { CartLines, cartTotal } from '@tavelyo/cart';
 import {
   ActionNotice,
@@ -232,6 +236,7 @@ function PaymentCard({
   const [outcome, setOutcome] = useState<SimulatedPaymentOutcome>('approved');
   return (
     <Card title="Pago simulado" headingLevel={2}>
+      <p>{preauthorizationConsentText(total)}</p>
       <p>
         Esta versión de prueba no cobra dinero real: el pago se simula y no se piden datos de
         tarjeta.

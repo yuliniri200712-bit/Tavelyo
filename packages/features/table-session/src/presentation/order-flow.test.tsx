@@ -3,7 +3,11 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { err, ok } from '@tavelyo/core';
-import type { QuoteOrderResponse, QuoteSummary } from '@tavelyo/contracts';
+import {
+  PREAUTHORIZATION_CONSENT_VERSION,
+  type QuoteOrderResponse,
+  type QuoteSummary,
+} from '@tavelyo/contracts';
 import type { CartStorage } from '@tavelyo/cart';
 import type { CustomerGateway, MenuProduct, PublicMenu } from '../domain/index.ts';
 import { OrderReviewPage } from './OrderReviewPage.tsx';
@@ -101,7 +105,7 @@ function fakeGateway(overrides: Partial<CustomerGateway> = {}): CustomerGateway 
     ),
     quote: vi.fn(async () => ok(quoted())),
     authorize: vi.fn(async () =>
-      ok({ quoteId: 'q1', status: 'authorized' as const, simulated: true }),
+      ok({ quoteId: 'q1', status: 'authorized' as const, orderId: 'o1', simulated: true }),
     ),
     ...overrides,
   };
@@ -210,7 +214,11 @@ describe('carta y pedido del cliente', () => {
       screen.getByRole('button', { name: named('Autorizar pago simulado · $ 37.400') }),
     );
     expect(await screen.findByText('Pedido listo')).toBeTruthy();
-    expect(gateway.authorize).toHaveBeenCalledWith({ quoteId: 'q1', simulatedOutcome: 'approved' });
+    expect(gateway.authorize).toHaveBeenCalledWith({
+      quoteId: 'q1',
+      consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
+      simulatedOutcome: 'approved',
+    });
     expect(screen.getByText(/El envío a cocina todavía no está disponible/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Hacer otro pedido' }));
     expect(screen.getByText('Tu pedido está vacío')).toBeTruthy();
@@ -339,7 +347,11 @@ describe('carta y pedido del cliente', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /Autorizar pago simulado/ }));
     expect(await screen.findByText(/El pago simulado fue rechazado/)).toBeTruthy();
-    expect(gateway.authorize).toHaveBeenCalledWith({ quoteId: 'q1', simulatedOutcome: 'declined' });
+    expect(gateway.authorize).toHaveBeenCalledWith({
+      quoteId: 'q1',
+      consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
+      simulatedOutcome: 'declined',
+    });
     expect(screen.getByRole('button', { name: 'Revisar pedido' })).toBeTruthy();
   });
 

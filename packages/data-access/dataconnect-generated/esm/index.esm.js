@@ -842,17 +842,17 @@ export function serverOrderByQuote(dcOrVars, varsOrOptions, options) {
   return executeQuery(serverOrderByQuoteRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
 }
 
-export const serverStationsForOrderRef = (dcOrVars, vars) => {
+export const serverProductsForOrderRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'ServerStationsForOrder', inputVars);
+  return queryRef(dcInstance, 'ServerProductsForOrder', inputVars);
 }
-serverStationsForOrderRef.operationName = 'ServerStationsForOrder';
+serverProductsForOrderRef.operationName = 'ServerProductsForOrder';
 
-export function serverStationsForOrder(dcOrVars, varsOrOptions, options) {
+export function serverProductsForOrder(dcOrVars, varsOrOptions, options) {
   
   const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
-  return executeQuery(serverStationsForOrderRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+  return executeQuery(serverProductsForOrderRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
 }
 
 export const serverCreateDefaultStationRef = (dcOrVars, vars) => {
@@ -877,6 +877,18 @@ serverSendOrderToKitchenRef.operationName = 'ServerSendOrderToKitchen';
 export function serverSendOrderToKitchen(dcOrVars, vars) {
   const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
   return executeMutation(serverSendOrderToKitchenRef(dcInstance, inputVars));
+}
+
+export const serverMarkQuoteReleasePendingRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerMarkQuoteReleasePending', inputVars);
+}
+serverMarkQuoteReleasePendingRef.operationName = 'ServerMarkQuoteReleasePending';
+
+export function serverMarkQuoteReleasePending(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverMarkQuoteReleasePendingRef(dcInstance, inputVars));
 }
 
 export const serverCreateServiceRequestRef = (dcOrVars, vars) => {

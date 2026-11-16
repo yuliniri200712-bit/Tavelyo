@@ -1,8 +1,10 @@
-import { PaymentTimeoutError } from '@tavelyo/contracts';
+import { PaymentTimeoutError, PREAUTHORIZATION_CONSENT_VERSION } from '@tavelyo/contracts';
 import { describe, expect, it, vi } from 'vitest';
 import type { Actor } from '../shared/outcome.ts';
+import type { DispatchResult } from '../orders/send-to-kitchen.ts';
 import {
   createAuthorizeQuote,
+  NOT_SENT,
   parseAuthorizeQuoteInput,
   type PayableQuote,
   type PaymentQuoteStore,
@@ -21,14 +23,23 @@ const actor: Actor = {
 };
 const QUOTE = '9'.repeat(32);
 const NOW = new Date('2026-11-13T18:00:00Z');
+const ORDER = '5'.repeat(32);
 const quote: PayableQuote = {
   id: QUOTE,
   tenantId: '7'.repeat(32),
+  branchId: '6'.repeat(32),
+  sessionId: '4'.repeat(32),
+  participantId: '3'.repeat(32),
   status: 'QUOTED',
   currency: 'COP',
   totalMinor: '6480000',
   expiresAt: new Date('2026-11-13T18:15:00Z'),
+  sessionOpen: true,
+  participantRemoved: false,
+  participantExpiresAt: new Date('2026-11-13T22:00:00Z'),
+  lines: [],
 };
+const CONSENT = { consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION };
 
 describe('adaptador de pago simulado', () => {
   it('se niega a crearse fuera de un proyecto demo-*', () => {
@@ -91,41 +102,64 @@ describe('adaptador de pago simulado', () => {
   });
 });
 
-function setup(found: PayableQuote | null) {
+function setup(
+  found: PayableQuote | null,
+  dispatched: DispatchResult = { kind: 'sent', orderId: ORDER },
+) {
   const quotes = {
     forPayment: vi.fn(async () => found),
     setPayment: vi.fn(async () => undefined),
+    markReleasePending: vi.fn(async () => undefined),
   } satisfies PaymentQuoteStore;
   const payments = createSimulatedPaymentGateway('demo-tavelyo');
+  const dispatch = vi.fn(async () => dispatched);
   const authorize = createAuthorizeQuote({
     quotes,
     payments,
+    dispatch,
     limiter: { admit: async () => true },
     clock: { now: () => NOW },
   });
-  return { quotes, payments, authorize };
+  return { quotes, payments, dispatch, authorize };
 }
 
+const request = (extra: Record<string, unknown> = {}) => ({
+  quoteId: QUOTE,
+  ...CONSENT,
+  ...extra,
+});
+
 describe('authorizeQuote', () => {
-  it('solo admite el resultado forzado con el adaptador simulado', () => {
-    expect(
-      parseAuthorizeQuoteInput({ quoteId: QUOTE, simulatedOutcome: 'declined' }, true).ok,
-    ).toBe(true);
-    expect(
-      parseAuthorizeQuoteInput({ quoteId: QUOTE, simulatedOutcome: 'declined' }, false).ok,
-    ).toBe(false);
-    expect(
-      parseAuthorizeQuoteInput({ quoteId: QUOTE, simulatedOutcome: 'lo-que-sea' }, true).ok,
-    ).toBe(false);
-    expect(parseAuthorizeQuoteInput({ quoteId: QUOTE, amountMinor: '1' }, true).ok).toBe(false);
+  it('exige la versión vigente del texto y solo admite el resultado forzado en simulado', async () => {
+    expect(parseAuthorizeQuoteInput(request({ simulatedOutcome: 'declined' }), true).ok).toBe(true);
+    expect(parseAuthorizeQuoteInput(request({ simulatedOutcome: 'declined' }), false).ok).toBe(
+      false,
+    );
+    expect(parseAuthorizeQuoteInput(request({ simulatedOutcome: 'lo-que-sea' }), true).ok).toBe(
+      false,
+    );
+    expect(parseAuthorizeQuoteInput(request({ amountMinor: '1' }), true).ok).toBe(false);
+    expect(parseAuthorizeQuoteInput({ quoteId: QUOTE }, true).ok).toBe(false);
+
+    const old = setup(quote);
+    expect(await old.authorize(actor, request({ consentTextVersion: '2020-01-01' }))).toMatchObject(
+      {
+        ok: false,
+        error: {
+          code: 'failed-precondition',
+          message: expect.stringMatching(/texto de la autorización cambió/),
+        },
+      },
+    );
+    expect(old.quotes.forPayment).not.toHaveBeenCalled();
   });
 
-  it('autoriza el importe del resumen guardado y lo marca como autorizado', async () => {
-    const { authorize, quotes, payments } = setup(quote);
+  it('autoriza el importe del resumen, guarda el consentimiento y envía el pedido a cocina', async () => {
+    const { authorize, quotes, payments, dispatch } = setup(quote);
     const spy = vi.spyOn(payments, 'authorize');
-    expect(await authorize(actor, { quoteId: QUOTE })).toEqual({
+    expect(await authorize(actor, request())).toEqual({
       ok: true,
-      value: { quoteId: QUOTE, status: 'authorized', simulated: true },
+      value: { quoteId: QUOTE, status: 'authorized', orderId: ORDER, simulated: true },
     });
     expect(spy).toHaveBeenCalledWith(
       expect.objectContaining({ amount: { amountMinor: '6480000', currency: 'COP' } }),
@@ -135,65 +169,101 @@ describe('authorizeQuote', () => {
       actor.uid,
       'AUTHORIZED',
       expect.stringMatching(/^sim_/),
+      PREAUTHORIZATION_CONSENT_VERSION,
     );
+    expect(dispatch).toHaveBeenCalledWith(quote, actor.uid);
   });
 
-  it('rechazado, requiere acción y tiempo agotado', async () => {
+  it('rechazado o con acción pendiente no llega a cocina (D-04)', async () => {
     const declined = setup(quote);
     expect(
-      await declined.authorize(actor, { quoteId: QUOTE, simulatedOutcome: 'declined' }),
-    ).toMatchObject({
-      ok: true,
-      value: { status: 'declined' },
-    });
+      await declined.authorize(actor, request({ simulatedOutcome: 'declined' })),
+    ).toMatchObject({ ok: true, value: { status: 'declined' } });
     expect(declined.quotes.setPayment).toHaveBeenCalledWith(
       quote,
       actor.uid,
       'DECLINED',
       expect.any(String),
+      PREAUTHORIZATION_CONSENT_VERSION,
     );
+    expect(declined.dispatch).not.toHaveBeenCalled();
 
     const action = setup(quote);
     expect(
-      await action.authorize(actor, { quoteId: QUOTE, simulatedOutcome: 'requires_action' }),
-    ).toMatchObject({
-      ok: true,
-      value: { status: 'requires_action' },
-    });
+      await action.authorize(actor, request({ simulatedOutcome: 'requires_action' })),
+    ).toMatchObject({ ok: true, value: { status: 'requires_action' } });
     expect(action.quotes.setPayment).not.toHaveBeenCalled();
+    expect(action.dispatch).not.toHaveBeenCalled();
 
     // La respuesta se pierde, pero la consulta posterior encuentra la autorización: sin cobro doble.
     const timeout = setup(quote);
-    expect(
-      await timeout.authorize(actor, { quoteId: QUOTE, simulatedOutcome: 'timeout' }),
-    ).toMatchObject({
+    expect(await timeout.authorize(actor, request({ simulatedOutcome: 'timeout' }))).toMatchObject({
       ok: true,
-      value: { status: 'authorized' },
+      value: { status: 'authorized', orderId: ORDER },
     });
   });
 
-  it('no autoriza resúmenes ajenos, vencidos o rechazados; repetir uno autorizado no cobra otra vez', async () => {
-    expect(await setup(null).authorize(actor, { quoteId: QUOTE })).toMatchObject({
+  it('un resumen ya autorizado (reintento o caída antes del envío) termina el envío sin volver a cobrar', async () => {
+    const done = setup({ ...quote, status: 'AUTHORIZED' });
+    const spy = vi.spyOn(done.payments, 'authorize');
+    expect(await done.authorize(actor, request())).toMatchObject({
+      ok: true,
+      value: { status: 'authorized', orderId: ORDER },
+    });
+    expect(spy).not.toHaveBeenCalled();
+    expect(done.dispatch).toHaveBeenCalledOnce();
+  });
+
+  it('si la mesa se cerró o la persona ya no está, no se envía y la retención queda para liberar', async () => {
+    const closed = setup({ ...quote, status: 'AUTHORIZED', sessionOpen: false });
+    expect(await closed.authorize(actor, request())).toEqual({
+      ok: false,
+      error: { code: 'failed-precondition', message: NOT_SENT },
+    });
+    expect(closed.dispatch).not.toHaveBeenCalled();
+    expect(closed.quotes.markReleasePending).toHaveBeenCalledOnce();
+
+    // El servidor rechazó el envío aunque al autorizar la persona seguía en la mesa.
+    const raced = setup(quote, { kind: 'rejected' });
+    expect(await raced.authorize(actor, request())).toMatchObject({
+      ok: false,
+      error: { message: NOT_SENT },
+    });
+    expect(raced.quotes.markReleasePending).toHaveBeenCalledOnce();
+
+    const pending = setup({ ...quote, status: 'RELEASE_PENDING' });
+    expect(await pending.authorize(actor, request())).toMatchObject({
+      ok: false,
+      error: { message: NOT_SENT },
+    });
+    expect(pending.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('no autoriza resúmenes ajenos, vencidos, rechazados ni de una mesa ya cerrada', async () => {
+    expect(await setup(null).authorize(actor, request())).toMatchObject({
       ok: false,
       error: { code: 'not-found' },
     });
     const expired = { ...quote, expiresAt: new Date('2026-11-13T17:59:00Z') };
-    expect(await setup(expired).authorize(actor, { quoteId: QUOTE })).toMatchObject({
+    expect(await setup(expired).authorize(actor, request())).toMatchObject({
       ok: false,
       error: { code: 'failed-precondition' },
     });
-    expect(
-      await setup({ ...quote, status: 'DECLINED' }).authorize(actor, { quoteId: QUOTE }),
-    ).toMatchObject({
-      ok: false,
-      error: { code: 'failed-precondition' },
-    });
-    const done = setup({ ...quote, status: 'AUTHORIZED' });
-    const spy = vi.spyOn(done.payments, 'authorize');
-    expect(await done.authorize(actor, { quoteId: QUOTE })).toMatchObject({
-      ok: true,
-      value: { status: 'authorized' },
-    });
-    expect(spy).not.toHaveBeenCalled();
+    expect(await setup({ ...quote, status: 'DECLINED' }).authorize(actor, request())).toMatchObject(
+      { ok: false, error: { code: 'failed-precondition' } },
+    );
+    for (const gone of [
+      { ...quote, sessionOpen: false },
+      { ...quote, participantRemoved: true },
+      { ...quote, participantExpiresAt: new Date('2026-11-13T17:00:00Z') },
+    ]) {
+      const result = setup(gone);
+      const spy = vi.spyOn(result.payments, 'authorize');
+      expect(await result.authorize(actor, request())).toMatchObject({
+        ok: false,
+        error: { code: 'not-found' },
+      });
+      expect(spy).not.toHaveBeenCalled();
+    }
   });
 });

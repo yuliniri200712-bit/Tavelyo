@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
-import type {
-  QuoteChange,
-  QuoteOrderResponse,
-  QuoteProblem,
-  QuoteSummary,
-  SimulatedPaymentOutcome,
+import {
+  PREAUTHORIZATION_CONSENT_VERSION,
+  type QuoteChange,
+  type QuoteOrderResponse,
+  type QuoteProblem,
+  type QuoteSummary,
+  type SimulatedPaymentOutcome,
 } from '@tavelyo/contracts';
 import { acceptServerPrices, cartTotal, toQuoteLines, type CartLine } from '@tavelyo/cart';
 import { ok, type Result } from '@tavelyo/core';
@@ -162,6 +163,8 @@ export function useCheckout({
     setState({ step: 'authorizing', quote });
     const result = await gateway.authorize({
       quoteId: quote.quoteId,
+      // La persona aceptó el texto que muestra la tarjeta de pago (RF-PA-02).
+      consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
       ...(simulatedOutcome ? { simulatedOutcome } : {}),
     });
     if (!result.ok) {

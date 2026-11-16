@@ -21,10 +21,15 @@ const DENIED = new Set([
   'data-connect/not-found',
 ]);
 
+/** Una regla del conector (@auth o @check) rechazó la operación. */
+export function isConnectorRejection(error: unknown): boolean {
+  const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : '';
+  return typeof code === 'string' && DENIED.has(code);
+}
+
 /** Una regla del conector rechazó la operación; cualquier otro error es inesperado y se lanza. */
 export function mapConnectorRejection(error: unknown, message: string): Failure {
-  const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : '';
-  if (typeof code === 'string' && DENIED.has(code)) return failure('permission-denied', message);
+  if (isConnectorRejection(error)) return failure('permission-denied', message);
   throw error;
 }
 
@@ -83,6 +88,7 @@ function provisionDocument(createProfile: boolean): string {
   return `mutation ProvisionTenant($tenantId: UUID!, $tenantRef: String!, $branchId: UUID!, $tenantName: String!, $branchName: String!, $currency: String!, $timezone: String!, $ownerId: String!, $ownerName: String!, $operatorId: String!) @transaction {
   tenant_insert(data: { id: $tenantId, name: $tenantName, status: ACTIVE, defaultCurrency: $currency, defaultTimezone: $timezone })
   branch_insert(data: { id: $branchId, tenantId: $tenantId, name: $branchName, currency: $currency, timezone: $timezone, status: ACTIVE })
+  station_insert(data: { tenantId: $tenantId, branchId: $branchId, name: "Cocina", sort: 0, defaultForBranchId: $branchId })
   ${profile}
   membership_insert(data: { tenantId: $tenantId, userId: $ownerId, roleCode: "tenant_owner", status: ACTIVE, createdBy: $operatorId })
   auditEvent_insert(data: { tenantId: $tenantId, actorId: $operatorId, operation: "tenant.provision", resourceType: "tenant", resourceId: $tenantRef })

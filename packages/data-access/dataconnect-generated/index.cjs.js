@@ -979,18 +979,18 @@ exports.serverOrderByQuote = function serverOrderByQuote(dcOrVars, varsOrOptions
 }
 ;
 
-const serverStationsForOrderRef = (dcOrVars, vars) => {
+const serverProductsForOrderRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'ServerStationsForOrder', inputVars);
+  return queryRef(dcInstance, 'ServerProductsForOrder', inputVars);
 }
-serverStationsForOrderRef.operationName = 'ServerStationsForOrder';
-exports.serverStationsForOrderRef = serverStationsForOrderRef;
+serverProductsForOrderRef.operationName = 'ServerProductsForOrder';
+exports.serverProductsForOrderRef = serverProductsForOrderRef;
 
-exports.serverStationsForOrder = function serverStationsForOrder(dcOrVars, varsOrOptions, options) {
+exports.serverProductsForOrder = function serverProductsForOrder(dcOrVars, varsOrOptions, options) {
   
   const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
-  return executeQuery(serverStationsForOrderRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+  return executeQuery(serverProductsForOrderRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
 }
 ;
 
@@ -1019,6 +1019,20 @@ exports.serverSendOrderToKitchenRef = serverSendOrderToKitchenRef;
 exports.serverSendOrderToKitchen = function serverSendOrderToKitchen(dcOrVars, vars) {
   const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
   return executeMutation(serverSendOrderToKitchenRef(dcInstance, inputVars));
+}
+;
+
+const serverMarkQuoteReleasePendingRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerMarkQuoteReleasePending', inputVars);
+}
+serverMarkQuoteReleasePendingRef.operationName = 'ServerMarkQuoteReleasePending';
+exports.serverMarkQuoteReleasePendingRef = serverMarkQuoteReleasePendingRef;
+
+exports.serverMarkQuoteReleasePending = function serverMarkQuoteReleasePending(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverMarkQuoteReleasePendingRef(dcInstance, inputVars));
 }
 ;
 

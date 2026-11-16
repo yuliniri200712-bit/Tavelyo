@@ -6,6 +6,8 @@ import { logger } from 'firebase-functions';
 import { setGlobalOptions } from 'firebase-functions/options';
 import { createOperatorDirectory, createSessionRevoker, createStaffAccounts } from './data/auth.ts';
 import { createPaymentQuoteStore, createQuoteStore } from './data/order-quotes.ts';
+import { createKitchenOrderStore } from './data/orders.ts';
+import { createServiceRequestStore } from './data/service-requests.ts';
 import {
   createAuditLog,
   createMembershipCommands,
@@ -15,6 +17,7 @@ import {
 import { createRateLimiter, createTableSessionStore } from './data/table-sessions.ts';
 import { createRevokeMember } from './members/revoke-member.ts';
 import { createQuoteOrder } from './orders/quote-order.ts';
+import { createKitchenDispatcher } from './orders/send-to-kitchen.ts';
 import { createAuthorizeQuote } from './payments/authorize-quote.ts';
 import {
   configuredProjectId,
@@ -22,6 +25,7 @@ import {
 } from './payments/simulated-gateway.ts';
 import { createCallables } from './presentation/callables.ts';
 import { createProvisionTenant } from './provisioning/provision-tenant.ts';
+import { createRequestService } from './service-requests/request-service.ts';
 import { systemClock } from './shared/clock.ts';
 import { createJoinTableSession } from './table-session/join-table-session.ts';
 
@@ -31,11 +35,11 @@ const LOCATION = 'us-central1';
 // Límite de instancias para acotar el coste ante un uso abusivo.
 setGlobalOptions({ region: LOCATION, maxInstances: 10 });
 
-// Fase 2: solo hay pago SIMULADO. Lanza al cargar el backend con un proyecto que no sea demo-*,
+// Fases 2 y 3: solo hay pago SIMULADO. Lanza al cargar el backend con un proyecto que no sea demo-*,
 // así que en un proyecto real ninguna función llega a servir hasta configurar la pasarela (D-02).
 const payments = createSimulatedPaymentGateway(configuredProjectId());
 logger.warn(
-  'PAGO SIMULADO: el backend usa el adaptador de pago simulado (Fase 2, sin dinero real).',
+  'PAGO SIMULADO: el backend usa el adaptador de pago simulado (sin dinero real, hasta D-02).',
 );
 
 const app = initializeApp();
@@ -46,33 +50,44 @@ const dataConnect = getDataConnect(
 );
 const limiter = createRateLimiter(dataConnect, () => systemClock.now());
 
-export const { revokeMember, provisionTenant, joinTableSession, quoteOrder, authorizeQuote } =
-  createCallables({
-    revokeMember: createRevokeMember({
-      memberships: createMembershipCommands(dataConnect),
-      directory: createMembershipDirectory(dataConnect),
-      sessions: createSessionRevoker(auth),
-      audit: createAuditLog(dataConnect),
-    }),
-    provisionTenant: createProvisionTenant({
-      operators: createOperatorDirectory(auth),
-      accounts: createStaffAccounts(auth),
-      provisioner: createTenantProvisioner(dataConnect),
-    }),
-    joinTableSession: createJoinTableSession({
-      sessions: createTableSessionStore(dataConnect),
-      limiter,
-      clock: systemClock,
-    }),
-    quoteOrder: createQuoteOrder({
-      quotes: createQuoteStore(dataConnect),
-      limiter,
-      clock: systemClock,
-    }),
-    authorizeQuote: createAuthorizeQuote({
-      quotes: createPaymentQuoteStore(dataConnect),
-      payments,
-      limiter,
-      clock: systemClock,
-    }),
-  });
+export const {
+  revokeMember,
+  provisionTenant,
+  joinTableSession,
+  quoteOrder,
+  authorizeQuote,
+  requestService,
+} = createCallables({
+  revokeMember: createRevokeMember({
+    memberships: createMembershipCommands(dataConnect),
+    directory: createMembershipDirectory(dataConnect),
+    sessions: createSessionRevoker(auth),
+    audit: createAuditLog(dataConnect),
+  }),
+  provisionTenant: createProvisionTenant({
+    operators: createOperatorDirectory(auth),
+    accounts: createStaffAccounts(auth),
+    provisioner: createTenantProvisioner(dataConnect),
+  }),
+  joinTableSession: createJoinTableSession({
+    sessions: createTableSessionStore(dataConnect),
+    limiter,
+    clock: systemClock,
+  }),
+  quoteOrder: createQuoteOrder({
+    quotes: createQuoteStore(dataConnect),
+    limiter,
+    clock: systemClock,
+  }),
+  authorizeQuote: createAuthorizeQuote({
+    quotes: createPaymentQuoteStore(dataConnect),
+    payments,
+    dispatch: createKitchenDispatcher({ orders: createKitchenOrderStore(dataConnect) }),
+    limiter,
+    clock: systemClock,
+  }),
+  requestService: createRequestService({
+    requests: createServiceRequestStore(dataConnect),
+    limiter,
+  }),
+});
