@@ -107,3 +107,11 @@ Entorno: Windows bloquea el ejecutable del emulador de SQL Connect (Control inte
 | Mesero: sin módulos de administración | ✅ |
 
 Según el propietario, «todo funciona perfectamente». La carta del cliente al escanear el QR llega en el bloque 6 y no se probó.
+
+## 2026-11-15 — Bloque 5: salón del mesero (operations)
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Conjunto | `npm run check` | ✅ 505 pruebas. Nuevas: hora local en 24 horas y en la zona de la sucursal (`formatLocalTime`), estado de las personas (vigente, vencida o retirada) y conteo del salón, pantalla del salón (mesa libre o abierta en texto, abrir, rechazo si otra persona la abrió antes, cerrar con confirmación, personas en la mesa y retiro, sin `session.close` no se ofrece cerrar ni retirar, estados vacío y error) y rutas (el mesero ve solo «Salón»; un rol sin `session.open` no lo ve) |
+| Autorización de las operaciones | `npm run test:integration` (`salon-carta.int.test.ts`, del bloque 2) | ✅ CI #24: abrir, ver participantes sin su uid, expulsar y cerrar; otra empresa y el cliente no expulsan; cocina no ve el salón |
+| Navegador con emuladores | `npm run test:e2e:emulators` (`waiter-floor.spec.ts`, Chrome y Safari de iPhone) | ✅ CI #24: el mesero abre la mesa, ve a las dos personas unidas, retira a una con confirmación, axe sin infracciones, cierra la mesa y queda libre; cocina no ve el módulo y la ruta directa no muestra datos |

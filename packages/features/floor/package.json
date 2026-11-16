@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Salón: sectores, mesas y su QR imprimible (administración) y, en el bloque 5, la vista del mesero",
+  "description": "Salón: sectores, mesas y su QR imprimible (administración) y la vista del mesero en servicio",
   "exports": {
     ".": "./src/index.ts",
     "./domain": "./src/domain/index.ts"
