@@ -102,3 +102,25 @@ Hallazgos:
 - **Pruebas unitarias intermitentes:** con todo el conjunto en paralelo, la primera búsqueda de algunos archivos pasaba de 1 s (ya había ocurrido en el bloque 4). `vitest.setup.ts` sube a 5 s la espera de Testing Library; no cambia lo que se comprueba.
 
 Pendiente de verificar en los bloques siguientes: TalkBack y el Android real (bloque 7).
+
+CI #43 en verde.
+
+## 2026-11-17 — Bloque 7: cierre
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| **Concurrencia (caso 4)** | `npx playwright test --config playwright.emulators.config.ts concurrency` | ✅ **5 navegadores** de D-15, con dos personas en navegadores separados. Dos cocineros pulsan «Empezar» en la misma línea a la vez: la línea queda «En preparación» en las dos pantallas y solo una recibe «Esta línea ya cambió. La pantalla muestra el estado actual.». Dos meseros pulsan «Atendida» en la misma solicitud a la vez: una persona la atiende, la otra recibe «ya atendida», y las dos pantallas quedan sin solicitudes pendientes |
+| **Accesibilidad de la Fase 3** | ídem con `accessibility-fase-3` | ✅ **320 px y texto al 200 %** sin desplazamiento horizontal en los 5 navegadores: «Pedido enviado a cocina», «Mis pedidos» con una solicitud hecha, cocina con los alérgenos, salón con solicitudes y pedidos abiertos, «Listos para recoger» y «Estaciones de cocina». **Solo con el teclado** (Chrome, Edge y Chrome Android; omitido en Safari, que no enfoca botones con Tab, como en la Fase 2): el cliente va a «Mis pedidos» y llama al mesero; cocina empieza, termina y cancela con motivo: Escape cierra el diálogo y devuelve el foco al botón, el foco empieza en «Volver» y el motivo está justo antes; el mesero recoge y entrega. axe ya corre en cada recorrido de la fase |
+| Reconexión de cocina (caso 11) | `kitchen-realtime`, dentro de la tanda completa | ✅ Sin cambios desde el bloque 4: sin red bloquea los botones y al volver recupera lo hecho entretanto |
+| **Tanda completa con emuladores** | `npx playwright test --config playwright.emulators.config.ts` | ✅ **81 superadas y 4 omitidas** (Tab en Safari, Fase 2 y Fase 3) en los 5 navegadores, 37 min: todos los recorridos de las fases 1 a 3, incluidos mesero, cocina y cliente |
+| **Android real** | Motorola edge 50 fusion, Android 16, Chrome 157; emuladores en Docker y puertos con `adb reverse` | ✅ Teléfono como cliente; computador como mesero y como cocina (ventana de incógnito). El teléfono tenía la versión de una prueba anterior y ofreció «Actualizar». El mesero abre la mesa M1, el cliente pide 2 bandejas paisa bien asadas y autoriza; cocina las ve sin recargar; «Mis pedidos» sigue en vivo «Empezar», «Listo», «Recogido» y «Entregado»; «Llamar al mesero» llega al salón y se marca «Atendida». Resultado: «Pedido de las 15:30 · Entregado» con «En vivo» en el teléfono |
+| Conjunto | `npm run check` | ✅ 659 pruebas unitarias, tipos, ESLint y Prettier |
+
+Hallazgos:
+- **De las pruebas, no de la app:** con varios navegadores abiertos a la vez, entrar como personal superó la espera habitual, y una llamada a `requestService` desde el navegador llegó a tardar unos 25 s. Medida sin navegador, la misma llamada tarda menos de 1 s: la demora es el emulador de Functions en Docker, que arranca un proceso nuevo (también para la consulta previa de CORS). Los recorridos esperan hasta 30 s el acceso y hasta 60 s los avisos que dependen del backend (`FUNCTION_WAIT`), con 180 s por prueba en los recorridos de varias personas.
+- **Para el despliegue:** un arranque en frío de las funciones puede retrasar el primer «Llamar al mesero» o el primer envío a cocina. Mantener instancias activas (`minInstances`) lo evita, pero tiene coste: se decide con el propietario al desplegar, después de medir la latencia real (ADR-0007).
+- En el panel de pedidos de la mesa, el mesero ve «Cancelar» en un plato «Listo para recoger»: es lo esperado (`order_item.cancel` vale mientras el plato no sale de cocina; «Entregar sin recoger» es solo del dueño y del administrador).
+- **Del equipo local, no del código:** lanzado desde `c:\…` (unidad en minúscula), Vitest carga dos veces su propio módulo y los 58 archivos fallan con «Vitest failed to find the current suite». Desde `C:\…` pasan todos. Hay que lanzar las pruebas desde la ruta con la unidad en mayúscula.
+- Ayudas compartidas nuevas en `e2e/support`: `a11y.ts` (`tabTo`, `expectReflow`, antes dentro de `accessibility-fase-2.spec.ts`) y, en `orders.ts`, `openStaffPage`, `orderFromMenu` y `named`.
+
+No verificado en el bloque 7: TalkBack en las pantallas nuevas (se revisó en la Fase 1; en esta fase los cambios se anuncian en texto y lo comprueban las pruebas de componentes) y VoiceOver en iPhone (pendiente desde la Fase 1).

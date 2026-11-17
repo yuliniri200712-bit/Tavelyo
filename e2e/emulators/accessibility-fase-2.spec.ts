@@ -1,8 +1,9 @@
 // Accesibilidad de las pantallas de la Fase 2 (bloque 7): teclado y texto ampliado, con datos
 // reales en los emuladores. axe ya corre en cada recorrido (mesas, carta, sucursales, salón, cliente).
 // Se ejecuta con `npm run test:e2e:emulators`.
-import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { APPS } from '../../playwright.config.ts';
+import { expectReflow, tabTo } from '../support/a11y.ts';
 import { expectNotice } from '../support/notices.ts';
 import {
   createUser,
@@ -39,39 +40,6 @@ async function prepare(testInfo: TestInfo) {
     'OpenTableSession',
   );
   return { owner, tenantName, fixture };
-}
-
-/** Avanza con Tab hasta que el elemento tenga el foco (falla si no llega). */
-async function tabTo(page: Page, target: Locator, maxPresses = 80) {
-  for (let i = 0; i < maxPresses; i += 1) {
-    if (await target.evaluate((element) => element === document.activeElement)) return;
-    await page.keyboard.press('Tab');
-  }
-  throw new Error(`El foco no llegó con Tab a: ${target.toString()}`);
-}
-
-/**
- * Sin desplazamiento horizontal a 320 px (reflow, WCAG 1.4.10) ni con el texto al 200 % a 640 px
- * (WCAG 1.4.4). `ready` es algo visible que indica que la pantalla terminó de cargar.
- */
-async function expectReflow(page: Page, screen: string, ready: Locator) {
-  for (const { width, fontSize } of [
-    { width: 320, fontSize: '100%' },
-    { width: 640, fontSize: '200%' },
-  ]) {
-    await page.setViewportSize({ width, height: 800 });
-    await page.evaluate((size) => {
-      document.documentElement.style.fontSize = size;
-    }, fontSize);
-    await expect(ready).toBeVisible();
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow, `${screen} a ${width} px con el texto al ${fontSize}`).toBeLessThanOrEqual(0);
-  }
-  await page.evaluate(() => {
-    document.documentElement.style.fontSize = '';
-  });
 }
 
 async function openMenu(page: Page, fixture: Fixture) {

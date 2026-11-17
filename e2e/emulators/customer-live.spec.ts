@@ -6,6 +6,10 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { APPS } from '../../playwright.config.ts';
 import { expectNotice } from '../support/notices.ts';
+import { FUNCTION_WAIT } from '../support/orders.ts';
+
+// Tres avisos que pasan por el backend: más tiempo que el general (90 s).
+test.describe.configure({ timeout: 180_000 });
 import {
   createUser,
   expectOk,
@@ -29,9 +33,6 @@ async function expectNoAxeViolations(page: Page) {
   const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze();
   expect(axe.violations).toEqual([]);
 }
-
-/** Espera de un aviso que depende de una función del backend en el emulador. */
-const FUNCTION_WAIT = 30_000;
 
 interface FloorData {
   sectors: Array<{
