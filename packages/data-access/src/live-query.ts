@@ -6,16 +6,17 @@ import { mapCommandError, type CommandError } from './command-errors.ts';
 // suscripción usa el registro propio del SDK, sin caché persistente (ADR-0007, implementación).
 export const SERVER_ONLY = { fetchPolicy: QueryFetchPolicy.SERVER_ONLY } as const;
 
-/** Lectura completa traducida al contrato del módulo. */
-export async function readQuery<Data, T>(
+/** Lectura completa traducida al contrato del módulo (errores del personal por defecto). */
+export async function readQuery<Data, T, E = CommandError>(
   run: () => Promise<{ readonly data: Data }>,
   map: (data: Data) => T,
-): Promise<Result<T, CommandError>> {
+  mapError: (error: unknown) => E = mapCommandError as (error: unknown) => E,
+): Promise<Result<T, E>> {
   try {
     const { data } = await run();
     return ok(map(data));
   } catch (error) {
-    return err(mapCommandError(error));
+    return err(mapError(error));
   }
 }
 
@@ -23,21 +24,22 @@ export async function readQuery<Data, T>(
  * Suscripción en tiempo real a una consulta con `@refresh` (ADR-0007). Devuelve la función que la
  * cancela; cada resultado llega ya traducido al contrato del módulo.
  */
-export function watchQuery<Data, Variables, T>(
+export function watchQuery<Data, Variables, T, E = CommandError>(
   ref: QueryRef<Data, Variables>,
   map: (data: Data) => T,
-  observer: LiveObserver<T, CommandError>,
+  observer: LiveObserver<T, E>,
+  mapError: (error: unknown) => E = mapCommandError as (error: unknown) => E,
 ): () => void {
   try {
     return subscribe(ref, {
       onNext: (result) => observer.onData(map(result.data)),
       onErr: (error) => {
-        if (error) observer.onError(mapCommandError(error));
+        if (error) observer.onError(mapError(error));
       },
     });
   } catch (error) {
     // Sin conexión de streaming, el SDK lanza al suscribir: la pantalla lo trata como sin red.
-    observer.onError(mapCommandError(error));
+    observer.onError(mapError(error));
     return () => undefined;
   }
 }

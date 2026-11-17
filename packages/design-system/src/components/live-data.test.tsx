@@ -127,6 +127,24 @@ describe('useLiveData y LiveStatus', () => {
     expect(live.load).toHaveBeenCalledTimes(2);
     expect(await screen.findByText('En vivo')).toBeTruthy();
   });
+  it('una respuesta que llega tras perder la red actualiza los datos, pero no dice «En vivo»', async () => {
+    const live = setup();
+    await screen.findByText('Datos: a');
+    const onLine = vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+    act(() => {
+      window.dispatchEvent(new Event('offline'));
+    });
+    await live.push(['a', 'tarde']);
+    expect(screen.getByText('Datos: a,tarde')).toBeTruthy();
+    expect(screen.getByText('Sin conexión con el servidor.')).toBeTruthy();
+    expect(screen.queryByText('En vivo')).toBeNull();
+    onLine.mockReturnValue(true);
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+    expect(await screen.findByText('En vivo')).toBeTruthy();
+    onLine.mockRestore();
+  });
 });
 
 describe('ReasonDialog', () => {

@@ -1,7 +1,13 @@
 import { signInAnonymously, type Auth } from 'firebase/auth';
 import { QueryFetchPolicy, type DataConnect } from 'firebase/data-connect';
 import { httpsCallable, type Functions } from 'firebase/functions';
-import { publicMenu, type PublicMenuData } from '@tavelyo/dataconnect-sdk';
+import {
+  myOrders,
+  myOrdersRef,
+  publicMenu,
+  type MyOrdersData,
+  type PublicMenuData,
+} from '@tavelyo/dataconnect-sdk';
 import { err, ok, type Result } from '@tavelyo/core';
 import type {
   AuthorizeQuoteRequest,
@@ -10,8 +16,17 @@ import type {
   JoinTableSessionResponse,
   QuoteOrderRequest,
   QuoteOrderResponse,
+  RequestServiceRequest,
+  RequestServiceResponse,
 } from '@tavelyo/contracts';
-import type { CustomerError, CustomerGateway, MenuProduct } from '@tavelyo/table-session/domain';
+import type {
+  CustomerError,
+  CustomerGateway,
+  MenuProduct,
+  MyOrder,
+} from '@tavelyo/table-session/domain';
+import { ITEM_STATUS } from './item-status.ts';
+import { readQuery, watchQuery } from './live-query.ts';
 import { mapDataError } from './sql-connect-gateways.ts';
 
 // Siempre al servidor: la PWA no conserva respuestas de datos (ADR-0008 §8, ADR-0009).
@@ -52,6 +67,35 @@ export function mapCallableError(error: unknown): CustomerError {
   const reason =
     code === 'permission-denied' ? 'not-participant' : code === 'unavailable' ? 'retry' : 'other';
   return { kind: 'rejected', reason, message };
+}
+
+/** Falla de una lectura de SQL Connect del cliente: sin conexión o inesperada. */
+function mapCustomerDataError(error: unknown): CustomerError {
+  return { kind: mapDataError(error) === 'network' ? 'network' : 'unknown' };
+}
+
+/** «Mis pedidos»: solo los propios y ya enviados a cocina (lo filtra el conector, D-06). */
+export function toMyOrders(data: MyOrdersData): MyOrder[] {
+  return data.orders.flatMap((order) => {
+    if (!order.sentToKitchenAt) return [];
+    return [
+      {
+        id: order.id,
+        sentAt: new Date(order.sentToKitchenAt),
+        currency: order.quote.currency,
+        totalMinor: String(order.quote.totalMinor),
+        items: order.orderItems_on_order.map((item) => ({
+          id: item.id,
+          status: ITEM_STATUS[item.status],
+          quantity: item.quantity,
+          productName: item.productNameSnapshot,
+          modifiers: item.orderItemModifiers_on_item.map((modifier) => modifier.nameSnapshot),
+          note: item.note ?? null,
+          lineTotalMinor: String(item.lineTotalMinor),
+        })),
+      },
+    ];
+  });
 }
 
 type MenuEntry =
@@ -170,5 +214,23 @@ export function createCustomerGateway({
     quote: (request) => call<QuoteOrderRequest, QuoteOrderResponse>('quoteOrder', request),
     authorize: (request) =>
       call<AuthorizeQuoteRequest, AuthorizeQuoteResponse>('authorizeQuote', request),
+    async resume(qrPublicId) {
+      try {
+        await auth.authStateReady();
+      } catch {
+        return err({ kind: 'unknown' });
+      }
+      // Sin sesión anónima, este teléfono nunca se unió: no se crea una solo por mirar.
+      if (!auth.currentUser) return ok(null);
+      return call<JoinTableSessionRequest, JoinTableSessionResponse>('joinTableSession', {
+        qrPublicId,
+      });
+    },
+    myOrders: (seat) =>
+      readQuery(() => myOrders(dataConnect, seat, SERVER_ONLY), toMyOrders, mapCustomerDataError),
+    watchMyOrders: (seat, observer) =>
+      watchQuery(myOrdersRef(dataConnect, seat), toMyOrders, observer, mapCustomerDataError),
+    requestService: (request) =>
+      call<RequestServiceRequest, RequestServiceResponse>('requestService', request),
   };
 }

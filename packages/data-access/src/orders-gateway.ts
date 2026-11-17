@@ -3,7 +3,6 @@ import {
   cancelOrderItem,
   deliverOrderItem,
   deliverOrderItemDirectly,
-  OrderItemStatus,
   pickUpOrderItem,
   pickupQueue,
   pickupQueueRef,
@@ -12,19 +11,9 @@ import {
   type PickupQueueData,
   type SessionOrdersData,
 } from '@tavelyo/dataconnect-sdk';
-import type { OrderItemStatus as ItemStatus } from '@tavelyo/core';
 import type { PickupItem, SessionOrder, StaffOrdersGateway } from '@tavelyo/orders/domain';
+import { ITEM_STATUS } from './item-status.ts';
 import { readQuery, runCommand, SERVER_ONLY, watchQuery } from './live-query.ts';
-
-/** Los estados del SDK son los mismos códigos que la máquina de estados de core. */
-const ITEM_STATUS: Readonly<Record<OrderItemStatus, ItemStatus>> = {
-  [OrderItemStatus.RECEIVED]: 'RECEIVED',
-  [OrderItemStatus.IN_PREPARATION]: 'IN_PREPARATION',
-  [OrderItemStatus.READY]: 'READY',
-  [OrderItemStatus.PICKED_UP]: 'PICKED_UP',
-  [OrderItemStatus.DELIVERED]: 'DELIVERED',
-  [OrderItemStatus.CANCELLED]: 'CANCELLED',
-};
 
 /** «Listos para recoger»: solo líneas listas o recogidas (lo filtra el conector). */
 export function toPickupItems(data: PickupQueueData): PickupItem[] {

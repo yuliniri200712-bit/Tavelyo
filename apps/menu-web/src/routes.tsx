@@ -1,6 +1,11 @@
 import { Link, Outlet, useParams, type RouteObject } from 'react-router';
 import { EmptyState } from '@tavelyo/design-system';
-import { OrderReviewPage, TableMenuPage, TableOrderProvider } from '@tavelyo/table-session';
+import {
+  MyOrdersPage,
+  OrderReviewPage,
+  TableMenuPage,
+  TableOrderProvider,
+} from '@tavelyo/table-session';
 import { useServices } from './app-context.tsx';
 
 /** Mesa del QR: la carta y el pedido comparten el estado (carrito y revisión). */
@@ -27,6 +32,23 @@ function MenuRoute() {
           {label}
         </Link>
       )}
+      myOrdersLink={
+        <Link className="tv-link-button" to="mis-pedidos">
+          Mis pedidos y llamar al mesero
+        </Link>
+      }
+    />
+  );
+}
+
+function MyOrdersRoute() {
+  return (
+    <MyOrdersPage
+      menuLink={
+        <Link className="tv-link-button" to="..">
+          Volver a la carta
+        </Link>
+      }
     />
   );
 }
@@ -36,6 +58,11 @@ function OrderRoute() {
   return (
     <OrderReviewPage
       offerSimulatedOutcomes={services.usesEmulators}
+      myOrdersLink={(label) => (
+        <Link className="tv-link-button" to="../mis-pedidos">
+          {label}
+        </Link>
+      )}
       menuLink={
         <Link className="tv-link-button" to="..">
           Volver a la carta
@@ -62,6 +89,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <MenuRoute /> },
       { path: 'pedido', element: <OrderRoute /> },
+      { path: 'mis-pedidos', element: <MyOrdersRoute /> },
     ],
   },
   {

@@ -25,6 +25,10 @@ const customer: CustomerGateway = {
   join: vi.fn(),
   quote: vi.fn(),
   authorize: vi.fn(),
+  resume: vi.fn(async () => ok(null)),
+  myOrders: vi.fn(),
+  watchMyOrders: vi.fn(() => () => undefined),
+  requestService: vi.fn(),
 };
 
 function renderAt(path: string) {
@@ -63,6 +67,15 @@ describe('rutas de menu-web', () => {
     expect(screen.getByText('Tu pedido está vacío')).toBeTruthy();
     fireEvent.click(screen.getByRole('link', { name: 'Volver a la carta' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Centro' })).toBeTruthy();
+  });
+
+  it('la carta lleva a «Mis pedidos», que ofrece llamar al mesero', async () => {
+    renderAt('/mesa/qr-1');
+    fireEvent.click(await screen.findByRole('link', { name: 'Mis pedidos y llamar al mesero' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mis pedidos' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Llamar al mesero' })).toBeTruthy();
+    expect(await screen.findByText('Todavía no tienes pedidos')).toBeTruthy();
+    expect(customer.resume).toHaveBeenCalledWith('qr-1');
   });
 
   it('un QR de otra mesa o inventado no muestra ninguna carta', async () => {

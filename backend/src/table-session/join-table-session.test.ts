@@ -65,6 +65,7 @@ describe('joinTableSession', () => {
       ok: true,
       value: {
         sessionId: '5'.repeat(32),
+        branchId: '4'.repeat(32),
         participantId: 'p-nuevo',
         tableCode: 'M1',
         expiresAt: IN_FOUR_HOURS,

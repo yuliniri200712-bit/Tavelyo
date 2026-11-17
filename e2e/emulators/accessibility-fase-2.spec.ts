@@ -76,7 +76,10 @@ async function expectReflow(page: Page, screen: string, ready: Locator) {
 
 async function openMenu(page: Page, fixture: Fixture) {
   await page.goto(`${APPS.menuWeb}/mesa/${fixture.qrPublicId}`);
-  await expect(page.getByRole('heading', { level: 1, name: 'Centro' })).toBeVisible();
+  // Primera carga del navegador: incluye registrar el service worker y leer la carta.
+  await expect(page.getByRole('heading', { level: 1, name: 'Centro' })).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 test('el cliente pide y paga en simulado usando solo el teclado', async ({
@@ -106,12 +109,12 @@ test('el cliente pide y paga en simulado usando solo el teclado', async ({
   await expect(page.getByRole('heading', { level: 1, name: 'Tu pedido' })).toBeVisible();
   await tabTo(page, page.getByRole('button', { name: 'Revisar pedido' }));
   await page.keyboard.press('Enter');
-  const pay = page.getByRole('button', { name: named('Autorizar pago simulado · $ 32.000') });
+  const pay = page.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 32.000') });
   // La primera llamada al backend puede tardar (arranque en frío de las funciones).
   await expect(pay).toBeVisible({ timeout: 30_000 });
   await tabTo(page, pay);
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'Pedido listo' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible();
 });
 
 test('las pantallas de la Fase 2 se leen a 320 px y con el texto al 200 %', async ({

@@ -10,6 +10,8 @@ export interface JoinTableSessionRequest {
 
 export interface JoinTableSessionResponse {
   readonly sessionId: string;
+  /** Sucursal de la mesa: acota la actualización en vivo de «Mis pedidos» (ADR-0007). */
+  readonly branchId: string;
   readonly participantId: string;
   readonly tableCode: string;
   /** La participación vence en este instante UTC (o antes, si se cierra la mesa). */

@@ -4,8 +4,21 @@ export type {
   CustomerRejection,
   CustomerResult,
   MenuProduct,
+  MyOrder,
+  MyOrderItem,
+  MyOrdersObserver,
   PublicMenu,
+  TableSeat,
 } from './domain/index.ts';
+export {
+  describeMyOrder,
+  describeMyOrders,
+  describeStatusChanges,
+  itemStatuses,
+  MY_ITEM_STATUS,
+  serviceRequestText,
+} from './application/my-orders.ts';
+export { MyOrdersPage, type MyOrdersPageProps } from './presentation/MyOrdersPage.tsx';
 export { describeOffering, menuSections, type MenuSection } from './application/menu.ts';
 export {
   describeChange,

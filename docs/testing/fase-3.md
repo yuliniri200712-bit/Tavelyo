@@ -80,4 +80,25 @@ Hallazgo: en el SDK web 12.19 la suscripción funciona sin `clientCache` (ADR-00
 
 Hallazgo durante la prueba: el recorrido pedía la solicitud con el código `CALL_WAITER` del esquema, y `requestService` la rechazó como inválida, como debía: el contrato del cliente usa `call_waiter`. Se corrigió la prueba.
 
+## 2026-11-17 — Bloque 6: cliente
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Flujo del cliente | `npx vitest run packages/features/table-session` | ✅ 21 pruebas. Nuevas: «Autorizar y enviar a cocina» lleva a «Mis pedidos» sin volver a unirse; «Mis pedidos» muestra el estado de cada línea y anuncia los cambios; tras recargar recupera la mesa sin crear sesión; sin pedidos no se une solo por mirar; llamar al mesero y pedir la cuenta, con aviso repetido; límite del servidor con su motivo; lógica de textos y de cambios de estado |
+| Rutas de `menu-web` | `npx vitest run apps/menu-web` | ✅ La carta lleva a «Mis pedidos», que ofrece llamar al mesero |
+| Capa de datos | `npx vitest run packages/data-access` | ✅ Traducción de «Mis pedidos» con su total y el estado e importe de cada línea; un pedido sin enviar no aparece |
+| Backend | `npx vitest run backend/src/table-session` e integración `backend/tests` | ✅ `joinTableSession` devuelve la sucursal; 47 de integración contra los emuladores |
+| Tiempo real compartido | `npx vitest run packages/design-system/src/components/live-data` | ✅ 7 pruebas; nueva: una respuesta que llega tras perder la red actualiza los datos, pero no dice «En vivo» |
+| **Cliente en navegador** | `npx playwright test --config playwright.emulators.config.ts customer-live` | ✅ **5 navegadores** de D-15. Autoriza y envía; «Mis pedidos» pasa de «Recibido en cocina» a «En preparación» **sin recargar** y lo anuncia; llamar al mesero (con el aviso repetido) y pedir la cuenta llegan a `PendingServiceRequests`; al recargar se recupera el pedido; **sin red lo dice y, al volver, muestra lo que pasó entretanto** («En camino a tu mesa») y luego «Entregado». axe sin infracciones |
+| Regresión en navegador | ídem con `customer-order accessibility-fase-2 waiter-service` | ✅ 5 navegadores, con los textos nuevos del pago |
+| Conjunto | `npm run check` | ✅ 659 pruebas unitarias, dos veces seguidas con los emuladores en marcha |
+
+Hallazgos:
+- **Real, corregido:** en Safari (escritorio e iPhone), al cortar la red justo después de «Recogido», la lectura que ya venía en camino volvía a marcar «En vivo» y dejaba activo «Entregado». `useLiveData` ahora mantiene «Sin conexión» mientras el navegador no tenga red.
+- **De las pruebas, no de la app:**
+  - en el emulador en Docker, `requestService` tardó más de 5 s en 2 de 74 llamadas (la media es 1 s; el resto de funciones no pasa de 3 s). Los recorridos esperan hasta 30 s esos avisos. La latencia real se mide al desplegar (ADR-0007);
+  - la primera carga de la carta en Chrome de Android tardó más de 5 s; ahora espera hasta 15 s;
+  - un fallo aislado de conexión con el servidor local y uno de WebKit al esperar un botón estable no se repitieron.
+- **Pruebas unitarias intermitentes:** con todo el conjunto en paralelo, la primera búsqueda de algunos archivos pasaba de 1 s (ya había ocurrido en el bloque 4). `vitest.setup.ts` sube a 5 s la espera de Testing Library; no cambia lo que se comprueba.
+
 Pendiente de verificar en los bloques siguientes: TalkBack y el Android real (bloque 7).

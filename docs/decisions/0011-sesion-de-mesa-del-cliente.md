@@ -86,3 +86,12 @@ Además, `branch_insert` y `branch_update` solo aparecen en las operaciones auto
 - **`requestService`:** «Llamar al mesero» y «Pedir la cuenta», solo para quien sigue en una mesa abierta. Repetir un aviso que el personal aún no atendió responde `already-pending` sin crear otro.
 - **Límites (T11):** 6 solicitudes de servicio cada 10 minutos por persona y 30 por mesa.
 - **Estación predeterminada:** se crea con cada sucursal (`CreateBranch` y `provisionTenant`). Si una sucursal anterior a la Fase 3 no la tiene, el backend la crea al enviar el primer pedido.
+
+## Implementación (Fase 3, bloque 6, 2026-11-17)
+
+- **«Autorizar y enviar a cocina»:** el botón de pago dice qué hace. Antes de pulsarlo, la tarjeta muestra el texto de la preautorización y aclara que sin autorización el pedido no se envía. Al terminar, «Pedido enviado a cocina» lleva a «Mis pedidos».
+- **«Mis pedidos»** (`/mesa/<qrPublicId>/mis-pedidos`, D-06): solo los pedidos propios, con el estado de cada línea en vivo y en texto (consulta `MyOrders`, ADR-0007). Cada cambio de estado se anuncia también en una región de aviso, para el lector de pantalla.
+- **Volver a la mesa sin crear cuentas:** tras recargar el teléfono, «Mis pedidos» recupera la mesa con `joinTableSession`, que es idempotente, pero solo si el teléfono ya tenía su sesión anónima. Mirar «Mis pedidos» sin haber pedido ni llamado al mesero no crea una sesión anónima ni una participación.
+- **`joinTableSession` devuelve también la sucursal (`branchId`)**: la suscripción de «Mis pedidos» la necesita para acotar el refresco a la sucursal de la mesa.
+- **«Llamar al mesero» y «Pedir la cuenta»** están en «Mis pedidos», enlazada desde la carta. Si la persona todavía no estaba en la mesa, se une al pulsar. Un aviso repetido se responde en texto («El mesero ya tiene tu aviso») sin crear otro. La cuenta en sí es de la Fase 4.
+

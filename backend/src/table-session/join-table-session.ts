@@ -96,6 +96,7 @@ export function createJoinTableSession(deps: JoinTableSessionDeps) {
     const respond = (participantId: string, until: Date) =>
       ok({
         sessionId: session.id,
+        branchId: table.branchId,
         participantId,
         tableCode: table.code,
         expiresAt: until.toISOString(),

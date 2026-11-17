@@ -57,6 +57,13 @@ Por D-04, todo pedido está sujeto a garantía. Mientras no haya pasarela real (
 - **Módulos separados:** `packages/features/orders` (pedidos del personal) y `packages/features/service-requests` (solicitudes). El salón los recibe desde `operations` y no los importa.
 - **Una mesa cerrada con platos listos** sigue en «Listos para recoger» hasta que se entregan o se cancelan. La comida existe y el cierre con cuenta es de la Fase 4, que decidirá si cerrar exige no tener líneas pendientes.
 
+### Tomadas en el bloque 6 (2026-11-17, dentro del alcance aprobado)
+
+- **«Mis pedidos» va en `packages/features/table-session`**, que ya tiene la pasarela del cliente y la mesa del teléfono, y no en `orders`, que queda para el personal.
+- **«Llamar al mesero» y «Pedir la cuenta» viven en «Mis pedidos»**, con un enlace visible desde la carta («Mis pedidos y llamar al mesero»).
+- **Mirar «Mis pedidos» no crea una sesión anónima:** solo se recupera la mesa si el teléfono ya tenía una (ADR-0011).
+- **`joinTableSession` devuelve también `branchId`**, que necesita la suscripción de «Mis pedidos».
+
 ## 3. Diseño propuesto
 
 ### Del resumen autorizado al pedido

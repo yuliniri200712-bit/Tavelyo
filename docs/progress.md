@@ -1,6 +1,6 @@
 # Progreso del proyecto
 
-Última actualización: 2026-11-16
+Última actualización: 2026-11-17
 
 ## Fase actual
 
@@ -20,8 +20,8 @@
 - «Esta línea ya cambió» si otra persona se adelantó.
 
 **D-25:** la pantalla de cocina retiene el cierre por inactividad mientras está visible. Recorrido `kitchen-realtime.spec.ts` superado en los **5 navegadores** |
-| 5. Operaciones, meseros | ✅ **Salón en vivo** (`/salon`): cada mesa abierta dice en texto sus líneas en cocina, listas para recoger y recogidas por entregar, y sus solicitudes con la hora (RF-ME-01). Arriba, **«Solicitudes de las mesas»** con «Atendida» (`service_request.handle`), y con «Ver pedidos», los **pedidos de la mesa**: estado de cada pedido y de cada línea, cancelar con motivo (`order_item.cancel`, avisa la merma) y entregar sin recoger con motivo (`delivery.skip_sequence`). **«Listos para recoger»** (`/entregas`, `delivery.pickup`): «Recogido» y «Entregado», con la espera, la estación y el aviso en texto del plato que queda listo. Módulos nuevos `packages/features/orders` y `packages/features/service-requests`. La lógica de tiempo real de cocina pasa a `useLiveData` y `LiveStatus` en el sistema de diseño, y la usan las cinco pantallas en vivo. Recorrido `waiter-service.spec.ts` superado en los **5 navegadores** |
-| 6. Cliente (`menu-web`) | Pendiente |
+| 5. Operaciones, meseros | ✅ **Salón en vivo** (`/salon`): cada mesa abierta dice en texto sus líneas en cocina, listas para recoger y recogidas por entregar, y sus solicitudes con la hora (RF-ME-01). Arriba, **«Solicitudes de las mesas»** con «Atendida» (`service_request.handle`), y con «Ver pedidos», los **pedidos de la mesa**: estado de cada pedido y de cada línea, cancelar con motivo (`order_item.cancel`, avisa la merma) y entregar sin recoger con motivo (`delivery.skip_sequence`). **«Listos para recoger»** (`/entregas`, `delivery.pickup`): «Recogido» y «Entregado», con la espera, la estación y el aviso en texto del plato que queda listo. Módulos nuevos `packages/features/orders` y `packages/features/service-requests`. La lógica de tiempo real de cocina pasa a `useLiveData` y `LiveStatus` en el sistema de diseño, y la usan las cinco pantallas en vivo. Recorrido `waiter-service.spec.ts` superado en los **5 navegadores**. CI #42 en verde |
+| 6. Cliente (`menu-web`) | ✅ El pago dice **«Autorizar y enviar a cocina»**, con el texto de la preautorización y el aviso de que sin autorización no se envía; al terminar, «Pedido enviado a cocina» lleva a **«Mis pedidos»** (`/mesa/<qr>/mis-pedidos`, D-06): solo los propios, con el estado de cada línea **en vivo y en texto**, y cada cambio anunciado para el lector de pantalla. Tras recargar el teléfono se recupera la mesa sin crear otra sesión, y mirar sin haber pedido no crea una sesión anónima. **«Llamar al mesero» y «Pedir la cuenta»** en «Mis pedidos», enlazada desde la carta; un aviso repetido se responde sin duplicarlo. `joinTableSession` devuelve también la sucursal. **Hallazgo corregido:** al perder la red, una respuesta que venía en camino volvía a mostrar «En vivo» (Safari); `useLiveData` ahora respeta el estado del navegador. Recorrido `customer-live.spec.ts` superado en los **5 navegadores** |
 | 7. Cierre | Pendiente |
 
 **Fase 2 — Salón y carta: cerrada** con aprobación del propietario el 2026-11-16 e integrada en `main`. Autorizada el 2026-11-14. Rama: `fase-2-salon-carta`. Plan: [`plans/fase-2.md`](plans/fase-2.md). Decisiones: D-01b, D-21, D-22, D-06 (carrito) y ADR-0011.

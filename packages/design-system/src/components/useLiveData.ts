@@ -32,6 +32,9 @@ export interface LiveDataOptions {
 const INITIAL = { data: null, connection: 'connecting', lastUpdated: null, problem: null } as const;
 const systemNow = () => new Date();
 
+/** El navegador dice si tiene red; sin `navigator` (pruebas, servidor) se supone que sí. */
+const browserOnline = () => typeof navigator === 'undefined' || navigator.onLine !== false;
+
 /**
  * Lectura en tiempo real (ADR-0007). La suscripción trae cada cambio al instante y, además, se
  * vuelve a leer todo al abrir, al recuperar la red, al volver la pestaña a primer plano, tras un
@@ -52,7 +55,14 @@ export function useLiveData<T>(
   }, [now]);
 
   const accept = useCallback((data: T) => {
-    setState({ data, connection: 'live', lastUpdated: nowRef.current(), problem: null });
+    // Una lectura que salió antes de perder la red puede llegar después: actualiza los datos, pero
+    // la pantalla sigue «sin conexión» hasta que el navegador recupere la red.
+    setState({
+      data,
+      connection: browserOnline() ? 'live' : 'offline',
+      lastUpdated: nowRef.current(),
+      problem: null,
+    });
   }, []);
 
   const fail = useCallback((problem: ServerError) => {
