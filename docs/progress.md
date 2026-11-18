@@ -4,7 +4,7 @@
 
 ## Fase actual
 
-Ninguna autorizada. **Fase 4 — Caja y pagos: plan propuesto** el 2026-11-18 ([`plans/fase-4.md`](plans/fase-4.md)), pendiente de aprobación, con las decisiones D-05, D-06, D-29 y D-30 por resolver y D-02 (pasarela) antes del bloque 8. Rama: `fase-4-caja-pagos`.
+**Fase 4 — Caja y pagos: plan aprobado** por el propietario el 2026-11-18 ([`plans/fase-4.md`](plans/fase-4.md)), con D-05, D-06, D-29, D-30 y D-31; el inicio de la implementación espera su autorización expresa. D-02 (pasarela) hace falta antes del bloque 8; si no la hay al terminar el bloque 7, la pasarela real pasa a la Fase 4B (D-31). Rama: `fase-4-caja-pagos`.
 
 **Fase 3B — Diseño visual: cerrada** con aprobación del propietario el 2026-11-18 e integrada en `main`. Autorizada el 2026-11-17, con el plan [`plans/fase-3b-diseno-visual.md`](plans/fase-3b-diseno-visual.md), las decisiones D-27 (Lucide) y D-28 (solo Plus Jakarta Sans), D-22 confirmada (sin fotos todavía) y la instalación de `lucide-react` 1.66.0. Rama: `fase-3b-diseno-visual`. Al cerrarla se borraron el contenedor y la imagen de Docker de los emuladores, como se acordó.
 

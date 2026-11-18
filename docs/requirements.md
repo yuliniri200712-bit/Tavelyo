@@ -153,15 +153,18 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-26 | Retroceder el estado de una línea | **No se permite** (2026-11-16): los errores se corrigen cancelando con motivo, auditado | `plans/fase-3.md`; `architecture/state-machines.md` |
 | D-27 | Iconos de la interfaz | **Lucide** (2026-11-17), con `lucide-react` 1.66.0 (ISC) a través de un componente `Icon` del sistema de diseño; se instala al aprobar el plan de la Fase 3B | `plans/fase-3b-diseno-visual.md` |
 | D-28 | Letra serif en títulos | **No** (2026-11-17): solo Plus Jakarta Sans en toda la interfaz (IV §5) | `plans/fase-3b-diseno-visual.md` |
+| D-05 | Propinas | **Voluntaria, sugerida en 10 % al pagar la cuenta** (2026-11-18): la persona la cambia o la quita y nunca se incluye sin que la elija. No forma parte de la preautorización: se paga en el pago final (efectivo o un cobro aparte con tarjeta). El reparto al personal queda fuera de la Fase 4 | `plans/fase-4.md` |
+| D-06 (cuenta) | Quién ve y quién paga qué en la mesa compartida | **Cada persona paga lo que pidió y en su teléfono ve solo su parte** (2026-11-18); la caja y el mesero ven la cuenta de toda la mesa. Pagar por otros o dividir en partes iguales lo hace la caja a petición de la mesa, con reparto exacto | `plans/fase-4.md` |
+| D-29 | Pedidos tomados por el mesero (D-23) | **El mesero arma el pedido y muestra un QR de pago; el cliente lo autoriza en su teléfono** y solo entonces va a cocina (2026-11-18). Datáfono según la pasarela; sin excepción para efectivo | `plans/fase-4.md` |
+| D-30 | Cerrar la mesa | **Solo con saldo cero y sin líneas en cocina o por entregar** (2026-11-18); al cerrar, toda retención sin capturar se libera | `plans/fase-4.md` |
+| D-31 | Fase 4 sin pasarela | **Si al terminar el bloque 7 no hay pasarela, la Fase 4 se cierra sin el bloque 8** y la pasarela real pasa a la «Fase 4B — Pasarela real» (2026-11-18). Aparta, por decisión del propietario, la condición de PM §11 sobre la pasarela en pruebas; nada sale a producción con el adaptador simulado | `plans/fase-4.md` |
 | D-16 | Bibliotecas y herramientas del stack web, y Firebase Hosting | **Aceptadas** según ADR-0010; formateador **Prettier** (2026-11-13); validación de formularios se decide en Fase 1 | ADR-0010 aceptado |
 
 ### Pendientes
 
 | ID | Decisión | Bloquea |
 |---|---|---|
-| D-02 | Pasarela de pago (debe admitir autorización y captura separadas en Colombia). **El propietario está buscando proveedor** (2026-11-14) | Fase 4; ADR-0006 |
-| D-05 | Propinas: momento, cálculo y si se capturan con la cuenta | Modelo de cuenta |
-| D-06 | Sesión de mesa compartida: quién ve y quién paga qué en la cuenta (el carrito ya es por persona) | División de cuentas, Fases 3–4 |
+| D-02 | Pasarela de pago (debe admitir autorización y captura separadas en Colombia). **El propietario está buscando proveedor** (2026-11-14). Comparación y preguntas para los proveedores en `plans/fase-4.md` (2026-11-18) | Bloque 8 de la Fase 4 o Fase 4B (D-31); ADR-0006 |
 | D-09 | Carga objetivo por sucursal, latencia aceptable y presupuesto mensual | RNF-12, dimensionamiento de Cloud SQL |
 | D-10 | Jurisdicción de datos personales (Colombia, por D-01), retención y anonimización | Modelo de datos personales |
 | D-11 | RPO/RTO para copias y restauración | Fase 6 |

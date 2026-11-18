@@ -1,6 +1,6 @@
 # Plan de Fase 4 — Caja y pagos
 
-Estado: **propuesto, pendiente de aprobación del propietario** (2026-11-18). Rama de trabajo: `fase-4-caja-pagos`.
+Estado: **plan y recomendaciones aprobados por el propietario el 2026-11-18** (D-05, D-06, D-29, D-30 y D-31, sección 2). Rama de trabajo: `fase-4-caja-pagos`.
 
 ## 1. Objetivo
 
@@ -56,32 +56,28 @@ Fuentes: [Kushki, autorización y captura (Colombia)](https://docs.kushki.com/co
 
 **Si ninguno ofrece preautorización amplia**, D-04 tendría que revisarse como una decisión nueva. La alternativa sería **cobrar cada pedido al enviarlo a cocina** y devolver lo cancelado. Funciona con más medios de pago, pero quien paga en efectivo ya no podría pedir desde su teléfono.
 
-**Recomendación:** construir primero todo lo que no depende del proveedor (bloques 1 a 7, con el adaptador simulado) mientras eliges la pasarela. El bloque 8 conecta la pasarela real en su entorno de pruebas. **La fase no se cierra sin ese bloque**, porque es su condición de salida. Si la elección se demora, te aviso al terminar el bloque 7 para decidir cómo seguir.
+**Cómo se avanza sin pasarela (D-31, decidido):** primero se construye todo lo que no depende del proveedor (bloques 1 a 7, con el adaptador simulado). El bloque 8 conecta la pasarela real en su entorno de pruebas cuando el propietario la tenga. **Si al terminar el bloque 7 todavía no hay pasarela, la Fase 4 se cierra sin el bloque 8**, y la pasarela real pasa a una fase propia, **«Fase 4B — Pasarela real»**. Es una decisión expresa del propietario que aparta la condición de PM §11 sobre la pasarela en pruebas. Mientras tanto, nada sale a producción: el adaptador simulado sigue bloqueado fuera de los emuladores.
 
-**D-05 — Propina.**
-**Recomendación:** propina voluntaria que se ofrece **al pagar la cuenta**:
+**D-05 — Propina (aprobada).** propina voluntaria que se ofrece **al pagar la cuenta**:
 - sugerida en 10 %;
 - la persona la cambia o la quita;
 - nunca se incluye sin que la elija.
 
 No forma parte de la preautorización. Se paga en el pago final: en efectivo, o con un cobro aparte con tarjeta. Así no hay que capturar más de lo autorizado. El reparto de propinas entre el personal queda fuera de esta fase.
 
-**D-06 — Quién ve y quién paga qué en la mesa compartida.**
-**Recomendación:**
+**D-06 — Quién ve y quién paga qué en la mesa compartida (aprobada):**
 - **cada persona paga lo que pidió**, que es lo que cubren sus preautorizaciones;
 - en su teléfono ve solo su parte;
 - la caja y el mesero ven la cuenta de toda la mesa;
 - si alguien quiere pagar por otros, o dividir en partes iguales, lo hace la caja a petición de la mesa, con reparto exacto (la suma de las partes es igual al total, al peso).
 
-**D-29 — Pedidos tomados por el mesero (D-23).**
-**Recomendación:** el mesero arma el pedido en su equipo y le muestra al cliente un **QR de pago**. El cliente lo escanea y autoriza en su teléfono, y solo entonces el pedido va a cocina. Así se cumple D-04 sin datáfono.
+**D-29 — Pedidos tomados por el mesero (D-23, aprobada).** el mesero arma el pedido en su equipo y le muestra al cliente un **QR de pago**. El cliente lo escanea y autoriza en su teléfono, y solo entonces el pedido va a cocina. Así se cumple D-04 sin datáfono.
 
 Alternativas:
 - **Datáfono:** depende de la pasarela; se vería al elegirla.
-- **Excepción para efectivo con permiso de un administrador:** cambia D-04, no la recomiendo ahora.
+- **Excepción para efectivo con permiso de un administrador:** cambia D-04; descartada por ahora.
 
-**D-30 — Cerrar la mesa.**
-**Recomendación:** una mesa se cierra solo cuando:
+**D-30 — Cerrar la mesa (aprobada).** Una mesa se cierra solo cuando:
 - su saldo es cero;
 - no le quedan líneas en cocina o por entregar (se entregan o se cancelan con motivo).
 
@@ -182,7 +178,7 @@ Al cerrar, toda retención sin capturar se libera.
    - el mesero toma pedidos con QR de pago (D-29);
    - trasladar mesa.
 7. **Cliente:** «Mi cuenta», propina, pago de su parte y comprobante.
-8. **Pasarela real en su entorno de pruebas (necesita D-02):**
+8. **Pasarela real en su entorno de pruebas (necesita D-02; si no la hay al terminar el bloque 7, pasa a la Fase 4B por D-31):**
    - adaptador del proveedor;
    - campos de tarjeta del proveedor (Tavelyo nunca ve el número ni el CVV);
    - *webhooks* verificados;
@@ -250,13 +246,14 @@ Al cerrar, toda retención sin capturar se libera.
 4. La caja cuadra: efectivo esperado, conteo y diferencia, con auditoría.
 5. Aislamiento por empresa, sucursal y mesa, y permisos con topes, validados en el servidor.
 6. Pantallas accesibles como en las fases anteriores; el estado de un pago nunca depende solo del color.
-7. La pasarela elegida funciona en su entorno de pruebas (bloque 8). CI en verde, sin secretos y con la documentación al día. Sin cobros reales ni despliegue.
+7. La pasarela elegida funciona en su entorno de pruebas (bloque 8) o, por D-31, queda como Fase 4B con el contrato y el adaptador simulado listos para conectarla. CI en verde, sin secretos y con la documentación al día. Sin cobros reales ni despliegue.
 
 ## 8. Aprobaciones que pide este plan
 
-- El plan y su alcance (secciones 3 y 4).
-- Las recomendaciones de **D-05, D-06, D-29 y D-30** (sección 2).
-- **D-02:** no hace falta decidirla para empezar, pero sí antes del bloque 8.
+- ✅ El plan y su alcance (secciones 3 y 4), aprobados el 2026-11-18.
+- ✅ **D-05, D-06, D-29 y D-30** (sección 2), aprobadas el 2026-11-18.
+- ✅ **D-31:** sin pasarela al terminar el bloque 7, la Fase 4 se cierra sin el bloque 8 y la pasarela real pasa a la Fase 4B.
+- **D-02:** no hace falta decidirla para empezar, pero sí antes del bloque 8 (o de la Fase 4B).
 - **Volver a crear el contenedor de Docker de los emuladores** (`tavelyo-emu`, el mismo de las fases 3 y 3B), que se borró al cerrar la Fase 3B. Se borra al cerrar esta fase.
 - Más adelante, en el bloque 8 y por separado:
   - las credenciales de prueba del proveedor, que van fuera del repositorio;
@@ -269,4 +266,5 @@ Al cerrar, toda retención sin capturar se libera.
 - **Las autorizaciones vencen** (por ejemplo, 7 días en Mercado Pago). Una cena dura horas, pero una mesa olvidada abierta podría perder cobertura. La conciliación avisa antes del vencimiento.
 - **El adaptador simulado no garantiza el comportamiento real:** por eso el bloque 8 es obligatorio para cerrar la fase.
 - **Factura electrónica:** el comprobante de Tavelyo no la sustituye. Hay que decidir aparte cómo se factura (con tu contador o un proveedor de facturación).
-- **Es la fase más grande hasta ahora.** Si hace falta, el bloque 8 puede ir en una fase propia cuando la pasarela tarde. Esa decisión sería tuya, al terminar el bloque 7.
+- **Es la fase más grande hasta ahora.** Por D-31, el bloque 8 va a la Fase 4B si la pasarela tarda.
+- **Lógica probada solo con el simulado hasta la Fase 4B:** si la pasarela elegida no permite preautorizar, habrá que ajustar parte del cobro (cobrar cada pedido al enviarlo). El contrato separado del proveedor limita ese ajuste.
