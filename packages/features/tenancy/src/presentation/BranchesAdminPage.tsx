@@ -6,6 +6,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  PageTitle,
   SelectField,
   serverErrorText,
   StatusChip,
@@ -53,7 +54,7 @@ export function BranchesAdminPage(props: BranchesAdminPageProps) {
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Sucursales</h1>
+          <PageTitle icon="branch">Sucursales</PageTitle>
           <p className="tv-list__meta">
             Todas usan la moneda de la empresa ({props.currency}). El horario de la carta se aplica
             en la zona horaria de cada sucursal.

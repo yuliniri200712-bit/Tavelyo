@@ -5,10 +5,11 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  PageTitle,
+  serverErrorText,
   StatusChip,
   TavelyoButton,
   TextField,
-  serverErrorText,
   useServerData,
 } from '@tavelyo/design-system';
 import { parseStationForm, STATION_NAME_MAX } from '../application/forms.ts';
@@ -48,7 +49,7 @@ export function StationsAdminPage({
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Estaciones de cocina</h1>
+          <PageTitle icon="stations">Estaciones de cocina</PageTitle>
           <p className="tv-list__meta">
             {branchName} · Cada producto de la carta se prepara en una estación. Lo que no tiene
             estación va a la predeterminada.

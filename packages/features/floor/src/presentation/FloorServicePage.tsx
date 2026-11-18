@@ -9,10 +9,11 @@ import {
   Icon,
   LiveStatus,
   LoadingState,
+  PageTitle,
+  serverErrorText,
   StatusChip,
   TableTile,
   TavelyoButton,
-  serverErrorText,
   useLiveData,
   type LiveRunCommand,
   type LiveSubscriber,
@@ -89,7 +90,7 @@ export function FloorServicePage({
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Salón</h1>
+          <PageTitle icon="floor">Salón</PageTitle>
           <p className="tv-list__meta">
             {branchName}
             {data ? ` · ${describeFloorCounts(floorCounts(data))}` : ''}

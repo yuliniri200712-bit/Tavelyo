@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 import { Link, Navigate, Outlet } from 'react-router';
-import { Card, LoadingState, StatusChip } from '@tavelyo/design-system';
+import { Icon, LoadingState, StatusChip } from '@tavelyo/design-system';
 import { InactivityGuard, InactivityHoldProvider, useSession } from '@tavelyo/identity';
 import { PwaShell } from '@tavelyo/pwa-shell';
 import {
@@ -88,21 +88,30 @@ export function StaffHome() {
   );
   return (
     <div className="tv-page">
-      <Card title={`${selection.tenant.tenantName} · ${selection.branch.name}`} headingLevel={2}>
-        <p>
-          Entraste como <strong>{selection.tenant.roleName}</strong>.
-        </p>
-        <StatusChip tone="success" label="Contexto listo" />
-      </Card>
+      <section className="tv-welcome" aria-labelledby="inicio-contexto">
+        <Icon name="home" size="large" />
+        <div className="tv-welcome__body">
+          <h2 id="inicio-contexto">
+            {selection.tenant.tenantName} · {selection.branch.name}
+          </h2>
+          <p>
+            Entraste como <strong>{selection.tenant.roleName}</strong>.
+          </p>
+          <StatusChip tone="success" label="Contexto listo" />
+        </div>
+      </section>
       {modules.length > 0 ? (
         <nav aria-label="Módulos">
-          <ul className="tv-list">
+          <ul className="tv-module-grid">
             {modules.map((module) => (
-              <li key={module.path} className="tv-list__item">
-                <Link className="tv-list__title" to={module.path}>
-                  {module.title}
-                </Link>
-                <p className="tv-list__meta">{module.description}</p>
+              <li key={module.path} className="tv-module">
+                <Icon name={module.icon} size="large" />
+                <div className="tv-module__body">
+                  <Link className="tv-module__link" to={module.path}>
+                    {module.title}
+                  </Link>
+                  <p className="tv-list__meta">{module.description}</p>
+                </div>
               </li>
             ))}
           </ul>

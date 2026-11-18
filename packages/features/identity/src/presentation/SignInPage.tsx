@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Card, CheckboxField, TavelyoButton, TextField } from '@tavelyo/design-system';
+import { Card, CheckboxField, Icon, TavelyoButton, TextField } from '@tavelyo/design-system';
 import {
   AUTH_ERROR_MESSAGES,
   validateCredentials,
@@ -73,71 +73,74 @@ export function SignInPage() {
   };
 
   return (
-    <Card
-      title={mode === 'sign-in' ? 'Acceso del personal' : 'Recuperar contraseña'}
-      headingLevel={2}
-    >
-      {signedOutByInactivity && mode === 'sign-in' ? (
-        <p className="tv-form__notice" role="status">
-          Cerramos tu sesión tras 15 minutos sin uso. Vuelve a entrar para continuar.
-        </p>
-      ) : null}
-      <form
-        className="tv-form"
-        noValidate
-        onSubmit={mode === 'sign-in' ? handleSignIn : handleReset}
-        aria-describedby={formError ? 'acceso-error' : undefined}
+    <div className="tv-auth">
+      <Card
+        title={mode === 'sign-in' ? 'Acceso del personal' : 'Recuperar contraseña'}
+        headingLevel={2}
       >
-        <TextField
-          label="Correo"
-          type="email"
-          autoComplete="username"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          {...(fieldErrors.email ? { error: fieldErrors.email } : {})}
-        />
-        {mode === 'sign-in' ? (
-          <TextField
-            label="Contraseña"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            {...(fieldErrors.password ? { error: fieldErrors.password } : {})}
-          />
-        ) : null}
-        {mode === 'sign-in' ? (
-          <CheckboxField
-            label="Equipo compartido"
-            hint="La sesión se borra al cerrar esta pestaña o la app. Desmárcala solo en tu propio teléfono."
-            checked={sharedDevice}
-            onChange={(event) => setSharedDevice(event.target.checked)}
-          />
-        ) : null}
-        {formError ? (
-          <p id="acceso-error" className="tv-form__error" role="alert">
-            {formError}
-          </p>
-        ) : null}
-        {notice ? (
+        {signedOutByInactivity && mode === 'sign-in' ? (
           <p className="tv-form__notice" role="status">
-            {notice}
+            Cerramos tu sesión tras 15 minutos sin uso. Vuelve a entrar para continuar.
           </p>
         ) : null}
-        <TavelyoButton
-          type="submit"
-          loading={busy}
-          loadingLabel={mode === 'sign-in' ? 'Entrando…' : 'Enviando…'}
+        <form
+          className="tv-form"
+          noValidate
+          onSubmit={mode === 'sign-in' ? handleSignIn : handleReset}
+          aria-describedby={formError ? 'acceso-error' : undefined}
         >
-          {mode === 'sign-in' ? 'Entrar' : 'Enviar enlace'}
-        </TavelyoButton>
-        <TavelyoButton
-          variant="secondary"
-          onClick={() => switchMode(mode === 'sign-in' ? 'reset' : 'sign-in')}
-        >
-          {mode === 'sign-in' ? '¿Olvidaste tu contraseña?' : 'Volver al acceso'}
-        </TavelyoButton>
-      </form>
-    </Card>
+          <TextField
+            label="Correo"
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            {...(fieldErrors.email ? { error: fieldErrors.email } : {})}
+          />
+          {mode === 'sign-in' ? (
+            <TextField
+              label="Contraseña"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              {...(fieldErrors.password ? { error: fieldErrors.password } : {})}
+            />
+          ) : null}
+          {mode === 'sign-in' ? (
+            <CheckboxField
+              label="Equipo compartido"
+              hint="La sesión se borra al cerrar esta pestaña o la app. Desmárcala solo en tu propio teléfono."
+              checked={sharedDevice}
+              onChange={(event) => setSharedDevice(event.target.checked)}
+            />
+          ) : null}
+          {formError ? (
+            <p id="acceso-error" className="tv-form__error" role="alert">
+              {formError}
+            </p>
+          ) : null}
+          {notice ? (
+            <p className="tv-form__notice" role="status">
+              {notice}
+            </p>
+          ) : null}
+          <TavelyoButton
+            type="submit"
+            loading={busy}
+            loadingLabel={mode === 'sign-in' ? 'Entrando…' : 'Enviando…'}
+          >
+            <Icon name={mode === 'sign-in' ? 'signIn' : 'next'} />
+            {mode === 'sign-in' ? 'Entrar' : 'Enviar enlace'}
+          </TavelyoButton>
+          <TavelyoButton
+            variant="secondary"
+            onClick={() => switchMode(mode === 'sign-in' ? 'reset' : 'sign-in')}
+          >
+            {mode === 'sign-in' ? '¿Olvidaste tu contraseña?' : 'Volver al acceso'}
+          </TavelyoButton>
+        </form>
+      </Card>
+    </div>
   );
 }

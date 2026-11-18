@@ -50,3 +50,16 @@ Hallazgos en la revisión de capturas, corregidos:
 
 Hallazgos de la tanda completa (de las pruebas, no de la app):
 - **Backend frío en el emulador:** tras un rato sin uso (el equipo se suspendió unos 50 minutos a mitad de la tanda), la primera llamada desde el navegador tarda mucho más. `accessibility-fase-2` esperaba solo 5 s el resumen del pedido; ahora espera `FUNCTION_WAIT` (60 s), como las demás llamadas al backend. `accessibility-fase-3` encadena varias llamadas y pasó de su límite de 3 minutos; ahora tiene 5. Medido sin navegador, el backend responde en unos 0,8 s.
+
+## 2026-11-18 — Bloque 4: entrada, inicio y administración
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Sistema de diseño | `npx vitest run packages/design-system` | ✅ `PageTitle`: es el encabezado principal y el icono no cambia su nombre. Catálogo de iconos con 44 nombres (5 nuevos: carta, horario, inicio, persona y acceso), todos dibujan su icono |
+| Pantallas y rutas | `npx vitest run packages apps` | ✅ Sin cambios en lo que comprueban: los títulos, enlaces y botones conservan su nombre accesible |
+| Capturas de antes y después | `npm run capturas -- administracion --output=capturas/<etiqueta>` | ✅ Entrada, inicio del propietario, carta de la empresa y de la sucursal, estaciones, mesas y QR, y sucursales, en móvil y escritorio |
+| **Tanda completa con emuladores** | `npx playwright test --config playwright.emulators.config.ts` | ✅ **5 navegadores**: 80 superadas, 4 omitidas (Tab en Safari, como antes) y 1 fallida en Safari de escritorio (`staff-session`, ver hallazgos). Corregida la espera de la prueba: ✅ pasa 5 de 5 seguidas en Safari de escritorio |
+| Conjunto | `npm run check` y `npm run check:secrets` | ✅ 712 pruebas unitarias, tipos, ESLint y Prettier; sin secretos en 448 archivos |
+
+Hallazgos de la tanda completa (de las pruebas, no de la app):
+- **Comprobación de la sesión lenta en Safari con la máquina cargada:** al cargar o recargar, la app muestra «Comprobando la sesión…» mientras consulta Auth y SQL Connect. Justo después de la tanda completa (38 minutos), en Safari de escritorio esa comprobación superó la espera general de 5 s de `staff-session` (3 de 3 intentos, cada uno de 28 a 33 s). Con el equipo descansado pasó 5 de 5 con este bloque (unos 20 s cada uno) y 2 de 2 sin él, así que no es una regresión del diseño. Las esperas tras cargar y recargar pasan a 20 s, como las demás esperas de conexión de las pruebas; los pasos y lo que comprueban no cambian.

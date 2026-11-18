@@ -6,9 +6,10 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  PageTitle,
+  serverErrorText,
   StatusChip,
   TavelyoButton,
-  serverErrorText,
 } from '@tavelyo/design-system';
 import { tableMenuUrl } from '../application/forms.ts';
 import type {
@@ -47,7 +48,7 @@ export function LayoutAdminPage({
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Mesas y códigos QR</h1>
+          <PageTitle icon="qr">Mesas y códigos QR</PageTitle>
           <p className="tv-list__meta">{branchName}</p>
         </div>
         <div className="tv-toolbar">{printLink}</div>

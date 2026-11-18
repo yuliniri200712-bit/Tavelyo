@@ -7,6 +7,7 @@ import {
   KitchenTicket,
   LiveStatus,
   LoadingState,
+  PageTitle,
   StatusChip,
   TavelyoButton,
   useLiveData,
@@ -83,7 +84,7 @@ export function PickupPage({
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Listos para recoger</h1>
+          <PageTitle icon="readyToServe">Listos para recoger</PageTitle>
           <p className="tv-list__meta">{branchName}</p>
         </div>
       </header>

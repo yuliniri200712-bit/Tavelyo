@@ -1178,6 +1178,114 @@
   color: var(--tv-color-status-info);
 }
 
+/* ---------- Fase 3B, bloque 4: inicio, administración y entrada ---------- */
+
+/* Título de pantalla con el icono del módulo. */
+.tv-page-title {
+  display: flex;
+  align-items: center;
+  gap: var(--tv-space-3);
+  margin: 0;
+}
+.tv-page-title .tv-icon {
+  color: var(--tv-color-action-primary);
+}
+
+/* Bienvenida del inicio: empresa, sucursal y rol sobre durazno. */
+.tv-welcome {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tv-space-4);
+  padding: var(--tv-space-5);
+  border-radius: var(--tv-radius-container);
+  background: var(--tv-color-surface-grouped);
+}
+.tv-welcome > .tv-icon {
+  color: var(--tv-color-action-primary);
+}
+.tv-welcome__body {
+  display: grid;
+  justify-items: start;
+  gap: var(--tv-space-2);
+}
+.tv-welcome__body h2,
+.tv-welcome__body p {
+  margin: 0;
+}
+
+/* Módulos del inicio: tarjeta con icono; el enlace cubre toda la tarjeta. */
+.tv-module-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, calc(var(--tv-size-table-tile) * 1.75)), 1fr)
+  );
+  gap: var(--tv-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tv-module {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tv-space-3);
+  height: 100%;
+  padding: var(--tv-space-4);
+  border: var(--tv-stroke-hairline) solid var(--tv-color-border-subtle);
+  border-radius: var(--tv-radius-card);
+  background: var(--tv-color-surface-card);
+  box-shadow: var(--tv-elevation-card);
+}
+.tv-module:hover {
+  border-color: var(--tv-color-border-control);
+}
+.tv-module:focus-within {
+  outline: var(--tv-stroke-focus) solid var(--tv-color-focus-ring);
+  outline-offset: var(--tv-stroke-focus-offset);
+}
+.tv-module > .tv-icon {
+  color: var(--tv-color-action-primary);
+}
+.tv-module__body {
+  display: grid;
+  gap: var(--tv-space-1);
+}
+.tv-module__body p {
+  margin: 0;
+}
+.tv-module__link {
+  color: var(--tv-color-text-primary);
+  font-size: var(--tv-type-h3-size);
+  line-height: var(--tv-type-h3-line-height);
+  font-weight: var(--tv-type-h3-weight);
+  text-decoration: none;
+}
+.tv-module__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--tv-radius-card);
+}
+.tv-module__link:focus-visible {
+  outline: none;
+}
+
+/* Barra de contexto de la cabecera: la persona con su icono. */
+.tv-context-bar__text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tv-space-2);
+  margin: 0;
+}
+
+/* Entrada del personal: tarjeta centrada y de ancho cómodo. */
+.tv-auth {
+  width: 100%;
+  max-width: var(--tv-size-dialog-max-width);
+  margin: var(--tv-space-5) auto 0;
+}
+
 @media print {
   .tv-app-header,
   .tv-skip-link,

@@ -2,15 +2,16 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { isCurrencyCode, Money, formatMoney } from '@tavelyo/core';
 import {
   ActionNotice,
-  serverErrorText,
-  useServerData,
-  type RunCommand,
   Card,
   EmptyState,
   ErrorState,
   LoadingState,
+  PageTitle,
+  serverErrorText,
   StatusChip,
   TavelyoButton,
+  useServerData,
+  type RunCommand,
 } from '@tavelyo/design-system';
 import { formatRate, minorToInput } from '../application/forms.ts';
 import type {
@@ -62,7 +63,7 @@ export function CatalogAdminPage(props: CatalogAdminPageProps) {
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Carta de la empresa</h1>
+          <PageTitle icon="menu">Carta de la empresa</PageTitle>
           <p className="tv-list__meta">
             Productos, opciones e impuestos comunes a todas las sucursales.
             {props.canEditCatalog ? '' : ' Solo el propietario puede modificarlos.'}

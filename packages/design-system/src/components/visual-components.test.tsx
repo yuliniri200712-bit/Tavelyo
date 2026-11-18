@@ -6,6 +6,7 @@ import { ActionBar } from './ActionBar.tsx';
 import { FilterPills } from './FilterPills.tsx';
 import { Icon, iconNames } from './Icon.tsx';
 import { KitchenTicket } from './KitchenTicket.tsx';
+import { PageTitle } from './PageTitle.tsx';
 import { ProductCard } from './ProductCard.tsx';
 import { SearchField } from './SearchField.tsx';
 import { StatusTimeline } from './StatusTimeline.tsx';
@@ -192,5 +193,13 @@ describe('ActionBar', () => {
     );
     const region = screen.getByRole('region', { name: 'Tu pedido' });
     expect(within(region).getByRole('button', { name: 'Mi pedido (2)' })).toBeTruthy();
+  });
+});
+
+describe('PageTitle', () => {
+  it('es el encabezado principal y el icono no cambia su nombre', () => {
+    const { container } = render(<PageTitle icon="kitchen">Cocina</PageTitle>);
+    expect(screen.getByRole('heading', { level: 1, name: 'Cocina' })).toBeTruthy();
+    expect(container.querySelector('h1 svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 });

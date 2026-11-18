@@ -70,4 +70,5 @@ export {
 export { ProductCard, type ProductCardProps } from './components/ProductCard.tsx';
 export { SearchField, type SearchFieldProps } from './components/SearchField.tsx';
 export { ActionBar, type ActionBarProps } from './components/ActionBar.tsx';
+export { PageTitle, type PageTitleProps } from './components/PageTitle.tsx';
 export { DesignSystemCatalog } from './catalog/Catalog.tsx';

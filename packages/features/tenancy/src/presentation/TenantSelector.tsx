@@ -1,4 +1,11 @@
-import { Card, EmptyState, ErrorState, LoadingState, TavelyoButton } from '@tavelyo/design-system';
+import {
+  Card,
+  EmptyState,
+  ErrorState,
+  Icon,
+  LoadingState,
+  TavelyoButton,
+} from '@tavelyo/design-system';
 import { canChangeContext } from '../application/selection.ts';
 import { useTenancy } from './TenancyProvider.tsx';
 
@@ -51,6 +58,7 @@ export function TenantSelector() {
                   variant="secondary"
                   onClick={() => dispatch({ type: 'tenant-chosen', tenantId: membership.tenantId })}
                 >
+                  <Icon name="menu" />
                   {membership.tenantName} · {membership.roleName}
                 </TavelyoButton>
               </li>
@@ -68,6 +76,7 @@ export function TenantSelector() {
                   variant="secondary"
                   onClick={() => dispatch({ type: 'branch-chosen', branchId: branch.id })}
                 >
+                  <Icon name="branch" />
                   {branch.name}
                 </TavelyoButton>
               </li>
@@ -91,6 +100,7 @@ export function ContextBar({ userName, onSignOut }: ContextBarProps) {
   return (
     <div className="tv-context-bar">
       <p className="tv-context-bar__text">
+        <Icon name="user" />
         {userName}
         {selection.status === 'ready'
           ? ` · ${selection.tenant.tenantName} · ${selection.branch.name} · ${selection.tenant.roleName}`
@@ -98,10 +108,12 @@ export function ContextBar({ userName, onSignOut }: ContextBarProps) {
       </p>
       {canChangeContext(selection) ? (
         <TavelyoButton variant="secondary" onClick={() => dispatch({ type: 'change-context' })}>
+          <Icon name="branch" />
           Cambiar empresa o sucursal
         </TavelyoButton>
       ) : null}
       <TavelyoButton variant="secondary" onClick={onSignOut}>
+        <Icon name="signOut" />
         Cerrar sesión
       </TavelyoButton>
     </div>

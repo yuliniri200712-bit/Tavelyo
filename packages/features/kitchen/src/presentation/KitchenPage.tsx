@@ -10,11 +10,12 @@ import {
   KitchenTicket,
   LiveStatus,
   LoadingState,
+  PageTitle,
   ReasonDialog,
   SelectField,
+  serverErrorText,
   StatusChip,
   TavelyoButton,
-  serverErrorText,
   useServerData,
   type ActionResult,
 } from '@tavelyo/design-system';
@@ -125,7 +126,7 @@ export function KitchenPage(props: KitchenPageProps) {
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Cocina</h1>
+          <PageTitle icon="kitchen">Cocina</PageTitle>
           <p className="tv-list__meta">
             {props.branchName}
             {station ? ` · ${station.name}` : ''}

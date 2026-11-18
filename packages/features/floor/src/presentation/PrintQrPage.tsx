@@ -3,6 +3,7 @@ import {
   EmptyState,
   ErrorState,
   LoadingState,
+  PageTitle,
   serverErrorText,
   TavelyoButton,
 } from '@tavelyo/design-system';
@@ -53,7 +54,7 @@ export function PrintQrPage({
     <div className="tv-page">
       <header className="tv-page__header tv-no-print">
         <div>
-          <h1>Códigos QR para imprimir</h1>
+          <PageTitle icon="print">Códigos QR para imprimir</PageTitle>
           <p className="tv-list__meta">
             {branchName} · {tables.length} mesas activas
           </p>
