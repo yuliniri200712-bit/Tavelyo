@@ -60,6 +60,16 @@ export const color = {
     identity: brand.tomato,
     gastronomic: brand.paprika,
   },
+  /**
+   * Fondos suaves de estado (Fase 3B): mesas, franjas y tickets. Sobre ellos el texto va siempre en
+   * `text.primary` o `text.secondary`; el color de estado solo en iconos y bordes (señal gráfica).
+   */
+  tint: {
+    success: '#E6F4EA',
+    warning: '#FDF1DE',
+    error: '#FCE8E5',
+    info: '#E8EEFC',
+  },
 } as const;
 
 export const font = {
@@ -125,6 +135,11 @@ export const stroke = {
 /** Medidas de componentes que no son espacios ni radios. */
 export const size = {
   icon: 20,
+  iconLarge: 28,
+  /** Ancho mínimo de la tarjeta de mesa en la cuadrícula del salón. */
+  tableTile: 128,
+  /** Ancho del bloque de la mesa en el ticket de cocina. */
+  ticketTable: 96,
   /** Altura del logotipo horizontal en la cabecera: 40 px dan ≥ 120 px de ancho (IV §3). */
   logoHeader: 40,
   dialogMaxWidth: 480,

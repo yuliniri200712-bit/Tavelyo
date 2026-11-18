@@ -8,7 +8,7 @@
 
 | Bloque del plan | Estado |
 |---|---|
-| 1. Base del sistema de diseño | Pendiente |
+| 1. Base del sistema de diseño | ✅ `lucide-react` 1.66.0 y `Icon` con catálogo cerrado (39 iconos; D-27, ADR-0010). Tokens nuevos: fondos suaves de estado (`tint.*`) y medidas de icono grande, mesa y ticket, con **19 pares de contraste** nuevos medidos. Componentes nuevos en el catálogo (`/catalogo`): `FilterPills` (píldoras con contador), `TableTile` (mesa con estado en texto e icono), `StatusTimeline` (seguimiento), `KitchenTicket` (bloque de mesa en color y espera grande), `ProductCard`, `SearchField` y `ActionBar` (barra fija al pie). `PwaShell` admite cabecera oscura con el logotipo para fondo espresso. Las apps todavía no los usan (bloques 2 a 4). Pruebas en `testing/fase-3b.md` |
 | 2. Cliente | Pendiente |
 | 3. Personal | Pendiente |
 | 4. Administración y acceso | Pendiente |

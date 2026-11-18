@@ -49,4 +49,25 @@ export {
   type ErrorStateProps,
   type LoadingStateProps,
 } from './components/States.tsx';
+export { Icon, iconNames, type IconName, type IconProps } from './components/Icon.tsx';
+export {
+  FilterPills,
+  type FilterOption,
+  type FilterPillsProps,
+} from './components/FilterPills.tsx';
+export { TableTile, type TableTileProps, type TableTone } from './components/TableTile.tsx';
+export {
+  StatusTimeline,
+  type StatusTimelineProps,
+  type TimelineStep,
+  type TimelineStepState,
+} from './components/StatusTimeline.tsx';
+export {
+  KitchenTicket,
+  type KitchenTicketProps,
+  type TicketTone,
+} from './components/KitchenTicket.tsx';
+export { ProductCard, type ProductCardProps } from './components/ProductCard.tsx';
+export { SearchField, type SearchFieldProps } from './components/SearchField.tsx';
+export { ActionBar, type ActionBarProps } from './components/ActionBar.tsx';
 export { DesignSystemCatalog } from './catalog/Catalog.tsx';
