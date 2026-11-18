@@ -78,14 +78,15 @@ stateDiagram-v2
 - `resultado_desconocido` **nunca** dispara un nuevo cobro: se consulta o se reintenta la misma operación idempotente.
 - Los estados confirmados no retroceden ante webhooks tardíos.
 - El mapeo a los estados de la pasarela se documenta tras D-02.
+- **Implementación (Fase 4, bloque 1):** el diagrama se reparte en dos tablas. `PaymentOperation` guarda cada llamada a la pasarela (`CREATED` → `PROCESSING` → `SUCCEEDED` | `FAILED` | `UNKNOWN`); `UNKNOWN` es `resultado_desconocido` y la conciliación lo resuelve con la misma clave. `PaymentAuthorization` guarda el estado de la preautorización (`AUTHORIZED` → `CAPTURED` | `VOIDED` | `EXPIRED`); `requiere_accion` (3DS) llega con la pasarela real.
 
 ## 4. Reembolso (Refund)
 
-`solicitado → procesando → confirmado | rechazado | resultado_desconocido`. La interfaz no lo muestra completado hasta `confirmado`.
+`solicitado → procesando → confirmado | rechazado | resultado_desconocido`. La interfaz no lo muestra completado hasta `confirmado`. En el esquema: `RefundStatus` (`REQUESTED`, `PROCESSING`, `CONFIRMED`, `REJECTED`, `UNKNOWN`).
 
 ## 5. Sesión de caja (CashSession)
 
-`abierta → en_cierre (conteo) → cerrada`. Una diferencia distinta de cero exige motivo.
+`abierta → en_cierre (conteo) → cerrada`. Una diferencia distinta de cero exige motivo. En el esquema, `CashSessionStatus` es `OPEN` o `CLOSED`: el conteo (`CashCount`) y el cierre se guardan en la misma transacción, así que no hace falta un estado intermedio.
 
 ## 6. Flujo crítico: pedido con preautorización
 

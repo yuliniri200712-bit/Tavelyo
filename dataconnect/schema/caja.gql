@@ -1,0 +1,109 @@
+# Caja (Fase 4, RF-PA-07): cajas de cada sucursal, sus sesiones (turnos), movimientos de efectivo y
+# conteo de cierre. Mismas reglas que el resto del esquema: FK compuestas con tenantId y branchId,
+# importes enteros con moneda y nada se borra.
+
+"Caja física de una sucursal (por ejemplo, «Caja principal»). Se archiva, no se borra."
+type Register
+  @table
+  @unique(fields: ["id", "tenantId", "branchId"])
+  @unique(fields: ["tenantId", "branchId", "name"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  branch: Branch! @ref(fields: ["branchId", "tenantId"], references: ["id", "tenantId"])
+  name: String!
+  archivedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+"""
+Turno de una caja: se abre con el fondo inicial y se cierra con el conteo (CashCount).
+openRegisterId vale el id de la caja mientras está abierta y null al cerrarla: su unicidad deja una
+sola sesión abierta por caja (mismo recurso que TableSession.openTableId).
+"""
+type CashSession @table @unique(fields: ["id", "tenantId", "branchId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  registerId: UUID!
+  register: Register!
+    @ref(fields: ["registerId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  openRegisterId: UUID @unique
+  status: CashSessionStatus!
+  currency: String! @col(dataType: "char(3)")
+  openingFloatMinor: Int64!
+  version: Int! @default(value: 1)
+  openedBy: String!
+  openedAt: Timestamp! @default(expr: "request.time")
+  closedBy: String
+  closedAt: Timestamp
+}
+
+enum CashMovementKind {
+  "Entrada de efectivo con motivo (por ejemplo, más cambio)."
+  CASH_IN
+  "Salida de efectivo con motivo (por ejemplo, un pago a un proveedor)."
+  CASH_OUT
+  "Cobro en efectivo de una cuenta (lo recibido menos el cambio)."
+  SALE
+  "Reembolso entregado en efectivo."
+  REFUND
+}
+
+"""
+Movimiento de efectivo de un turno. amountMinor es siempre positivo; kind dice si entra o sale.
+Las ventas y los reembolsos apuntan a su pago o reembolso; las entradas y salidas manuales llevan
+motivo. El efectivo esperado es el fondo inicial más entradas y ventas menos salidas y reembolsos.
+"""
+type CashMovement
+  @table
+  @unique(fields: ["id", "tenantId", "branchId"])
+  @index(fields: ["cashSessionId", "createdAt"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  cashSessionId: UUID!
+  cashSession: CashSession!
+    @ref(
+      fields: ["cashSessionId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  kind: CashMovementKind!
+  amountMinor: Int64!
+  reason: String
+  paymentId: UUID
+  payment: BillPayment
+    @ref(fields: ["paymentId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  refundId: UUID
+  refund: Refund
+    @ref(fields: ["refundId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  createdBy: String!
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+"""
+Conteo de cierre de un turno: uno por sesión. Guarda lo esperado, lo contado y la diferencia en el
+momento del cierre; una diferencia distinta de cero exige motivo (state-machines.md §5).
+"""
+type CashCount @table @unique(fields: ["cashSessionId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  cashSessionId: UUID!
+  cashSession: CashSession!
+    @ref(
+      fields: ["cashSessionId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  expectedMinor: Int64!
+  countedMinor: Int64!
+  differenceMinor: Int64!
+  reason: String
+  countedBy: String!
+  countedAt: Timestamp! @default(expr: "request.time")
+}

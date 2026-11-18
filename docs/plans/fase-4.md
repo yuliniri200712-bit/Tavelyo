@@ -1,6 +1,6 @@
 # Plan de Fase 4 — Caja y pagos
 
-Estado: **plan y recomendaciones aprobados por el propietario el 2026-11-18** (D-05, D-06, D-29, D-30 y D-31, sección 2). Rama de trabajo: `fase-4-caja-pagos`.
+Estado: **plan y recomendaciones aprobados por el propietario el 2026-11-18** (D-05, D-06, D-29, D-30 y D-31, sección 2). **Fase autorizada** el mismo día, junto con volver a crear el contenedor de Docker de los emuladores. Rama de trabajo: `fase-4-caja-pagos`.
 
 ## 1. Objetivo
 
@@ -82,6 +82,12 @@ Alternativas:
 - no le quedan líneas en cocina o por entregar (se entregan o se cancelan con motivo).
 
 Al cerrar, toda retención sin capturar se libera.
+
+### Tomadas en el bloque 1 (2026-11-18, dentro del alcance aprobado)
+
+- **Sin tablas `BillItem`, `Authorization` ni `Capture` separadas.** La línea de la cuenta es la propia línea del pedido; la preautorización es `PaymentAuthorization` (una por resumen, con lo capturado); la captura es un pago `CARD_CAPTURE` con su operación ante la pasarela. Menos tablas que sincronizar y las mismas garantías (`architecture/data-model.md`).
+- **`PaymentOperation` reúne el intento y la idempotencia:** una fila por llamada a la pasarela, guardada antes de llamar, con la clave que recibe la pasarela.
+- **Los totales de la cuenta no se guardan mientras está abierta:** se calculan en el servidor desde las líneas, para que nunca difieran; al saldarla se guarda el total.
 
 ## 3. Diseño propuesto
 

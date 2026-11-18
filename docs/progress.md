@@ -4,7 +4,19 @@
 
 ## Fase actual
 
-**Fase 4 — Caja y pagos: plan aprobado** por el propietario el 2026-11-18 ([`plans/fase-4.md`](plans/fase-4.md)), con D-05, D-06, D-29, D-30 y D-31; el inicio de la implementación espera su autorización expresa. D-02 (pasarela) hace falta antes del bloque 8; si no la hay al terminar el bloque 7, la pasarela real pasa a la Fase 4B (D-31). Rama: `fase-4-caja-pagos`.
+**Fase 4 — Caja y pagos: autorizada** por el propietario el 2026-11-18, con el plan [`plans/fase-4.md`](plans/fase-4.md), las decisiones D-05, D-06, D-29, D-30 y D-31, y el contenedor de Docker de los emuladores (se borra al cerrar la fase). D-02 (pasarela) hace falta antes del bloque 8; si no la hay al terminar el bloque 7, la pasarela real pasa a la Fase 4B (D-31). Rama: `fase-4-caja-pagos`.
+
+| Bloque del plan | Estado |
+|---|---|
+| 1. Decisiones y esquema | ✅ D-05, D-06, D-29, D-30 y D-31 registradas. Esquema nuevo en `cuenta.gql` (cuenta, preautorización, pago, asignación, reembolso, operación ante la pasarela, avisos y tareas pendientes) y `caja.gql` (caja, turno, movimientos y conteo), con FK compuestas y unicidades; 17 pruebas de capacidades en el emulador (`testing/fase-4.md`, `architecture/data-model.md`). Los permisos de caja y pagos ya estaban en el catálogo desde la Fase 1 |
+| 2. Dinero de la cuenta | Pendiente |
+| 3. Pagos en el backend (simulado) | Pendiente |
+| 4. Cuenta y cierre | Pendiente |
+| 5. Caja | Pendiente |
+| 6. Operaciones (caja y mesero) | Pendiente |
+| 7. Cliente («Mi cuenta») | Pendiente |
+| 8. Pasarela real en pruebas (o Fase 4B, D-31) | Pendiente |
+| 9. Cierre | Pendiente |
 
 **Fase 3B — Diseño visual: cerrada** con aprobación del propietario el 2026-11-18 e integrada en `main`. Autorizada el 2026-11-17, con el plan [`plans/fase-3b-diseno-visual.md`](plans/fase-3b-diseno-visual.md), las decisiones D-27 (Lucide) y D-28 (solo Plus Jakarta Sans), D-22 confirmada (sin fotos todavía) y la instalación de `lucide-react` 1.66.0. Rama: `fase-3b-diseno-visual`. Al cerrarla se borraron el contenedor y la imagen de Docker de los emuladores, como se acordó.
 

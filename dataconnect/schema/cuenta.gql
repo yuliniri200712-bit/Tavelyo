@@ -1,0 +1,304 @@
+# Cuenta y pagos (Fase 4). Solo los escribe el backend: el dinero nunca se calcula ni se confirma en
+# el navegador (PM §8). Mismas reglas que el resto del esquema: FK compuestas con tenantId y
+# branchId, importes en unidades menores enteras con moneda explícita (ADR-0005) y nada se borra:
+# los errores se corrigen con operaciones nuevas (reembolsos, liberaciones), auditadas.
+
+enum BillStatus {
+  OPEN
+  "Saldada: la suma de los pagos confirmados es exactamente el total de sus líneas (D-30)."
+  SETTLED
+}
+
+"""
+Cuenta de una sesión de mesa: una sola por sesión. Sus líneas son las del pedido (OrderItem, con
+su instantánea) que no estén canceladas, así que el total no se guarda mientras está abierta: se
+calcula en el servidor (packages/core). version sube con cada cobro o cambio: dos cajeros que
+cobran o cierran a la vez no pueden pasar los dos (caso 9).
+"""
+type Bill @table @unique(fields: ["id", "tenantId", "branchId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  sessionId: UUID! @unique
+  session: TableSession!
+    @ref(fields: ["sessionId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  currency: String! @col(dataType: "char(3)")
+  status: BillStatus!
+  version: Int! @default(value: 1)
+  "Total al saldarla (instantánea): las líneas ya no cambian después."
+  settledTotalMinor: Int64
+  settledAt: Timestamp
+  settledBy: String
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+enum AuthorizationStatus {
+  AUTHORIZED
+  "Capturada (toda o en parte): capturedMinor dice cuánto; lo sobrante se liberó."
+  CAPTURED
+  "Liberada sin captura (pago en efectivo, pedido no enviado o mesa cerrada)."
+  VOIDED
+  "Venció sin capturar: no se captura; hace falta otro pago (PM §8, paso 9)."
+  EXPIRED
+}
+
+"""
+Preautorización de un pedido (D-04): una por resumen autorizado. La crea el backend al confirmar
+la autorización en la pasarela. capturedMinor nunca supera authorizedMinor (lo comprueba el backend
+en la misma transacción que la captura). provider es «simulated» con el adaptador simulado, que
+está bloqueado fuera de los emuladores.
+"""
+type PaymentAuthorization
+  @table
+  @unique(fields: ["id", "tenantId", "branchId"])
+  @index(fields: ["tenantId", "branchId", "status", "expiresAt"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  sessionId: UUID!
+  session: TableSession!
+    @ref(fields: ["sessionId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  "Quien autorizó: por D-06, paga lo que pidió."
+  participantId: UUID!
+  participant: SessionParticipant!
+    @ref(
+      fields: ["participantId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  quoteId: UUID! @unique
+  quote: OrderQuote!
+    @ref(fields: ["quoteId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  provider: String!
+  providerRef: String!
+  currency: String! @col(dataType: "char(3)")
+  authorizedMinor: Int64!
+  capturedMinor: Int64!
+  status: AuthorizationStatus!
+  "Vencimiento que informa la pasarela; la conciliación avisa antes (PM §8, paso 9)."
+  expiresAt: Timestamp
+  version: Int! @default(value: 1)
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+enum PaymentMethod {
+  "Captura de una preautorización existente."
+  CARD_CAPTURE
+  "Cobro nuevo con tarjeta (propina o un pago que no cubre una preautorización)."
+  CARD_CHARGE
+  "Efectivo registrado por la caja."
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  "La pasarela no respondió: la conciliación lo resuelve; nunca se cobra otra vez (caso 7)."
+  UNKNOWN
+}
+
+"""
+Pago aplicado a la cuenta. amountMinor salda líneas (ver PaymentAllocation) y tipMinor es la
+propina voluntaria (D-05), aparte del consumo. idempotencyKey es única por cuenta: una doble
+pulsación o un reintento no crean dos pagos (caso 3). En efectivo, receivedMinor y changeMinor
+dicen lo recibido y el cambio, y cashSessionId, la caja que lo recibió.
+"""
+type BillPayment
+  @table
+  @unique(fields: ["id", "tenantId", "branchId"])
+  @unique(fields: ["billId", "idempotencyKey"])
+  @index(fields: ["tenantId", "branchId", "status", "createdAt"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  billId: UUID!
+  bill: Bill!
+    @ref(fields: ["billId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  method: PaymentMethod!
+  status: PaymentStatus!
+  idempotencyKey: String!
+  "Persona que paga, si paga desde su teléfono o la caja la eligió; null si se cobra por la mesa."
+  participantId: UUID
+  participant: SessionParticipant
+    @ref(
+      fields: ["participantId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  "Preautorización capturada (solo en CARD_CAPTURE)."
+  authorizationId: UUID
+  authorization: PaymentAuthorization
+    @ref(
+      fields: ["authorizationId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  "Caja que recibió el efectivo (solo en CASH)."
+  cashSessionId: UUID
+  cashSession: CashSession
+    @ref(
+      fields: ["cashSessionId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  currency: String! @col(dataType: "char(3)")
+  amountMinor: Int64!
+  tipMinor: Int64!
+  receivedMinor: Int64
+  changeMinor: Int64
+  providerRef: String
+  createdAt: Timestamp! @default(expr: "request.time")
+  createdBy: String!
+  confirmedAt: Timestamp
+}
+
+"""
+Parte de una línea de la cuenta que salda un pago. Un pago no repite línea, y la suma de lo
+asignado a una línea nunca supera su importe (lo comprueba el backend en la transacción del
+cobro). Así una línea no se cobra dos veces, ni al dividir la cuenta (RF-PA-04).
+"""
+type PaymentAllocation @table @unique(fields: ["paymentId", "orderItemId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  paymentId: UUID!
+  payment: BillPayment!
+    @ref(fields: ["paymentId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  orderItemId: UUID!
+  orderItem: OrderItem!
+    @ref(
+      fields: ["orderItemId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  amountMinor: Int64!
+}
+
+enum RefundStatus {
+  REQUESTED
+  PROCESSING
+  "Confirmado por la pasarela o entregado en efectivo: solo entonces se muestra como hecho."
+  CONFIRMED
+  REJECTED
+  UNKNOWN
+}
+
+"""
+Reembolso de un pago: con permiso, motivo y tope (payment.refund). La suma de los confirmados y en
+curso nunca supera lo pagado del pago (caso 10); lo comprueba el backend en la misma transacción.
+"""
+type Refund
+  @table
+  @unique(fields: ["id", "tenantId", "branchId"])
+  @unique(fields: ["paymentId", "idempotencyKey"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  paymentId: UUID!
+  payment: BillPayment!
+    @ref(fields: ["paymentId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  idempotencyKey: String!
+  currency: String! @col(dataType: "char(3)")
+  amountMinor: Int64!
+  reason: String!
+  status: RefundStatus!
+  providerRef: String
+  requestedBy: String!
+  requestedAt: Timestamp! @default(expr: "request.time")
+  confirmedAt: Timestamp
+}
+
+enum PaymentOperationKind {
+  AUTHORIZE
+  CAPTURE
+  VOID
+  REFUND
+  CHARGE
+}
+
+enum PaymentOperationStatus {
+  CREATED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  "Sin respuesta de la pasarela: se consulta o se repite la misma operación, nunca otra nueva."
+  UNKNOWN
+}
+
+"""
+Intento guardado antes de llamar a la pasarela (PM §8): cada captura, liberación, reembolso o cobro
+tiene una fila con su clave de idempotencia, que es también la que recibe la pasarela. Si la
+llamada se corta, la conciliación encuentra la fila en PROCESSING o UNKNOWN y consulta el resultado
+con la misma clave (casos 3 y 7).
+"""
+type PaymentOperation
+  @table
+  @unique(fields: ["id", "tenantId", "branchId"])
+  @index(fields: ["status", "updatedAt"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  branch: Branch! @ref(fields: ["branchId", "tenantId"], references: ["id", "tenantId"])
+  kind: PaymentOperationKind!
+  status: PaymentOperationStatus!
+  idempotencyKey: String! @unique
+  authorizationId: UUID
+  authorization: PaymentAuthorization
+    @ref(
+      fields: ["authorizationId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  paymentId: UUID
+  payment: BillPayment
+    @ref(fields: ["paymentId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  refundId: UUID
+  refund: Refund
+    @ref(fields: ["refundId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  currency: String! @col(dataType: "char(3)")
+  amountMinor: Int64!
+  providerRef: String
+  "Código del error de la pasarela, sin datos de la tarjeta ni del cliente (PM §10)."
+  failureCode: String
+  attempts: Int! @default(value: 0)
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+}
+
+"""
+Aviso de la pasarela (webhook), guardado tras verificar su firma. La unicidad por proveedor e id
+externo descarta los repetidos (caso 8). Se guarda la huella del cuerpo, no el cuerpo: puede traer
+datos que no hacen falta. tenantId queda vacío hasta relacionarlo con una operación propia.
+"""
+type ProviderEvent @table @unique(fields: ["provider", "externalEventId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  provider: String!
+  externalEventId: String!
+  type: String!
+  payloadHash: String!
+  tenantId: UUID
+  providerRef: String
+  receivedAt: Timestamp! @default(expr: "request.time")
+  processedAt: Timestamp
+  outcome: String
+}
+
+enum OutboxStatus {
+  PENDING
+  DONE
+  FAILED
+}
+
+"""
+Tarea pendiente que el backend debe completar aunque falle la primera vez (por ejemplo, liberar una
+retención después de cerrar la mesa). Se escribe en la misma transacción que el cambio que la
+origina y la conciliación la reintenta hasta terminarla.
+"""
+type OutboxEvent @table @index(fields: ["status", "nextAttemptAt"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenant: Tenant!
+  kind: String!
+  "Datos de la tarea en JSON, sin datos de tarjeta ni personales."
+  payload: String!
+  status: OutboxStatus!
+  attempts: Int! @default(value: 0)
+  nextAttemptAt: Timestamp! @default(expr: "request.time")
+  lastError: String
+  createdAt: Timestamp! @default(expr: "request.time")
+}

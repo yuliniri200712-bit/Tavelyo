@@ -80,6 +80,16 @@ export interface AuditEvent_Key {
   __typename?: 'AuditEvent_Key';
 }
 
+export interface BillPayment_Key {
+  id: UUIDString;
+  __typename?: 'BillPayment_Key';
+}
+
+export interface Bill_Key {
+  id: UUIDString;
+  __typename?: 'Bill_Key';
+}
+
 export interface BranchCatalogData {
   productBranches: ({
     productId: UUIDString;
@@ -154,6 +164,21 @@ export interface CancelOrderItemVariables {
   itemId: UUIDString;
   version: number;
   reason: string;
+}
+
+export interface CashCount_Key {
+  id: UUIDString;
+  __typename?: 'CashCount_Key';
+}
+
+export interface CashMovement_Key {
+  id: UUIDString;
+  __typename?: 'CashMovement_Key';
+}
+
+export interface CashSession_Key {
+  id: UUIDString;
+  __typename?: 'CashSession_Key';
 }
 
 export interface CatalogAdminData {
@@ -615,6 +640,26 @@ export interface Order_Key {
   __typename?: 'Order_Key';
 }
 
+export interface OutboxEvent_Key {
+  id: UUIDString;
+  __typename?: 'OutboxEvent_Key';
+}
+
+export interface PaymentAllocation_Key {
+  id: UUIDString;
+  __typename?: 'PaymentAllocation_Key';
+}
+
+export interface PaymentAuthorization_Key {
+  id: UUIDString;
+  __typename?: 'PaymentAuthorization_Key';
+}
+
+export interface PaymentOperation_Key {
+  id: UUIDString;
+  __typename?: 'PaymentOperation_Key';
+}
+
 export interface PendingServiceRequestsData {
   serviceRequests: ({
     id: UUIDString;
@@ -699,6 +744,11 @@ export interface Product_Key {
   __typename?: 'Product_Key';
 }
 
+export interface ProviderEvent_Key {
+  id: UUIDString;
+  __typename?: 'ProviderEvent_Key';
+}
+
 export interface PublicMenuData {
   diningTables: ({
     code: string;
@@ -755,6 +805,16 @@ export interface PublicMenuVariables {
 export interface RateLimitHit_Key {
   id: UUIDString;
   __typename?: 'RateLimitHit_Key';
+}
+
+export interface Refund_Key {
+  id: UUIDString;
+  __typename?: 'Refund_Key';
+}
+
+export interface Register_Key {
+  id: UUIDString;
+  __typename?: 'Register_Key';
 }
 
 export interface RemoveParticipantData {

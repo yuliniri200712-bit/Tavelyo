@@ -2,6 +2,19 @@
 
 Estado: **«Organización» implementado en la Fase 1** (`dataconnect/schema/schema.gql`); **«Salón», «Carta» y el resumen de pedido, en la Fase 2** (`salon.gql`, `carta.gql`, `pedido.gql`, `control.gql`). El resto sigue siendo el diseño lógico de la Fase 0 y se fija al escribir el esquema en su fase.
 
+**Implementado (Fase 4, bloque 1, 2026-11-18), con sus diferencias respecto al borrador** (`cuenta.gql` y `caja.gql`):
+
+- **Cuenta:** `Bill`, una por sesión de mesa (`sessionId` único), con `version` para que dos cajeros no cobren ni cierren a la vez (caso 9). **No guarda totales mientras está abierta:** sus líneas son las del pedido (`OrderItem`, con su instantánea) que no están canceladas, y el total se calcula en el servidor (`packages/core`, bloque 2); al saldarla guarda `settledTotalMinor`. **Sin `BillItem`:** la línea de la cuenta es la propia `OrderItem`.
+- **Preautorización:** `PaymentAuthorization`, una por resumen autorizado (`quoteId` único), porque cada pedido tiene su propia preautorización (D-04) y cada persona paga lo suyo (D-06). Reúne el `Authorization` del borrador y lo capturado (`capturedMinor`); estados `AUTHORIZED`, `CAPTURED`, `VOIDED` y `EXPIRED`.
+- **Intento ante la pasarela:** `PaymentOperation` reúne `PaymentAttempt` e `IdempotencyRecord`: una fila por llamada (autorizar, capturar, liberar, reembolsar o cobrar), guardada antes de llamar, con su `idempotencyKey` única, que es la misma que recibe la pasarela. Estados `CREATED`, `PROCESSING`, `SUCCEEDED`, `FAILED` y `UNKNOWN` (casos 3 y 7).
+- **Pago:** `BillPayment` es lo que salda la cuenta: método (`CARD_CAPTURE`, `CARD_CHARGE` o `CASH`), estado, propina aparte del consumo (`tipMinor`, D-05), lo recibido y el cambio en efectivo, y la caja que lo recibió. Su `idempotencyKey` es única por cuenta. La **captura** del borrador es un pago `CARD_CAPTURE` con su `PaymentOperation`, sin tabla propia.
+- **Asignación:** `PaymentAllocation` asigna parte de una línea a un pago (única por pago y línea), en lugar de asignar por origen. Así se divide la cuenta y una línea no se cobra dos veces.
+- **Reembolso:** `Refund` cuelga del pago (no de la captura), con motivo, estado y clave de idempotencia única por pago.
+- **Avisos y tareas:** `ProviderEvent` guarda la huella del cuerpo, no el cuerpo, y es único por proveedor e id externo (caso 8); `tenantId` queda vacío hasta relacionarlo. `OutboxEvent` guarda las tareas que deben terminarse aunque fallen la primera vez.
+- **Caja:** `Register` (nombre único por sucursal), `CashSession` con `openRegisterId` único (una sola abierta por caja, el mismo recurso que `openTableId`), `CashMovement` (entrada, salida, venta o reembolso, siempre positivo) y `CashCount` (uno por turno).
+- **Invariantes que comprueba el backend en la misma transacción**, porque SQL Connect no ofrece `CHECK` entre filas: lo capturado no supera lo autorizado, lo asignado a una línea no supera su importe y los reembolsos no superan lo pagado.
+- Verificado en el emulador (`dataconnect/tests/capacidades-fase-4.int.test.ts`, 17 pruebas): unicidades, FK compuestas entre empresas y sucursales, y el cambio condicionado por versión de la cuenta.
+
 **Implementado (Fase 3, bloque 1, 2026-11-16), con sus diferencias respecto al borrador:**
 
 - **Estaciones** (`cocina.gql`): `Station` por sucursal. La estación predeterminada se marca con `defaultForBranchId` único (vale el id de la sucursal en la predeterminada y `null` en las demás), el mismo recurso que `openTableId`, porque SQL Connect no ofrece índices únicos parciales. `ProductBranch.station` (opcional) asigna cada producto de la carta de la sucursal; la FK compuesta incluye `branchId`, así que no admite una estación de otra sucursal.
