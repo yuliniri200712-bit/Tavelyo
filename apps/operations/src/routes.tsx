@@ -6,8 +6,11 @@ import {
   BranchMenuRoute,
   CatalogAdminRoute,
   FloorServiceRoute,
+  KitchenRoute,
+  PickupRoute,
   PrintQrRoute,
   RequirePermission,
+  StationsAdminRoute,
   TablesAdminRoute,
 } from './admin-routes.tsx';
 import { AppLayout, PublicOnly, RequireStaffContext, StaffHome } from './layout.tsx';
@@ -31,6 +34,26 @@ export const routes: RouteObject[] = [
           <RequireStaffContext>
             <RequirePermission permissions={['session.open']}>
               <FloorServiceRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/entregas',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['delivery.pickup']}>
+              <PickupRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/cocina',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['kitchen.advance']}>
+              <KitchenRoute />
             </RequirePermission>
           </RequireStaffContext>
         ),
@@ -71,6 +94,16 @@ export const routes: RouteObject[] = [
           <RequireStaffContext>
             <RequirePermission permissions={['catalog.manage', 'price.change']}>
               <BranchMenuRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/carta/estaciones',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['catalog.manage']}>
+              <StationsAdminRoute />
             </RequirePermission>
           </RequireStaffContext>
         ),

@@ -95,6 +95,17 @@ Resultado: `npm audit` → **0 vulnerabilidades**. Verificado con `npm run check
 - `qrcode-generator` **2.0.4** (MIT, sin dependencias, con tipos), aprobado por el propietario con el plan de la Fase 2 (2026-11-14). Solo lo usa `packages/features/floor` para el QR de cada mesa: se toma la matriz de módulos (`isDark`) y el SVG se dibuja en React, sin insertar HTML generado.
 - npm bloquea por defecto los scripts de instalación de `protobufjs` (aviso de versiones) y `@firebase/util` (lee `FIREBASE_WEBAPP_CONFIG`, que no usamos). No se aprueban: no son necesarios.
 
+### Regla de `npm audit` en la CI (2026-11-17)
+
+Aprobada por el propietario el 2026-11-17, tras la ejecución #44 de la CI. El aviso **GHSA-fc5q-39xc-vjpf** (alto) afecta a `picomatch` ≤ 4.0.7 (denegación de servicio con patrones *glob* hechos a propósito), que usan Vite, Vitest y `vite-plugin-pwa` al compilar y probar. **No hay versión corregida**: la 4.0.7 es la última, y `npm audit fix --force` bajaría Vite de la 8 a la 6. Los patrones los define el proyecto y el paquete no llega al navegador.
+
+Regla nueva del paso «Auditoría de dependencias»:
+
+- `npm audit --omit=dev`: cualquier aviso en dependencias de producción bloquea la CI;
+- `npm audit --audit-level=critical`: en el resto (herramientas de desarrollo), solo bloquean los críticos. Los demás siguen apareciendo en el informe del paso.
+
+Un aviso de desarrollo que no bloquea se registra aquí y se corrige en cuanto exista versión corregida (con `overrides` si hace falta, como en 2026-11-13). Pendiente: quitar la excepción de `picomatch` cuando se publique la corrección.
+
 ## Verificación pendiente
 
 - Repetir la compatibilidad exacta de versiones al crear el monorepo en Fase 1 y fijar versiones con al menos dos semanas de publicadas.

@@ -19,9 +19,16 @@ export type {
   QuotedLine,
   QuotedModifier,
   QuoteSummary,
+  RequestServiceRequest,
+  RequestServiceResponse,
+  ServiceRequestKind,
   SimulatedPaymentOutcome,
 } from './customer-api.ts';
-export { ORDER_LIMITS } from './customer-api.ts';
+export {
+  ORDER_LIMITS,
+  PREAUTHORIZATION_CONSENT_VERSION,
+  preauthorizationConsentText,
+} from './customer-api.ts';
 export {
   PaymentTimeoutError,
   type AuthorizeRequest,

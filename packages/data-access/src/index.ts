@@ -18,6 +18,9 @@ export {
 } from './sql-connect-gateways.ts';
 export { mapCommandError, type CommandError } from './command-errors.ts';
 export { createFloorAdminGateway, createFloorServiceGateway } from './floor-gateway.ts';
+export { createKitchenGateway } from './kitchen-gateway.ts';
+export { createStaffOrdersGateway } from './orders-gateway.ts';
+export { createServiceRequestsGateway } from './service-requests-gateway.ts';
 export { createCatalogAdminGateway } from './catalog-gateway.ts';
 export { createBranchAdminGateway } from './branch-gateway.ts';
 export {

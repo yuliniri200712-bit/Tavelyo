@@ -3,6 +3,7 @@ import type {
   AuthorizeQuoteResponse,
   JoinTableSessionResponse,
   QuoteOrderResponse,
+  RequestServiceResponse,
 } from '@tavelyo/contracts';
 import type { RevokeMemberResult } from '../members/revoke-member.ts';
 import type { ProvisionTenantResult } from '../provisioning/provision-tenant.ts';
@@ -16,6 +17,7 @@ export interface UseCases {
   readonly joinTableSession: UseCase<JoinTableSessionResponse>;
   readonly quoteOrder: UseCase<QuoteOrderResponse>;
   readonly authorizeQuote: UseCase<AuthorizeQuoteResponse>;
+  readonly requestService: UseCase<RequestServiceResponse>;
 }
 
 /** Quien llama, si Cloud Functions verificó su ID token; null si no hay sesión. */
@@ -56,5 +58,6 @@ export function createCallables(useCases: UseCases) {
     joinTableSession: onCall(OPTIONS, (request) => handle(request, useCases.joinTableSession)),
     quoteOrder: onCall(OPTIONS, (request) => handle(request, useCases.quoteOrder)),
     authorizeQuote: onCall(OPTIONS, (request) => handle(request, useCases.authorizeQuote)),
+    requestService: onCall(OPTIONS, (request) => handle(request, useCases.requestService)),
   };
 }

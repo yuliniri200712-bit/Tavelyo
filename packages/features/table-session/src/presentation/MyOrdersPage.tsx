@@ -1,0 +1,200 @@
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { formatLocalTime, type OrderItemStatus } from '@tavelyo/core';
+import {
+  EmptyState,
+  ErrorState,
+  LiveStatus,
+  LoadingState,
+  StatusChip,
+  useLiveData,
+  type LiveSubscriber,
+} from '@tavelyo/design-system';
+import {
+  describeMyOrder,
+  describeMyOrders,
+  describeStatusChanges,
+  itemStatuses,
+  MY_ITEM_STATUS,
+} from '../application/my-orders.ts';
+import { formatMinor } from '../application/review-text.ts';
+import type { MyOrder, PublicMenu, TableSeat } from '../domain/index.ts';
+import { MenuGate } from './MenuGate.tsx';
+import { ServiceCard } from './ServiceCard.tsx';
+import { useTableOrder } from './TableOrderProvider.tsx';
+import { customerErrorText } from './useCheckout.ts';
+
+export interface MyOrdersPageProps {
+  /** Enlace para volver a la carta (la navegación es de la app). */
+  readonly menuLink: ReactNode;
+}
+
+/**
+ * «Mis pedidos» (D-06): solo los de esta persona, con el estado de cada línea en vivo y en texto
+ * (ADR-0007). Desde aquí también llama al mesero o pide la cuenta.
+ */
+export function MyOrdersPage({ menuLink }: MyOrdersPageProps) {
+  return (
+    <MenuGate>
+      {(menu) => (
+        <div className="tv-page">
+          <header className="tv-page__header">
+            <div>
+              <h1>Mis pedidos</h1>
+              <p className="tv-list__meta">
+                {menu.branchName} · Mesa {menu.tableCode}
+              </p>
+            </div>
+            <div className="tv-toolbar">{menuLink}</div>
+          </header>
+          <ServiceCard />
+          <MyOrdersContent menu={menu} />
+        </div>
+      )}
+    </MenuGate>
+  );
+}
+
+type Lookup =
+  | { readonly status: 'checking' }
+  | { readonly status: 'done' }
+  | {
+      readonly status: 'error';
+      readonly text: string;
+    };
+
+function MyOrdersContent({ menu }: { readonly menu: PublicMenu }) {
+  const { seat } = useTableOrder();
+  const { resume } = seat;
+  const [lookup, setLookup] = useState<Lookup>({ status: 'checking' });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    void resume().then((result) => {
+      if (!active) return;
+      setLookup(
+        result.ok ? { status: 'done' } : { status: 'error', text: customerErrorText(result.error) },
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, [resume, attempt]);
+
+  if (seat.seat) return <LiveOrders seat={seat.seat} menu={menu} />;
+  if (lookup.status === 'checking') return <LoadingState message="Buscando tus pedidos…" />;
+  if (lookup.status === 'error') {
+    return (
+      <ErrorState
+        title="No pudimos ver tus pedidos"
+        description={lookup.text}
+        onRetry={() => {
+          setLookup({ status: 'checking' });
+          setAttempt((n) => n + 1);
+        }}
+      />
+    );
+  }
+  return (
+    <EmptyState
+      title="Todavía no tienes pedidos"
+      description="Cuando autorices un pedido, aquí verás cómo avanza en cocina."
+    />
+  );
+}
+
+function LiveOrders({ seat, menu }: { readonly seat: TableSeat; readonly menu: PublicMenu }) {
+  const { gateway, now } = useTableOrder();
+  const { sessionId, branchId } = seat;
+  const load = useCallback(
+    () => gateway.myOrders({ sessionId, branchId }),
+    [gateway, sessionId, branchId],
+  );
+  const watch = useCallback(
+    (subscriber: LiveSubscriber<readonly MyOrder[]>) =>
+      gateway.watchMyOrders({ sessionId, branchId }, subscriber),
+    [gateway, sessionId, branchId],
+  );
+  const { state, refresh } = useLiveData(load, watch, { now });
+  const orders = state.data;
+  const announcement = useStatusAnnouncement(orders);
+  const formatTime = (date: Date) => formatLocalTime(date, menu.timezone);
+
+  return (
+    <section aria-label="Estado de tus pedidos">
+      {orders ? (
+        <LiveStatus
+          state={state}
+          formatTime={formatTime}
+          liveText="Los cambios de tus pedidos llegan solos."
+          blockedText="Los estados pueden no estar al día"
+          onRetry={() => void refresh()}
+        />
+      ) : null}
+      <div role="status" aria-live="polite">
+        {announcement ? <p className="tv-list__meta">{announcement}</p> : null}
+      </div>
+      {orders === null && state.problem === null ? (
+        <LoadingState message="Cargando tus pedidos…" />
+      ) : null}
+      {orders === null && state.problem ? (
+        <ErrorState
+          title="No pudimos cargar tus pedidos"
+          description={customerErrorText(state.problem)}
+          onRetry={() => void refresh()}
+        />
+      ) : null}
+      {orders ? <p className="tv-list__meta">{describeMyOrders(orders)}</p> : null}
+      {orders?.map((order) => (
+        <article
+          key={order.id}
+          className="tv-card"
+          aria-label={`Pedido de las ${formatTime(order.sentAt)}`}
+        >
+          <h2>
+            Pedido de las {formatTime(order.sentAt)} · {describeMyOrder(order)}
+          </h2>
+          <ul className="tv-list">
+            {order.items.map((item) => {
+              const status = MY_ITEM_STATUS[item.status];
+              return (
+                <li key={item.id} className="tv-list__item">
+                  <div className="tv-list__summary">
+                    <span className="tv-list__title">
+                      {item.quantity} × {item.productName}
+                    </span>
+                    <StatusChip tone={status.tone} label={status.label} />
+                  </div>
+                  {item.modifiers.length > 0 ? (
+                    <p className="tv-list__meta">{item.modifiers.join(', ')}</p>
+                  ) : null}
+                  {item.note ? <p className="tv-list__meta">Nota: {item.note}</p> : null}
+                  <p className="tv-list__meta">
+                    {formatMinor(item.lineTotalMinor, order.currency)}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="tv-list__title">Total: {formatMinor(order.totalMinor, order.currency)}</p>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+/** Aviso en texto de cada línea que cambia de estado mientras la pantalla está abierta. */
+function useStatusAnnouncement(orders: readonly MyOrder[] | null): string | null {
+  const previous = useRef<Map<string, OrderItemStatus> | null>(null);
+  const [announcement, setAnnouncement] = useState<string | null>(null);
+  useEffect(() => {
+    if (!orders) return;
+    const before = previous.current;
+    previous.current = itemStatuses(orders);
+    // La primera lectura no es un cambio: es lo que ya había al abrir.
+    if (!before) return;
+    const text = describeStatusChanges(before, orders);
+    if (text) setAnnouncement(text);
+  }, [orders]);
+  return announcement;
+}

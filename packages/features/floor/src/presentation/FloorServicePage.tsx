@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { formatLocalTime } from '@tavelyo/core';
 import {
   ActionNotice,
@@ -6,15 +6,28 @@ import {
   ConfirmDialog,
   EmptyState,
   ErrorState,
+  LiveStatus,
   LoadingState,
   StatusChip,
   TavelyoButton,
   serverErrorText,
-  useServerData,
-  type RunCommand,
+  useLiveData,
+  type LiveRunCommand,
+  type LiveSubscriber,
 } from '@tavelyo/design-system';
-import { describeFloorCounts, floorCounts } from '../application/floor-service.ts';
-import type { BranchScope, FloorServiceGateway, FloorTable } from '../domain/index.ts';
+import {
+  describeFloorCounts,
+  describeTableOrders,
+  describeTableRequests,
+  floorCounts,
+} from '../application/floor-service.ts';
+import type {
+  BranchScope,
+  FloorSector,
+  FloorServiceGateway,
+  FloorSession,
+  FloorTable,
+} from '../domain/index.ts';
 import { ParticipantsPanel } from './ParticipantsPanel.tsx';
 
 export interface FloorServicePageProps {
@@ -27,11 +40,19 @@ export interface FloorServicePageProps {
   readonly canClose: boolean;
   /** Reloj inyectable para las pruebas. */
   readonly now?: () => Date;
+  /** Solicitudes pendientes de la sucursal (otro módulo; se muestra arriba si hay permiso). */
+  readonly requestsPanel?: ReactNode;
+  /** Pedidos de una mesa abierta (otro módulo); sin esta función no se ofrece «Ver pedidos». */
+  readonly renderOrders?: (session: FloorSession, tableCode: string) => ReactNode;
 }
 
 const systemNow = () => new Date();
 
-/** Vista del salón para el personal en servicio (session.open; lo comprueba el servidor). */
+/**
+ * Vista del salón para el personal en servicio (session.open; lo comprueba el servidor). Se
+ * actualiza sola (ADR-0007): cada mesa dice en texto si tiene pedidos en curso, platos listos para
+ * recoger o solicitudes pendientes (RF-ME-01).
+ */
 export function FloorServicePage({
   gateway,
   scope,
@@ -39,14 +60,23 @@ export function FloorServicePage({
   timezone,
   canClose,
   now = systemNow,
+  requestsPanel,
+  renderOrders,
 }: FloorServicePageProps) {
   const { tenantId, branchId } = scope;
   const load = useCallback(
     () => gateway.floor({ tenantId, branchId }),
     [gateway, tenantId, branchId],
   );
-  const { state, notice, reload, run } = useServerData(load);
-  const sectors = state.status === 'ready' ? state.data.filter((s) => s.tables.length > 0) : [];
+  const watch = useCallback(
+    (subscriber: LiveSubscriber<readonly FloorSector[]>) =>
+      gateway.watchFloor({ tenantId, branchId }, subscriber),
+    [gateway, tenantId, branchId],
+  );
+  const { state, notice, refresh, run } = useLiveData(load, watch, { now });
+  const data = state.data;
+  const sectors = data ? data.filter((s) => s.tables.length > 0) : [];
+  const reload = () => void refresh();
 
   return (
     <div className="tv-page">
@@ -55,7 +85,7 @@ export function FloorServicePage({
           <h1>Salón</h1>
           <p className="tv-list__meta">
             {branchName}
-            {state.status === 'ready' ? ` · ${describeFloorCounts(floorCounts(state.data))}` : ''}
+            {data ? ` · ${describeFloorCounts(floorCounts(data))}` : ''}
           </p>
         </div>
         <div className="tv-toolbar">
@@ -64,16 +94,28 @@ export function FloorServicePage({
           </TavelyoButton>
         </div>
       </header>
-      <ActionNotice notice={notice} />
-      {state.status === 'loading' ? <LoadingState message="Cargando el salón…" /> : null}
-      {state.status === 'error' ? (
-        <ErrorState
-          title="No se pudo cargar el salón"
-          description={serverErrorText(state.error)}
+      {data ? (
+        <LiveStatus
+          state={state}
+          formatTime={(date) => formatLocalTime(date, timezone)}
+          liveText="Los pedidos y las solicitudes llegan solos."
+          blockedText="No puedes abrir ni cerrar mesas"
           onRetry={reload}
         />
       ) : null}
-      {state.status === 'ready' && sectors.length === 0 ? (
+      <ActionNotice notice={notice} />
+      {data === null && state.problem === null ? (
+        <LoadingState message="Cargando el salón…" />
+      ) : null}
+      {data === null && state.problem ? (
+        <ErrorState
+          title="No se pudo cargar el salón"
+          description={serverErrorText(state.problem)}
+          onRetry={reload}
+        />
+      ) : null}
+      {requestsPanel}
+      {data && sectors.length === 0 ? (
         <EmptyState
           title="Todavía no hay mesas"
           description="La administración agrega los sectores y las mesas en «Mesas y códigos QR»."
@@ -92,6 +134,8 @@ export function FloorServicePage({
                 canClose={canClose}
                 now={now}
                 run={run}
+                offline={state.connection === 'offline'}
+                renderOrders={renderOrders}
               />
             ))}
           </ul>
@@ -108,7 +152,9 @@ interface FloorTableItemProps {
   readonly timezone: string;
   readonly canClose: boolean;
   readonly now: () => Date;
-  readonly run: RunCommand;
+  readonly run: LiveRunCommand;
+  readonly offline: boolean;
+  readonly renderOrders: FloorServicePageProps['renderOrders'];
 }
 
 function FloorTableItem({
@@ -119,13 +165,16 @@ function FloorTableItem({
   canClose,
   now,
   run,
+  offline,
+  renderOrders,
 }: FloorTableItemProps) {
   const [showPeople, setShowPeople] = useState(false);
+  const [showOrders, setShowOrders] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [busy, setBusy] = useState(false);
   const { session } = table;
 
-  const execute = async (command: Parameters<RunCommand>[0], successText: string) => {
+  const execute = async (command: Parameters<LiveRunCommand>[0], successText: string) => {
     setBusy(true);
     const accepted = await run(command, successText);
     setBusy(false);
@@ -138,15 +187,38 @@ function FloorTableItem({
         <span className="tv-list__title">Mesa {table.code}</span>
         <span className="tv-list__meta">{table.seats} puestos</span>
         <StatusChip tone={session ? 'warning' : 'success'} label={session ? 'Abierta' : 'Libre'} />
+        {session && session.activity.requests.length > 0 ? (
+          <StatusChip tone="warning" label="Solicitud pendiente" />
+        ) : null}
+        {session && session.activity.ready > 0 ? (
+          <StatusChip tone="info" label="Platos listos" />
+        ) : null}
       </div>
       {session ? (
-        <p className="tv-list__meta">
-          Abierta desde las {formatLocalTime(session.openedAt, timezone)}
-        </p>
+        <>
+          <p className="tv-list__meta">
+            Abierta desde las {formatLocalTime(session.openedAt, timezone)}
+          </p>
+          <p>{describeTableOrders(session.activity)}</p>
+          {describeTableRequests(session.activity.requests, timezone).map((text) => (
+            <p key={text}>
+              <strong>{text}</strong>
+            </p>
+          ))}
+        </>
       ) : null}
       <div className="tv-toolbar">
         {session ? (
           <>
+            {renderOrders ? (
+              <TavelyoButton
+                variant="secondary"
+                aria-expanded={showOrders}
+                onClick={() => setShowOrders(!showOrders)}
+              >
+                {showOrders ? 'Ocultar pedidos' : 'Ver pedidos'}
+              </TavelyoButton>
+            ) : null}
             <TavelyoButton
               variant="secondary"
               aria-expanded={showPeople}
@@ -155,7 +227,11 @@ function FloorTableItem({
               {showPeople ? 'Ocultar personas' : 'Ver personas en la mesa'}
             </TavelyoButton>
             {canClose ? (
-              <TavelyoButton variant="secondary" onClick={() => setConfirmClose(true)}>
+              <TavelyoButton
+                variant="secondary"
+                disabled={offline}
+                onClick={() => setConfirmClose(true)}
+              >
                 Cerrar mesa
               </TavelyoButton>
             ) : null}
@@ -164,6 +240,7 @@ function FloorTableItem({
           <TavelyoButton
             loading={busy}
             loadingLabel="Abriendo…"
+            disabled={offline}
             onClick={() =>
               void execute(
                 () => gateway.openTable(scope, table.id),
@@ -175,6 +252,7 @@ function FloorTableItem({
           </TavelyoButton>
         )}
       </div>
+      {session && showOrders && renderOrders ? renderOrders(session, table.code) : null}
       {session && showPeople ? (
         <ParticipantsPanel
           gateway={gateway}
@@ -201,6 +279,7 @@ function FloorTableItem({
             ).then(() => {
               setConfirmClose(false);
               setShowPeople(false);
+              setShowOrders(false);
             });
           }}
         >

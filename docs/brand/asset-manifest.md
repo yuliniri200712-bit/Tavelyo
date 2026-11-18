@@ -8,7 +8,7 @@ El logotipo maestro está **aprobado** y se guarda en `assets/branding/` (ver «
 | Recurso | Formato | Origen | Estado | Observaciones |
 |---|---|---|---|---|
 | Composición del logotipo (isotipo T, `tavelyo.`, eslogan, variante horizontal e iconos de app sobre tomate, paprika y durazno) | Imagen raster (WebP) adjunta en la conversación del 2026-11-13 | Propietario | **Referencia, no maestro** | Coincide con el concepto aprobado (IV §3). No es vectorial; no se copió al repositorio. Necesita el archivo original para registrarse como maestro |
-| Cinco composiciones de interfaz (Cliente, Personal, Cocina, Caja, Administración) | Imágenes raster (WebP) | Propietario | **Referencia visual** | Analizadas en `reference-review.md`. Usan un logotipo distinto (gorro de chef), por lo que no son fuente de marca |
+| Cinco composiciones de interfaz (Cliente, Personal, Cocina, Caja, Administración) | WebP de 1448 × 1086 en `docs/brand/referencias/` (`cliente`, `personal`, `cocina`, `caja` y `administracion`), convertidas desde los PNG que el propietario volvió a enviar el 2026-11-17 | Propietario | **Referencia visual** | Guardadas a petición del propietario el 2026-11-17. Analizadas en `reference-review.md`. Usan un logotipo distinto (gorro de chef), por lo que no son fuente de marca; no se usan en las apps |
 
 ## Logotipo maestro (aprobado)
 

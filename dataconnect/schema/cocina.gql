@@ -1,0 +1,25 @@
+# Cocina (Fase 3): estaciones de preparación de cada sucursal.
+# Mismas reglas que schema.gql: FK compuestas con tenantId y branchId, y archivado en lugar de
+# borrado (las líneas de pedido conservan su estación).
+
+"""
+Estación de cocina de una sucursal (Cocina caliente, Bar…). Cada persona de cocina elige en
+pantalla la que atiende (D-24). Cada producto de la carta de la sucursal se asigna a una estación;
+el que no tiene estación va a la predeterminada.
+"""
+type Station @table @unique(fields: ["id", "tenantId", "branchId"]) {
+  id: UUID! @default(expr: "uuidV4()")
+  tenantId: UUID!
+  branchId: UUID!
+  branch: Branch! @ref(fields: ["branchId", "tenantId"], references: ["id", "tenantId"])
+  name: String!
+  sort: Int!
+  """
+  Vale el id de la sucursal en su estación predeterminada y null en las demás: su unicidad
+  garantiza una sola predeterminada por sucursal (mismo recurso que TableSession.openTableId).
+  La predeterminada no se archiva.
+  """
+  defaultForBranchId: UUID @unique
+  archivedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+}

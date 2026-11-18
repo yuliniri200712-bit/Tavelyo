@@ -1,16 +1,18 @@
 import { useRef, useState } from 'react';
-import type {
-  QuoteChange,
-  QuoteOrderResponse,
-  QuoteProblem,
-  QuoteSummary,
-  SimulatedPaymentOutcome,
+import {
+  PREAUTHORIZATION_CONSENT_VERSION,
+  type QuoteChange,
+  type QuoteOrderResponse,
+  type QuoteProblem,
+  type QuoteSummary,
+  type SimulatedPaymentOutcome,
 } from '@tavelyo/contracts';
+import type { ServerError } from '@tavelyo/design-system';
 import { acceptServerPrices, cartTotal, toQuoteLines, type CartLine } from '@tavelyo/cart';
-import { ok, type Result } from '@tavelyo/core';
 import { newAttemptKey } from '../application/review-text.ts';
 import type { CustomerError, CustomerGateway } from '../domain/index.ts';
 import type { CartState } from './useCart.ts';
+import type { TableSeatState } from './useTableSeat.ts';
 
 export type QuotedOrder = Extract<QuoteOrderResponse, { outcome: 'quoted' }>;
 
@@ -38,18 +40,22 @@ const FAILURE_TEXT = {
   unknown: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
 } as const;
 
-export function customerErrorText(error: CustomerError): string {
-  return error.kind === 'rejected' ? error.message : FAILURE_TEXT[error.kind];
+/** Texto para la persona; también para las fallas de la lectura en vivo de «Mis pedidos». */
+export function customerErrorText(error: CustomerError | ServerError): string {
+  if (error.kind === 'rejected') return error.message;
+  return error.kind === 'network' ? FAILURE_TEXT.network : FAILURE_TEXT.unknown;
 }
 
 const EXPIRED = 'El resumen del pedido venció. Revisa el pedido otra vez.';
-const DECLINED = 'El pago simulado fue rechazado. Revisa el pedido para intentarlo de nuevo.';
+const DECLINED =
+  'El pago simulado fue rechazado y el pedido no se envió a cocina. Revisa el pedido para intentarlo de nuevo.';
 const REQUIRES_ACTION =
   'El pago pide una verificación adicional (simulada). Inténtalo de nuevo; no se cobrará dos veces.';
 
 export interface CheckoutDeps {
   readonly gateway: CustomerGateway;
-  readonly qrPublicId: string;
+  /** La mesa de este teléfono, compartida con «Mis pedidos» y las solicitudes. */
+  readonly seat: TableSeatState;
   readonly currency: string;
   readonly cart: CartState;
   readonly randomUuid: () => string;
@@ -61,13 +67,14 @@ export interface CheckoutDeps {
 }
 
 /**
- * «Revisar pedido» y autorización simulada. El servidor es la autoridad: el total del teléfono
- * solo sirve para detectar si algo cambió. Cada intento tiene su clave de idempotencia; un
- * reintento del mismo carrito reutiliza la clave y recibe el mismo resumen (caso 3).
+ * «Revisar pedido» y «Autorizar y enviar a cocina» (pago simulado). El servidor es la autoridad:
+ * el total del teléfono solo sirve para detectar si algo cambió, y solo con la autorización
+ * confirmada el backend envía el pedido a cocina (D-04). Cada intento tiene su clave de
+ * idempotencia; un reintento del mismo carrito reutiliza la clave y recibe el mismo resumen (caso 3).
  */
 export function useCheckout({
   gateway,
-  qrPublicId,
+  seat,
   currency,
   cart,
   randomUuid,
@@ -75,7 +82,6 @@ export function useCheckout({
 }: CheckoutDeps) {
   const [state, setState] = useState<CheckoutState>({ step: 'editing' });
   const [message, setMessage] = useState<string | null>(null);
-  const session = useRef<string | null>(null);
   const attempt = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const keyFor = (lines: readonly CartLine[]) => {
@@ -87,14 +93,6 @@ export function useCheckout({
   };
   const consumeKey = () => {
     attempt.current = null;
-  };
-
-  const joinTable = async (): Promise<Result<string, CustomerError>> => {
-    if (session.current) return ok(session.current);
-    const joined = await gateway.join(qrPublicId);
-    if (!joined.ok) return joined;
-    session.current = joined.value.sessionId;
-    return ok(joined.value.sessionId);
   };
 
   const finish = (quote: QuotedOrder) => {
@@ -114,10 +112,10 @@ export function useCheckout({
     setState({ step: 'reviewing' });
     // Un segundo intento solo si la participación ya no vale: se vuelve a unir a la mesa.
     for (let round = 0; round < 2; round += 1) {
-      const joined = await joinTable();
+      const joined = await seat.join();
       if (!joined.ok) return backToEditing(customerErrorText(joined.error));
       const result = await gateway.quote({
-        sessionId: joined.value,
+        sessionId: joined.value.sessionId,
         idempotencyKey: keyFor(lines),
         lines: toQuoteLines(lines),
         expectedTotalMinor: cartTotal(lines, currency).toMinorString(),
@@ -126,7 +124,7 @@ export function useCheckout({
         const rejoin =
           result.error.kind === 'rejected' && result.error.reason === 'not-participant';
         if (rejoin && round === 0) {
-          session.current = null;
+          seat.forget();
           consumeKey();
           continue;
         }
@@ -162,6 +160,8 @@ export function useCheckout({
     setState({ step: 'authorizing', quote });
     const result = await gateway.authorize({
       quoteId: quote.quoteId,
+      // La persona aceptó el texto que muestra la tarjeta de pago (RF-PA-02).
+      consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
       ...(simulatedOutcome ? { simulatedOutcome } : {}),
     });
     if (!result.ok) {

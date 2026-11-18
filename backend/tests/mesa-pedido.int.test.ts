@@ -1,11 +1,14 @@
-// Flujo del cliente en la mesa (Fase 2): unirse con sesión anónima, «Revisar pedido» validado por
-// el servidor y autorización con el adaptador simulado. Funciones reales en el emulador de Cloud
+// Flujo del cliente en la mesa (Fases 2 y 3): unirse con sesión anónima, «Revisar pedido» validado
+// por el servidor, autorización con el adaptador simulado y envío a cocina, y solicitudes de servicio. Funciones reales en el emulador de Cloud
 // Functions, contra Auth y SQL Connect, con dos empresas, IDs alterados y sesiones cerradas.
 import { randomUUID } from 'node:crypto';
-import type {
-  JoinTableSessionResponse,
-  QuoteOrderRequest,
-  QuoteOrderResponse,
+import {
+  PREAUTHORIZATION_CONSENT_VERSION,
+  type AuthorizeQuoteResponse,
+  type JoinTableSessionResponse,
+  type QuoteOrderRequest,
+  type QuoteOrderResponse,
+  type RequestServiceResponse,
 } from '@tavelyo/contracts';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
@@ -33,10 +36,13 @@ import { callFunction, type CallResult } from './support/functions.ts';
 
 let ownerA: TestUser;
 let waiterA: TestUser;
+let kitchenA: TestUser;
 let ownerB: TestUser;
 let a: Fixture;
 let b: Fixture;
 let priceIdA: string;
+
+const CONSENT = { consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION };
 
 const tenantBranch = (f: Fixture) => ({ tenantId: f.tenantId, branchId: f.branchId });
 
@@ -145,15 +151,42 @@ async function storedQuotes(participantId: string) {
 
 let sessionA: string;
 
+/** Mesa nueva de la empresa A, abierta por el mesero: su QR. */
+async function openExtraTable(code: string): Promise<string> {
+  const tableId = expectOk(
+    await mutate<{ diningTable_insert: { id: string } }>(ownerA, 'CreateTable', {
+      ...tenantBranch(a),
+      sectorId: a.sectorId,
+      code,
+      seats: 8,
+    }),
+    `Mesa ${code}`,
+  ).diningTable_insert.id;
+  expectOk(
+    await mutate(waiterA, 'OpenTableSession', { ...tenantBranch(a), tableId }),
+    `Abrir ${code}`,
+  );
+  return qrOf(ownerA, a.tenantId, a.branchId, tableId);
+}
+
+/** Cliente unido a la mesa del QR indicado. */
+async function seatedAt(label: string, qrPublicId: string) {
+  const user = await createAnonymousUser(label);
+  const joined = expectOkCall(await join(user, qrPublicId), `Unirse ${label}`);
+  return { user, joined };
+}
+
 beforeAll(async () => {
   await seedAuthorizationCatalog();
   ownerA = await createUser('mp-ownerA');
   waiterA = await createUser('mp-waiterA');
+  kitchenA = await createUser('mp-kitchenA');
   ownerB = await createUser('mp-ownerB');
-  for (const user of [ownerA, waiterA, ownerB]) await createProfile(user);
+  for (const user of [ownerA, waiterA, kitchenA, ownerB]) await createProfile(user);
   const tenantA = await provisionTenant('Mesa y pedido A', ownerA, ['Centro']);
   const tenantB = await provisionTenant('Mesa y pedido B', ownerB, ['Sur']);
   await insertMembership(tenantA.id, waiterA, 'waiter', [tenantA.branches['Centro'] ?? '']);
+  await insertMembership(tenantA.id, kitchenA, 'kitchen', [tenantA.branches['Centro'] ?? '']);
   a = await buildFixture(ownerA, tenantA.id, tenantA.branches['Centro'] ?? '');
   b = await buildFixture(ownerB, tenantB.id, tenantB.branches['Sur'] ?? '');
   priceIdA = await currentPriceId(a, ownerA);
@@ -386,17 +419,22 @@ describe('authorizeQuote (adaptador SIMULADO)', () => {
   it('autoriza el importe del resumen y lo deja registrado; repetir no autoriza otra vez', async () => {
     const { user, joined, quoteId } = await quotedFor('mp-paga');
     const result = expectOkCall(
-      await callFunction(user, 'authorizeQuote', { quoteId }),
+      await callFunction(user, 'authorizeQuote', { ...CONSENT, quoteId }),
       'Autorizar',
     );
-    expect(result).toEqual({ quoteId, status: 'authorized', simulated: true });
+    expect(result).toEqual({
+      quoteId,
+      status: 'authorized',
+      orderId: expect.any(String),
+      simulated: true,
+    });
     const [stored] = await storedQuotes(joined.participantId);
     expect(stored).toMatchObject({
       status: 'AUTHORIZED',
       paymentRef: expect.stringMatching(/^sim_/),
     });
     expect(
-      expectOkCall(await callFunction(user, 'authorizeQuote', { quoteId }), 'Repetir'),
+      expectOkCall(await callFunction(user, 'authorizeQuote', { ...CONSENT, quoteId }), 'Repetir'),
     ).toEqual(result);
     expect((await storedQuotes(joined.participantId))[0]?.paymentRef).toBe(stored?.paymentRef);
   });
@@ -406,6 +444,7 @@ describe('authorizeQuote (adaptador SIMULADO)', () => {
     expect(
       expectOkCall(
         await callFunction(declined.user, 'authorizeQuote', {
+          ...CONSENT,
           quoteId: declined.quoteId,
           simulatedOutcome: 'declined',
         }),
@@ -418,6 +457,7 @@ describe('authorizeQuote (adaptador SIMULADO)', () => {
     expect(
       expectOkCall(
         await callFunction(action.user, 'authorizeQuote', {
+          ...CONSENT,
           quoteId: action.quoteId,
           simulatedOutcome: 'requires_action',
         }),
@@ -430,6 +470,7 @@ describe('authorizeQuote (adaptador SIMULADO)', () => {
     expect(
       expectOkCall(
         await callFunction(timeout.user, 'authorizeQuote', {
+          ...CONSENT,
           quoteId: timeout.quoteId,
           simulatedOutcome: 'timeout',
         }),
@@ -441,8 +482,251 @@ describe('authorizeQuote (adaptador SIMULADO)', () => {
   it('nadie autoriza el resumen de otra persona', async () => {
     const { quoteId } = await quotedFor('mp-dueno');
     const other = await seatedCustomer('mp-vecino', a);
-    expectFailure(await callFunction(other.user, 'authorizeQuote', { quoteId }), 'NOT_FOUND');
-    expectFailure(await callFunction(ownerA, 'authorizeQuote', { quoteId }), 'NOT_FOUND');
+    expectFailure(
+      await callFunction(other.user, 'authorizeQuote', { ...CONSENT, quoteId }),
+      'NOT_FOUND',
+    );
+    expectFailure(
+      await callFunction(ownerA, 'authorizeQuote', { ...CONSENT, quoteId }),
+      'NOT_FOUND',
+    );
+  });
+});
+
+describe('envío a cocina al autorizar (Fase 3, D-04)', () => {
+  let qr: string;
+  beforeAll(async () => {
+    qr = await openExtraTable('F3-envio');
+  });
+
+  async function quotedFor(label: string) {
+    const { user, joined } = await seatedAt(label, qr);
+    const quoted = expectOkCall(
+      await quote(user, order(joined.sessionId, { expectedTotalMinor: '7000000' })),
+      'Revisar',
+    );
+    if (quoted.outcome !== 'quoted') throw new Error(`esperaba un resumen: ${quoted.outcome}`);
+    return { user, joined, quoteId: quoted.quoteId };
+  }
+
+  const pay = (user: TestUser, quoteId: string) =>
+    callFunction<AuthorizeQuoteResponse>(user, 'authorizeQuote', { ...CONSENT, quoteId });
+
+  async function ordersOf(quoteId: string) {
+    return expectOk(
+      await admin<{
+        orders: Array<{
+          id: string;
+          sentToKitchenAt: string | null;
+          orderItems_on_order: Array<{
+            status: string;
+            quantity: number;
+            note: string | null;
+            allergensSnapshot: string[] | null;
+            orderItemModifiers_on_item: Array<{ nameSnapshot: string }>;
+          }>;
+        }>;
+      }>(
+        `query ($q: UUID!) { orders(where: { quoteId: { eq: $q } }) { id sentToKitchenAt orderItems_on_order { status quantity note allergensSnapshot orderItemModifiers_on_item { nameSnapshot } } } }`,
+        { q: quoteId },
+      ),
+      'Pedidos del resumen',
+    ).orders;
+  }
+
+  async function kitchenQueueIds(): Promise<string[]> {
+    const stations = expectOk(
+      await query<{ stations: Array<{ id: string; defaultForBranchId: string | null }> }>(
+        kitchenA,
+        'KitchenStations',
+        tenantBranch(a),
+      ),
+      'Estaciones',
+    ).stations;
+    const ids: string[] = [];
+    for (const station of stations) {
+      const queue = expectOk(
+        await query<{ orderItems: Array<{ order: { id: string } }> }>(kitchenA, 'KitchenQueue', {
+          ...tenantBranch(a),
+          stationId: station.id,
+        }),
+        'Cola de cocina',
+      );
+      ids.push(...queue.orderItems.map((item) => item.order.id));
+    }
+    return ids;
+  }
+
+  const markAuthorized = (quoteId: string) =>
+    admin(`mutation ($q: UUID!) { orderQuote_update(id: $q, data: { status: AUTHORIZED }) }`, {
+      q: quoteId,
+    });
+
+  it('autorizado, el pedido llega a cocina con sus líneas y el consentimiento queda guardado', async () => {
+    const { user, quoteId } = await quotedFor('mp3-envia');
+    const paid = expectOkCall(await pay(user, quoteId), 'Autorizar');
+    if (paid.status !== 'authorized') throw new Error(`esperaba autorizado: ${paid.status}`);
+    const [sent] = await ordersOf(quoteId);
+    expect(sent).toMatchObject({
+      id: paid.orderId,
+      orderItems_on_order: [
+        {
+          status: 'RECEIVED',
+          quantity: 2,
+          note: 'Sin cebolla',
+          allergensSnapshot: ['huevo'],
+          orderItemModifiers_on_item: [{ nameSnapshot: 'Bien asada' }],
+        },
+      ],
+    });
+    expect(sent?.sentToKitchenAt).toBeTruthy();
+    expect(await kitchenQueueIds()).toContain(paid.orderId);
+
+    const stored = expectOk(
+      await admin<{ orderQuote: { consentTextVersion: string; authorizedAt: string | null } }>(
+        `query ($q: UUID!) { orderQuote(id: $q) { consentTextVersion authorizedAt } }`,
+        { q: quoteId },
+      ),
+      'Consentimiento',
+    ).orderQuote;
+    expect(stored.consentTextVersion).toBe(PREAUTHORIZATION_CONSENT_VERSION);
+    expect(stored.authorizedAt).toBeTruthy();
+  });
+
+  it('doble pulsación y reintento: un solo pedido para el resumen (caso 3)', async () => {
+    const { user, quoteId } = await quotedFor('mp3-doble');
+    const results = await Promise.all([pay(user, quoteId), pay(user, quoteId)]);
+    const orderIds = results.map((result) => {
+      const value = expectOkCall(result, 'Pulsación');
+      return value.status === 'authorized' ? value.orderId : null;
+    });
+    expect(orderIds[0]).toBeTruthy();
+    expect(orderIds[1]).toBe(orderIds[0]);
+    const again = expectOkCall(await pay(user, quoteId), 'Reintento');
+    expect(again).toMatchObject({ status: 'authorized', orderId: orderIds[0] });
+    expect(await ordersOf(quoteId)).toHaveLength(1);
+  });
+
+  it('sin la autorización confirmada no hay pedido', async () => {
+    const { user, quoteId } = await quotedFor('mp3-rechazo');
+    expectOkCall(
+      await callFunction(user, 'authorizeQuote', {
+        ...CONSENT,
+        quoteId,
+        simulatedOutcome: 'declined',
+      }),
+      'Rechazo',
+    );
+    const action = await quotedFor('mp3-accion');
+    expectOkCall(
+      await callFunction(action.user, 'authorizeQuote', {
+        ...CONSENT,
+        quoteId: action.quoteId,
+        simulatedOutcome: 'requires_action',
+      }),
+      'Acción pendiente',
+    );
+    expect(await ordersOf(quoteId)).toEqual([]);
+    expect(await ordersOf(action.quoteId)).toEqual([]);
+  });
+
+  it('un texto de autorización que no es el vigente se rechaza sin autorizar', async () => {
+    const { user, quoteId } = await quotedFor('mp3-texto');
+    expectFailure(
+      await callFunction(user, 'authorizeQuote', { quoteId, consentTextVersion: '2020-01-01' }),
+      'FAILED_PRECONDITION',
+      /texto de la autorización cambió/,
+    );
+    expectFailure(await callFunction(user, 'authorizeQuote', { quoteId }), 'INVALID_ARGUMENT');
+    expect(
+      (await storedQuotes((await quotedFor('mp3-otro')).joined.participantId))[0]?.status,
+    ).toBe('QUOTED');
+  });
+
+  it('recuperación: autorizado sin pedido, o pedido guardado sin enviar, termina en cocina', async () => {
+    // Caída justo después de autorizar: el resumen quedó autorizado y sin pedido.
+    const lost = await quotedFor('mp3-caida');
+    expectOk(await markAuthorized(lost.quoteId), 'Autorizado sin pedido');
+    const recovered = expectOkCall(await pay(lost.user, lost.quoteId), 'Recuperar');
+    expect(recovered.status).toBe('authorized');
+    expect((await ordersOf(lost.quoteId))[0]?.sentToKitchenAt).toBeTruthy();
+
+    // Caída entre guardar el pedido y enviarlo: nadie lo ve hasta el reintento.
+    const half = await quotedFor('mp3-medio');
+    const first = expectOkCall(await pay(half.user, half.quoteId), 'Primer envío');
+    if (first.status !== 'authorized') throw new Error('esperaba autorizado');
+    expectOk(
+      await admin(
+        `mutation ($o: UUID!) { order_update(id: $o, data: { sentToKitchenAt: null }) }`,
+        { o: first.orderId },
+      ),
+      'Simular la caída',
+    );
+    expect(await kitchenQueueIds()).not.toContain(first.orderId);
+    expect(expectOkCall(await pay(half.user, half.quoteId), 'Reintento')).toMatchObject({
+      status: 'authorized',
+      orderId: first.orderId,
+    });
+    expect(await kitchenQueueIds()).toContain(first.orderId);
+    expect(await ordersOf(half.quoteId)).toHaveLength(1);
+  });
+
+  it('si la persona sale de la mesa antes del envío, no llega a cocina y queda para liberar', async () => {
+    const { user, joined, quoteId } = await quotedFor('mp3-sale');
+    expectOk(await markAuthorized(quoteId), 'Autorizado');
+    expectOk(
+      await mutate(waiterA, 'RemoveParticipant', {
+        ...tenantBranch(a),
+        participantId: joined.participantId,
+      }),
+      'Retirar',
+    );
+    expectFailure(await pay(user, quoteId), 'FAILED_PRECONDITION', /no se envió a cocina/);
+    expect((await storedQuotes(joined.participantId))[0]?.status).toBe('RELEASE_PENDING');
+    expect((await ordersOf(quoteId)).filter((o) => o.sentToKitchenAt !== null)).toEqual([]);
+    expectFailure(await pay(user, quoteId), 'FAILED_PRECONDITION', /no se envió a cocina/);
+  });
+});
+
+describe('requestService (Fase 3)', () => {
+  let qr: string;
+  beforeAll(async () => {
+    qr = await openExtraTable('F3-avisos');
+  });
+
+  const ask = (user: TestUser, sessionId: string, kind: string) =>
+    callFunction<RequestServiceResponse>(user, 'requestService', { sessionId, kind });
+
+  it('avisa al mesero; repetir el mismo aviso sin atender no crea otro', async () => {
+    const { user, joined } = await seatedAt('mp3-llama', qr);
+    const sessionId = joined.sessionId;
+    expect(expectOkCall(await ask(user, sessionId, 'call_waiter'), 'Llamar')).toEqual({
+      status: 'sent',
+    });
+    const neighbour = await seatedAt('mp3-vecina', qr);
+    expect(expectOkCall(await ask(neighbour.user, sessionId, 'call_waiter'), 'Repetir')).toEqual({
+      status: 'already-pending',
+    });
+    expect(expectOkCall(await ask(user, sessionId, 'request_bill'), 'Cuenta')).toEqual({
+      status: 'sent',
+    });
+    const pending = expectOk(
+      await query<{ serviceRequests: Array<{ kind: string; session: { id: string } }> }>(
+        waiterA,
+        'PendingServiceRequests',
+        tenantBranch(a),
+      ),
+      'Solicitudes del mesero',
+    ).serviceRequests.filter((r) => r.session.id === sessionId);
+    expect(pending.map((r) => r.kind).sort()).toEqual(['CALL_WAITER', 'REQUEST_BILL']);
+  });
+
+  it('quien no está en la mesa, o con el id de otra mesa, no avisa; un tipo inventado se rechaza', async () => {
+    const { user, joined } = await seatedAt('mp3-tipo', qr);
+    const outsider = await createAnonymousUser('mp3-ajeno');
+    expectFailure(await ask(outsider, joined.sessionId, 'call_waiter'), 'NOT_FOUND');
+    expectFailure(await ask(user, joined.sessionId, 'propina'), 'INVALID_ARGUMENT');
+    expectFailure(await ask(user, randomUUID().replaceAll('-', ''), 'call_waiter'), 'NOT_FOUND');
   });
 });
 
@@ -466,7 +750,7 @@ describe('expulsión y cierre de la mesa', () => {
       'PERMISSION_DENIED',
     );
     expectFailure(
-      await callFunction(user, 'authorizeQuote', { quoteId: quoted.quoteId }),
+      await callFunction(user, 'authorizeQuote', { ...CONSENT, quoteId: quoted.quoteId }),
       'NOT_FOUND',
     );
     expectFailure(await join(user, a.qrPublicId), 'PERMISSION_DENIED', /retiró/);
@@ -488,7 +772,7 @@ describe('expulsión y cierre de la mesa', () => {
       'PERMISSION_DENIED',
     );
     expectFailure(
-      await callFunction(user, 'authorizeQuote', { quoteId: quoted.quoteId }),
+      await callFunction(user, 'authorizeQuote', { ...CONSENT, quoteId: quoted.quoteId }),
       'NOT_FOUND',
     );
     expectFailure(await join(user, a.qrPublicId), 'FAILED_PRECONDITION');

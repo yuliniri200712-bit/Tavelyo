@@ -19,8 +19,22 @@ stateDiagram-v2
 ```
 
 - Saltar `recogido` exige `delivery.skip_sequence` y queda auditado.
-- Retroceder (p. ej. `en_preparacion → recibido`) no está permitido salvo como excepción auditada; pendiente de decidir si se admite.
+- Retroceder (p. ej. `en_preparacion → recibido`) **no está permitido** (D-26, 2026-11-16): un error se corrige cancelando la línea con motivo.
 - **Estado de la orden (derivado):** `recibido` si todas sus líneas activas lo están; `parcialmente_listo` si alguna está `listo` y otras no; `listo` cuando todas las activas lo están; `entregado` cuando todas se entregaron.
+
+**Implementación (Fase 3, bloque 1):** `packages/core/src/order-status.ts`, con los códigos del enum `OrderItemStatus` del esquema.
+
+| Acción | Desde | Hacia | Quién | Motivo |
+|---|---|---|---|---|
+| `start` | `RECEIVED` | `IN_PREPARATION` | Cocina (`kitchen.advance`) | No |
+| `finish` | `IN_PREPARATION` | `READY` | Cocina (`kitchen.advance`) | No |
+| `pickUp` | `READY` | `PICKED_UP` | Mesero (`delivery.pickup`) | No |
+| `deliver` | `PICKED_UP` | `DELIVERED` | Mesero (`delivery.deliver`) | No |
+| `deliverDirectly` | `READY` | `DELIVERED` | `delivery.skip_sequence` | Sí |
+| `cancel` | `RECEIVED`, `IN_PREPARATION`, `READY` | `CANCELLED` | `order_item.cancel` | Sí; merma si ya se empezó |
+
+- Estado derivado del pedido: `RECEIVED`, `IN_PREPARATION` (alguna empezó y ninguna salió de cocina), `PARTIALLY_READY` (unas salieron de cocina y otras no), `READY` (todas salieron de cocina y falta entregar alguna), `DELIVERED` y `CANCELLED` (sin líneas activas). Una línea «salió de cocina» si está lista, recogida o entregada.
+- Los permisos los comprueban los conectores (bloque 2); `core` solo decide si la transición existe. Cada cambio se aplica en el servidor solo si el estado y la `version` siguen siendo los que vio quien lo pide (caso 4).
 
 ## 2. Sesión de mesa (TableSession)
 
@@ -94,7 +108,7 @@ sequenceDiagram
   B->>DB: aplicar idempotentemente
 ```
 
-Pendiente de D-04: si la garantía no es obligatoria, el pedido se libera a cocina sin esperar la autorización.
+D-04 (2026-11-16): la garantía es obligatoria y sin excepciones; el pedido se libera a cocina solo después de la autorización confirmada.
 
 ## 7. Flujo crítico: cierre y captura
 

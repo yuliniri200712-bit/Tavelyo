@@ -40,7 +40,10 @@ jobs:
       - name: Formato, ESLint, tipos y pruebas unitarias
         run: npm run check
       - name: Auditoría de dependencias
-        run: npm audit
+        # Producción: cualquier aviso bloquea. Desarrollo: solo los críticos (ADR-0010).
+        run: |
+          npm audit --omit=dev
+          npm audit --audit-level=critical
       - name: Esquema y conector válidos y SDK generado al día
         run: |
           npx --yes ${{ env.FIREBASE_TOOLS }} dataconnect:sdk:generate --project demo-tavelyo

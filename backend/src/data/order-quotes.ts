@@ -98,8 +98,8 @@ export function toCatalogEntry(row: ProductRow): CatalogEntry {
 }
 
 /** Las opciones se guardan como instantáneas JSON (nombre e importe en el momento del resumen). */
-export function toStoredQuote(row: QuoteRow): StoredQuote {
-  const lines: QuotedLine[] = row.orderQuoteLines_on_quote.map((line) => ({
+export function toQuotedLines(rows: readonly LineRow[]): QuotedLine[] {
+  return rows.map((line) => ({
     position: line.position,
     productId: line.productId,
     priceId: line.priceId,
@@ -112,6 +112,10 @@ export function toStoredQuote(row: QuoteRow): StoredQuote {
     taxMinor: line.taxMinor,
     note: line.note,
   }));
+}
+
+export function toStoredQuote(row: QuoteRow): StoredQuote {
+  const lines = toQuotedLines(row.orderQuoteLines_on_quote);
   return {
     id: row.id,
     fingerprint: row.fingerprint,
@@ -219,10 +223,34 @@ export function createQuoteStore(dataConnect: DataConnect): QuoteStore {
 interface PayableRow {
   id: string;
   tenantId: string;
+  branchId: string;
+  sessionId: string;
+  participantId: string;
   status: QuoteStatus;
   currency: string;
   totalMinor: string;
   expiresAt: string;
+  session: { status: string };
+  participant: { removedAt: string | null; expiresAt: string };
+  orderQuoteLines_on_quote: LineRow[];
+}
+
+export function toPayableQuote(row: PayableRow): PayableQuote {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    branchId: row.branchId,
+    sessionId: row.sessionId,
+    participantId: row.participantId,
+    status: row.status,
+    currency: row.currency,
+    totalMinor: row.totalMinor,
+    expiresAt: new Date(row.expiresAt),
+    sessionOpen: row.session.status === 'OPEN',
+    participantRemoved: row.participant.removedAt !== null,
+    participantExpiresAt: new Date(row.participant.expiresAt),
+    lines: toQuotedLines(row.orderQuoteLines_on_quote),
+  };
 }
 
 export function createPaymentQuoteStore(dataConnect: DataConnect): PaymentQuoteStore {
@@ -233,16 +261,25 @@ export function createPaymentQuoteStore(dataConnect: DataConnect): PaymentQuoteS
         { quoteId: string; authUid: string }
       >('ServerQuoteForPayment', { quoteId, authUid });
       const row = data.orderQuotes[0];
-      return row ? { ...row, expiresAt: new Date(row.expiresAt) } : null;
+      return row ? toPayableQuote(row) : null;
     },
 
-    async setPayment(quote, authUid, status, paymentRef) {
+    async setPayment(quote, authUid, status, paymentRef, consentTextVersion) {
       await dataConnect.executeMutation('ServerSetQuotePayment', {
         quoteId: quote.id,
         tenantId: quote.tenantId,
         authUid,
         status,
         paymentRef,
+        consentTextVersion,
+      });
+    },
+
+    async markReleasePending(quote, authUid) {
+      await dataConnect.executeMutation('ServerMarkQuoteReleasePending', {
+        quoteId: quote.id,
+        tenantId: quote.tenantId,
+        authUid,
       });
     },
   };

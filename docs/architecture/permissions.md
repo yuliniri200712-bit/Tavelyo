@@ -42,6 +42,7 @@ Leyenda: ✅ permitido · 🔸 permitido con tope, motivo o autenticación refor
 | `delivery.pickup` / `delivery.deliver` | — | — | ✅ | — | — | — |
 | `delivery.skip_sequence` | ✅ | 🔸 | — | — | — | — |
 | `service_request.create` | — | — | — | — | — | ✅ |
+| `service_request.handle` (marcar como atendida) | ✅ | ✅ | ✅ | — | ✅ | — |
 | `bill.read` | ✅ | ✅ | ✅ sin datos de pago | — | ✅ | ✅ propia cuenta |
 | `bill.split` | ✅ | ✅ | — | — | ✅ | — |
 | `bill.discount` | ✅ | 🔸 | — | — | 🔸 tope | — |
@@ -70,6 +71,7 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 
 - Catálogo en código: `packages/contracts/src/authorization.ts`. Una prueba compara cada rol con la tabla de la sección 3 de este documento (✅ y 🔸 conceden); si cambia una sin la otra, CI falla. `service_request.create` es del cliente y no forma parte del catálogo del personal.
 - Permiso añadido: **`audit.read`** (ver el registro de auditoría), solo para el propietario.
+- Permiso añadido en la Fase 3 (bloque 1, 2026-11-16): **`service_request.handle`** (marcar como atendida una solicitud de servicio), para propietario, administrador de sucursal, mesero y cajero. La matriz solo tenía el del cliente (`service_request.create`). Las estaciones de cocina y la asignación de productos se gestionan con **`catalog.manage`**, porque se editan junto con la carta de la sucursal.
 - Rangos: propietario 100, administrador de sucursal 80, cajero 40, mesero 30, cocina 30. Nadie agrega, modifica, asigna sucursales ni revoca a alguien de rango igual o superior al propio, ni asigna un rol igual o superior (incluye cambiar el propio rol).
 - Gestión del personal: `staff.invite` cubre agregar, listar y revocar; `role.assign` cubre cambiar el rol y asignar o quitar sucursales. Quien no es propietario solo asigna sucursales que tiene asignadas.
 - Pendiente de fases siguientes: invitar por correo (requiere el backend para buscar al usuario), reactivar una membresía revocada y roles personalizados por empresa.
@@ -98,6 +100,24 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - El mesero no ve el `qrPublicId` (solo quien gestiona las mesas, para imprimirlo) ni el uid de Firebase Auth de los clientes que se unen a la mesa.
 - El cliente (`customer`) no tiene operaciones de personal: solo la carta pública por QR y su propia participación (ADR-0011).
 - Pendiente: tope o motivo en `price.change` (🔸 de la matriz), y si un administrador de sucursal puede tener productos propios de su sucursal.
+
+### Pedidos, cocina y solicitudes (Fase 3, bloque 2, 2026-11-16)
+
+| Operaciones | Permiso | Ámbito |
+|---|---|---|
+| Estaciones: listar, crear, editar, archivar y asignar productos (`BranchStations`, `CreateStation`, `UpdateStation`, `SetProductStation`) | `catalog.manage` | Sucursal asignada. La predeterminada no se archiva |
+| Estaciones activas y cola de cocina (`KitchenStations`, `KitchenQueue`); «Empezar» y «Listo» | `kitchen.advance` | Sucursal asignada. Sin importes ni datos del cliente |
+| «Listos para recoger» (`PickupQueue`) y «Recogido» | `delivery.pickup` | Sucursal asignada |
+| «Entregado» | `delivery.deliver` | Sucursal asignada |
+| Entregar sin pasar por «recogido» | `delivery.skip_sequence` y motivo (3 a 200 caracteres) | Sucursal asignada; el motivo queda en `AuditEvent` |
+| Cancelar una línea que no salió de cocina | `order_item.cancel` y motivo | Sucursal asignada; merma si ya se empezó |
+| Pedidos de una mesa y salón con líneas y solicitudes (`SessionOrders`, `FloorView`) | `session.open` | Sucursal asignada |
+| Solicitudes pendientes y «Atendida» | `service_request.handle` | Sucursal asignada; solo mesas abiertas |
+| «Mis pedidos» (`MyOrders`, `USER_ANON`) | Participación vigente propia | Solo los pedidos de quien consulta (D-06), en una sesión abierta |
+| Envío a cocina, solicitudes, estación predeterminada y consultas del pedido (`Server*`) | `NO_ACCESS` | Solo el backend |
+
+- Cada cambio de estado comprueba en el servidor el estado y la versión que vio quien lo pide; si otra persona se adelantó, se rechaza con «Esta línea ya cambió» y no se escribe nada (caso 4).
+- El propietario no tiene `kitchen.advance`, `delivery.pickup` ni `delivery.deliver` (matriz §3): esas pantallas son del personal de cocina y del salón.
 
 ## 6. Pendiente
 

@@ -4,9 +4,12 @@ import { useServerData, type DataState } from '@tavelyo/design-system';
 import type { CustomerGateway, PublicMenu } from '../domain/index.ts';
 import { useCart, type CartState } from './useCart.ts';
 import { useCheckout, type Checkout } from './useCheckout.ts';
+import { useTableSeat, type TableSeatState } from './useTableSeat.ts';
 
 interface TableOrderValue {
+  readonly gateway: CustomerGateway;
   readonly qrPublicId: string;
+  readonly seat: TableSeatState;
   readonly menu: DataState<PublicMenu | null>;
   readonly reloadMenu: () => void;
   readonly cart: CartState;
@@ -29,8 +32,9 @@ const systemNow = () => new Date();
 const systemUuid = () => crypto.randomUUID();
 
 /**
- * Estado de la mesa en este teléfono: la carta leída del servidor, el carrito local de la persona
- * y la revisión del pedido. Se comparte entre la carta y la pantalla del pedido.
+ * Estado de la mesa en este teléfono: la carta leída del servidor, el carrito local de la persona,
+ * la mesa en la que está, la revisión del pedido y el pago. Lo comparten la carta, el pedido y
+ * «Mis pedidos».
  */
 export function TableOrderProvider({
   gateway,
@@ -55,9 +59,10 @@ export function TableOrderProvider({
   const { state: menu, reload: reloadMenu, refresh: refreshMenu } = useServerData(load);
   const cart = useCart(storage, qrPublicId, now, randomUuid);
   const currency = menu.status === 'ready' && menu.data ? menu.data.currency : 'COP';
+  const seat = useTableSeat(gateway, qrPublicId);
   const checkout = useCheckout({
     gateway,
-    qrPublicId,
+    seat,
     currency,
     cart,
     randomUuid,
@@ -65,7 +70,9 @@ export function TableOrderProvider({
   });
 
   return (
-    <TableOrderContext.Provider value={{ qrPublicId, menu, reloadMenu, cart, checkout, now }}>
+    <TableOrderContext.Provider
+      value={{ gateway, qrPublicId, seat, menu, reloadMenu, cart, checkout, now }}
+    >
       {children}
     </TableOrderContext.Provider>
   );

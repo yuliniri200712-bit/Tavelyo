@@ -76,3 +76,22 @@ Además, `branch_insert` y `branch_update` solo aparecen en las operaciones auto
 - **Cliente (`menu-web`, `/mesa/<qrPublicId>`):** la carta se lee sin sesión. La sesión anónima se crea **solo al revisar el pedido**, no al mirar la carta, para no crear cuentas anónimas por cada visita. El carrito vive en el navegador de la persona (D-06) y se lee como dato no confiable; el servidor recalcula todo.
 - **Cambios de precio (caso 5):** si `quoteOrder` informa cambios, la pantalla muestra el importe anterior y el actual y no sigue sin confirmación; además la carta se vuelve a leer para que lo siguiente que se agregue tenga el precio vigente (hallazgo del recorrido en CI #26).
 - **Pago simulado:** rotulado en la pantalla; con emuladores la persona elige el resultado para probar cada caso. Aprobado termina en «Pedido listo»; nada llega a cocina hasta la Fase 3.
+
+## Implementación (Fase 3, bloque 3, 2026-11-16)
+
+- **`authorizeQuote` envía a cocina (D-04):** solo después de confirmar la autorización crea el pedido (uno por resumen) y lo envía con `ServerSendOrderToKitchen`, que vuelve a comprobar en el servidor el pago autorizado, la mesa abierta, la persona vigente y el resumen sin vencer. La respuesta incluye el `orderId`.
+- **Consentimiento (RF-PA-02):** el cliente envía la versión del texto de preautorización que aceptó (`PREAUTHORIZATION_CONSENT_VERSION`, en `packages/contracts`, con el texto en `preauthorizationConsentText`). El servidor solo autoriza la versión vigente y la guarda con el resumen, junto con `consentedAt` y `authorizedAt`.
+- **Reanudable (caso 3):** repetir la llamada con un resumen ya autorizado no vuelve a autorizar. Si una caída dejó el resumen sin pedido, o el pedido guardado sin enviar, el reintento termina el envío. Dos pulsaciones simultáneas dan un solo pedido.
+- **Para liberar:** si al enviar la mesa ya se cerró o la persona ya no está, el pedido no llega a cocina, el resumen pasa a `RELEASE_PENDING` y el cliente lo lee en texto. La liberación real de la retención es de la Fase 4. Falta una tarea programada de conciliación para los resúmenes autorizados que nadie vuelve a intentar: necesita Cloud Scheduler, un recurso facturable que requiere aprobación.
+- **`requestService`:** «Llamar al mesero» y «Pedir la cuenta», solo para quien sigue en una mesa abierta. Repetir un aviso que el personal aún no atendió responde `already-pending` sin crear otro.
+- **Límites (T11):** 6 solicitudes de servicio cada 10 minutos por persona y 30 por mesa.
+- **Estación predeterminada:** se crea con cada sucursal (`CreateBranch` y `provisionTenant`). Si una sucursal anterior a la Fase 3 no la tiene, el backend la crea al enviar el primer pedido.
+
+## Implementación (Fase 3, bloque 6, 2026-11-17)
+
+- **«Autorizar y enviar a cocina»:** el botón de pago dice qué hace. Antes de pulsarlo, la tarjeta muestra el texto de la preautorización y aclara que sin autorización el pedido no se envía. Al terminar, «Pedido enviado a cocina» lleva a «Mis pedidos».
+- **«Mis pedidos»** (`/mesa/<qrPublicId>/mis-pedidos`, D-06): solo los pedidos propios, con el estado de cada línea en vivo y en texto (consulta `MyOrders`, ADR-0007). Cada cambio de estado se anuncia también en una región de aviso, para el lector de pantalla.
+- **Volver a la mesa sin crear cuentas:** tras recargar el teléfono, «Mis pedidos» recupera la mesa con `joinTableSession`, que es idempotente, pero solo si el teléfono ya tenía su sesión anónima. Mirar «Mis pedidos» sin haber pedido ni llamado al mesero no crea una sesión anónima ni una participación.
+- **`joinTableSession` devuelve también la sucursal (`branchId`)**: la suscripción de «Mis pedidos» la necesita para acotar el refresco a la sucursal de la mesa.
+- **«Llamar al mesero» y «Pedir la cuenta»** están en «Mis pedidos», enlazada desde la carta. Si la persona todavía no estaba en la mesa, se une al pulsar. Un aviso repetido se responde en texto («El mesero ya tiene tu aviso») sin crear otro. La cuenta en sí es de la Fase 4.
+

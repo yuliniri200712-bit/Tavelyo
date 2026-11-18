@@ -1,4 +1,4 @@
-import type { Result } from '@tavelyo/core';
+import type { LiveObserver, Result } from '@tavelyo/core';
 
 /** Mesa tal como la ve quien gestiona el salón (incluye el identificador del QR). */
 export interface DiningTableAdmin {
@@ -62,13 +62,33 @@ export interface FloorAdminGateway {
   rotateQr(scope: BranchScope, tableId: string): FloorResult<void>;
 }
 
+export type ServiceRequestKind = 'CALL_WAITER' | 'REQUEST_BILL';
+
+/** Lo que pasa en una mesa abierta, para mostrarlo en texto en el salón (RF-ME-01). */
+export interface TableActivity {
+  /** Líneas recibidas o en preparación. */
+  readonly inKitchen: number;
+  /** Líneas listas para recoger. */
+  readonly ready: number;
+  /** Líneas recogidas que faltan por entregar. */
+  readonly pickedUp: number;
+  /** Solicitudes pendientes, de la más antigua a la más reciente. */
+  readonly requests: readonly { readonly kind: ServiceRequestKind; readonly createdAt: Date }[];
+}
+
+export interface FloorSession {
+  readonly id: string;
+  readonly openedAt: Date;
+  readonly activity: TableActivity;
+}
+
 /** Mesa tal como la ve el mesero: sin el identificador del QR. */
 export interface FloorTable {
   readonly id: string;
   readonly code: string;
   readonly seats: number;
   /** Sesión abierta de la mesa; null si está libre. */
-  readonly session: { readonly id: string; readonly openedAt: Date } | null;
+  readonly session: FloorSession | null;
 }
 
 export interface FloorSector {
@@ -87,7 +107,13 @@ export interface SessionParticipant {
 
 /** Contrato del salón para el personal en servicio (session.open y session.close). */
 export interface FloorServiceGateway {
+  /** Lectura completa: al abrir, al reconectar y tras cada cambio (caso 11). */
   floor(scope: BranchScope): FloorResult<readonly FloorSector[]>;
+  /** Suscripción en tiempo real (ADR-0007); devuelve la función que la cancela. */
+  watchFloor(
+    scope: BranchScope,
+    observer: LiveObserver<readonly FloorSector[], FloorError>,
+  ): () => void;
   participants(scope: BranchScope, sessionId: string): FloorResult<readonly SessionParticipant[]>;
   openTable(scope: BranchScope, tableId: string): FloorResult<void>;
   closeSession(scope: BranchScope, sessionId: string): FloorResult<void>;

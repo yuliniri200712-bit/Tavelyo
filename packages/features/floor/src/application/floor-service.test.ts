@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { describeFloorCounts, floorCounts, participantStatus } from './floor-service.ts';
+import {
+  describeFloorCounts,
+  describeTableOrders,
+  describeTableRequests,
+  floorCounts,
+  participantStatus,
+} from './floor-service.ts';
 
 const now = new Date('2026-11-15T20:00:00Z');
 const base = {
@@ -21,7 +27,11 @@ describe('participantStatus', () => {
 
 describe('conteo del salón', () => {
   it('cuenta mesas abiertas y libres de todos los sectores, en texto', () => {
-    const session = { id: 's1', openedAt: now };
+    const session = {
+      id: 's1',
+      openedAt: now,
+      activity: { inKitchen: 0, ready: 0, pickedUp: 0, requests: [] },
+    };
     const counts = floorCounts([
       {
         id: 'a',
@@ -36,5 +46,30 @@ describe('conteo del salón', () => {
     expect(counts).toEqual({ open: 1, free: 2 });
     expect(describeFloorCounts(counts)).toBe('1 mesa abierta · 2 libres');
     expect(describeFloorCounts({ open: 0, free: 1 })).toBe('0 mesas abiertas · 1 libre');
+  });
+});
+
+describe('actividad de la mesa en texto', () => {
+  it('cuenta las líneas en cocina, listas y recogidas, en singular o plural', () => {
+    const none = { inKitchen: 0, ready: 0, pickedUp: 0, requests: [] };
+    expect(describeTableOrders(none)).toBe('Sin pedidos en curso');
+    expect(describeTableOrders({ ...none, inKitchen: 2, ready: 1 })).toBe(
+      '2 líneas en cocina · 1 lista para recoger',
+    );
+    expect(describeTableOrders({ ...none, inKitchen: 1, ready: 3, pickedUp: 2 })).toBe(
+      '1 línea en cocina · 3 listas para recoger · 2 recogidas por entregar',
+    );
+  });
+
+  it('describe cada solicitud con la hora de la sucursal', () => {
+    expect(
+      describeTableRequests(
+        [
+          { kind: 'CALL_WAITER', createdAt: new Date('2026-11-16T00:45:00Z') },
+          { kind: 'REQUEST_BILL', createdAt: new Date('2026-11-16T00:50:00Z') },
+        ],
+        'America/Bogota',
+      ),
+    ).toEqual(['Llamó al mesero a las 19:45', 'Pidió la cuenta a las 19:50']);
   });
 });

@@ -176,43 +176,67 @@ query ServerQuoteByKey($participantId: UUID!, $idempotencyKey: String!) @auth(le
 # El resumen con sus líneas lo guarda el backend con executeGraphql (documento fijo en
 # backend/src/data/order-quotes.ts): el SDK web generado no admite listas de tipo _Data.
 
-# Resumen de un cliente para autorizar su pago: solo el suyo, con la mesa todavía abierta.
+# Resumen de un cliente para autorizar su pago y enviarlo a cocina: solo el suyo, con sus líneas.
+# Devuelve el estado de la mesa y de la participación en lugar de filtrarlos: un resumen ya
+# autorizado de una mesa que se cerró debe quedar para liberar (Fase 3), no desaparecer.
 query ServerQuoteForPayment($quoteId: UUID!, $authUid: String!) @auth(level: NO_ACCESS) {
   orderQuotes(
-    where: {
-      _and: [
-        { id: { eq: $quoteId } }
-        {
-          participant: {
-            authUid: { eq: $authUid }
-            removedAt: { isNull: true }
-            expiresAt: { gt_expr: "request.time" }
-          }
-        }
-        { session: { status: { eq: OPEN } } }
-      ]
-    }
+    where: { _and: [{ id: { eq: $quoteId } }, { participant: { authUid: { eq: $authUid } } }] }
     limit: 1
   ) {
     id
     tenantId
+    branchId
+    sessionId
+    participantId
     status
     currency
     totalMinor
     expiresAt
     paymentRef
+    session {
+      status
+    }
+    participant {
+      removedAt
+      expiresAt
+    }
+    orderQuoteLines_on_quote(orderBy: [{ position: ASC }]) {
+      position
+      productId
+      priceId
+      productNameSnapshot
+      quantity
+      unitPriceMinor
+      modifiersSnapshot
+      modifiersMinor
+      lineTotalMinor
+      taxMinor
+      note
+    }
   }
 }
 
-# Resultado de la autorización (simulada en la Fase 2), auditado.
+# Resultado de la autorización (simulada mientras no haya pasarela, D-02), con la versión del texto
+# de preautorización que aceptó el cliente (RF-PA-02), auditado.
 mutation ServerSetQuotePayment(
   $quoteId: UUID!
   $tenantId: UUID!
   $authUid: String!
   $status: OrderQuoteStatus!
   $paymentRef: String!
+  $consentTextVersion: String!
 ) @auth(level: NO_ACCESS) @transaction {
-  orderQuote_update(id: $quoteId, data: { status: $status, paymentRef: $paymentRef })
+  orderQuote_update(
+    id: $quoteId
+    data: {
+      status: $status
+      paymentRef: $paymentRef
+      consentTextVersion: $consentTextVersion
+      consentedAt_expr: "request.time"
+      authorizedAt_expr: "vars.status == 'AUTHORIZED' ? request.time : null"
+    }
+  )
   auditEvent_insert(
     data: {
       tenantId: $tenantId
@@ -236,4 +260,181 @@ mutation ServerHitRateLimit($scope: String!, $subject: String!, $since: Timestam
       _count
     }
   }
+}
+
+# --- Fase 3: pedidos enviados a cocina y solicitudes de servicio ---
+
+# Pedido ya creado para un resumen: un reintento lo reutiliza en lugar de crear otro (caso 3).
+query ServerOrderByQuote($quoteId: UUID!) @auth(level: NO_ACCESS) {
+  orders(where: { quoteId: { eq: $quoteId } }, limit: 1) {
+    id
+    sentToKitchenAt
+  }
+}
+
+# Estación y alérgenos declarados de cada producto en la sucursal, y la estación predeterminada,
+# para fijar la estación de cada línea y su instantánea de alérgenos al crear el pedido.
+query ServerProductsForOrder($tenantId: UUID!, $branchId: UUID!, $productIds: [UUID!]!)
+@auth(level: NO_ACCESS) {
+  productBranches(
+    where: {
+      tenantId: { eq: $tenantId }
+      branchId: { eq: $branchId }
+      productId: { in: $productIds }
+    }
+  ) {
+    productId
+    station {
+      id
+      archivedAt
+    }
+    product {
+      allergensDeclared
+    }
+  }
+  defaultStation: stations(
+    where: { tenantId: { eq: $tenantId }, defaultForBranchId: { eq: $branchId } }
+    limit: 1
+  ) {
+    id
+  }
+}
+
+# Estación predeterminada de una sucursal que todavía no la tiene (la crea CreateBranch; esto
+# cubre las sucursales anteriores a la Fase 3).
+mutation ServerCreateDefaultStation($tenantId: UUID!, $branchId: UUID!) @auth(level: NO_ACCESS) {
+  station_insert(
+    data: {
+      tenantId: $tenantId
+      branchId: $branchId
+      name: "Cocina"
+      sort: 0
+      defaultForBranchId: $branchId
+    }
+  )
+}
+
+# Envía a cocina un pedido que el backend ya guardó con sus líneas. Es la única puerta a cocina:
+# exige el resumen autorizado (D-04), la mesa abierta, la persona vigente en ella y el resumen
+# sin vencer, todo en la misma transacción. Avisa a las pantallas por @refresh (ADR-0007).
+mutation ServerSendOrderToKitchen(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sessionId: UUID!
+  $orderId: UUID!
+  $authUid: String!
+) @auth(level: NO_ACCESS) @transaction {
+  query @redact {
+    order(id: $orderId) @check(expr: "this != null", message: "Pedido inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El pedido no es de la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "El pedido no es de la sucursal")
+      sessionId @check(expr: "this == vars.sessionId", message: "El pedido no es de la mesa")
+      sentToKitchenAt @check(expr: "this == null", message: "El pedido ya está en cocina")
+      quote {
+        status @check(expr: "this == 'AUTHORIZED'", message: "El pago no está autorizado")
+      }
+    }
+    valid: orders(
+      where: {
+        _and: [
+          { id: { eq: $orderId } }
+          { session: { status: { eq: OPEN } } }
+          { quote: { expiresAt: { gt_expr: "request.time" } } }
+          {
+            participant: {
+              authUid: { eq: $authUid }
+              removedAt: { isNull: true }
+              expiresAt: { gt_expr: "request.time" }
+            }
+          }
+        ]
+      }
+    ) @check(expr: "this.size() == 1", message: "La mesa o la participación ya no están vigentes") {
+      id
+    }
+  }
+  order_update(id: $orderId, data: { sentToKitchenAt_expr: "request.time" })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "order.send_to_kitchen"
+      resourceType: "order"
+      resourceId_expr: "vars.orderId"
+    }
+  )
+}
+
+# Un resumen autorizado que no se pudo enviar a cocina (la mesa se cerró, la persona ya no está o
+# venció): la retención queda para liberar (Fase 4, con la pasarela real).
+mutation ServerMarkQuoteReleasePending($quoteId: UUID!, $tenantId: UUID!, $authUid: String!)
+@auth(level: NO_ACCESS)
+@transaction {
+  query @redact {
+    orderQuote(id: $quoteId) @check(expr: "this != null", message: "Resumen inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El resumen no es de la empresa")
+      status @check(expr: "this == 'AUTHORIZED'", message: "El resumen no está autorizado")
+    }
+  }
+  orderQuote_update(id: $quoteId, data: { status: RELEASE_PENDING })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "order_quote.release_pending"
+      resourceType: "order_quote"
+      resourceId_expr: "vars.quoteId"
+    }
+  )
+}
+
+# Solicitud de servicio (la decide requestService, con sus límites). pendingKey («<sesión>:<tipo>») es único: si ya hay
+# una pendiente del mismo tipo en la mesa, la inserción falla y el backend responde que el aviso
+# ya está hecho.
+mutation ServerCreateServiceRequest(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sessionId: UUID!
+  $participantId: UUID!
+  $authUid: String!
+  $kind: ServiceRequestKind!
+) @auth(level: NO_ACCESS) @transaction {
+  query @redact {
+    sessionParticipants(
+      where: {
+        _and: [
+          { id: { eq: $participantId } }
+          { tenantId: { eq: $tenantId } }
+          { branchId: { eq: $branchId } }
+          { sessionId: { eq: $sessionId } }
+          { authUid: { eq: $authUid } }
+          { removedAt: { isNull: true } }
+          { expiresAt: { gt_expr: "request.time" } }
+          { session: { status: { eq: OPEN } } }
+        ]
+      }
+    ) @check(expr: "this.size() == 1", message: "La mesa o la participación ya no están vigentes") {
+      id
+    }
+  }
+  serviceRequest_insert(
+    data: {
+      tenantId: $tenantId
+      branchId: $branchId
+      sessionId: $sessionId
+      participantId: $participantId
+      kind: $kind
+      status: PENDING
+      pendingKey_expr: "vars.sessionId + ':' + vars.kind"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "service_request.create"
+      resourceType: "service_request"
+      resourceId_expr: "response.serviceRequest_insert.id"
+    }
+  )
 }

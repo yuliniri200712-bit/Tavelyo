@@ -16,4 +16,19 @@ export {
   type WeeklySchedule,
 } from './weekly-schedule';
 export { parseMajorAmount, toMajorInput, type MoneyInputError } from './money-input';
-export { formatLocalTime } from './time-format';
+export { elapsedMinutes, formatLocalTime } from './time-format';
+export {
+  applyOrderItemAction,
+  availableOrderItemActions,
+  deriveOrderStatus,
+  isWasteOnCancel,
+  orderItemActionRequiresReason,
+  ORDER_ITEM_REASON_MAX,
+  ORDER_ITEM_REASON_MIN,
+  parseOrderItemReason,
+  type InvalidOrderItemTransition,
+  type OrderItemAction,
+  type OrderItemStatus,
+  type OrderStatus,
+} from './order-status';
+export { type LiveObserver } from './live-observer';

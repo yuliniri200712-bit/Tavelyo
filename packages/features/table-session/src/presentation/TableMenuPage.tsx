@@ -11,10 +11,12 @@ import { useTableOrder } from './TableOrderProvider.tsx';
 export interface TableMenuPageProps {
   /** Enlace a la pantalla del pedido con el texto dado (la navegación es de la app). */
   readonly orderLink: (label: string) => ReactNode;
+  /** Enlace a «Mis pedidos», donde también se llama al mesero y se pide la cuenta. */
+  readonly myOrdersLink: ReactNode;
 }
 
 /** Carta de la mesa del QR: cualquiera la ve; para pedir hay que unirse a la mesa abierta. */
-export function TableMenuPage({ orderLink }: TableMenuPageProps) {
+export function TableMenuPage({ orderLink, myOrdersLink }: TableMenuPageProps) {
   const { cart, now } = useTableOrder();
   const [notice, setNotice] = useState<{ tone: 'success'; text: string } | null>(null);
 
@@ -30,13 +32,14 @@ export function TableMenuPage({ orderLink }: TableMenuPageProps) {
                 <h1>{menu.branchName}</h1>
                 <p className="tv-list__meta">Mesa {menu.tableCode}</p>
               </div>
-              {count > 0 ? (
-                <div className="tv-toolbar">
-                  {orderLink(
-                    `Ver mi pedido · ${count} ${count === 1 ? 'producto' : 'productos'} · ${formatMoney(cartTotal(cart.lines, menu.currency))}`,
-                  )}
-                </div>
-              ) : null}
+              <div className="tv-toolbar">
+                {count > 0
+                  ? orderLink(
+                      `Ver mi pedido · ${count} ${count === 1 ? 'producto' : 'productos'} · ${formatMoney(cartTotal(cart.lines, menu.currency))}`,
+                    )
+                  : null}
+                {myOrdersLink}
+              </div>
             </header>
             <ActionNotice notice={notice} />
             <p className="tv-list__meta">

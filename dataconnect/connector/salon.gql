@@ -3,9 +3,71 @@
 # los recursos a la empresa y a la sucursal, y AuditEvent en la misma transacción.
 # Toda variable usada en un filtro es obligatoria: una variable omitida anula su filtro.
 
-# Vista del salón para meseros: sectores y mesas activas con su sesión abierta, si la hay. No
-# incluye el qrPublicId (solo lo ve quien gestiona las mesas).
-query FloorView($tenantId: UUID!, $branchId: UUID!) @auth(level: USER) {
+# Vista del salón para meseros: sectores y mesas activas con su sesión abierta, si la hay, sus
+# líneas en curso y sus solicitudes pendientes (Fase 3). No incluye el qrPublicId (solo lo ve
+# quien gestiona las mesas). Se refresca sola con cada cambio de la sucursal (ADR-0007).
+query FloorView($tenantId: UUID!, $branchId: UUID!)
+@auth(level: USER)
+@refresh(
+  onMutationExecuted: {
+    operation: "OpenTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "CloseTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerSendOrderToKitchen"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "FinishOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "PickUpOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "DeliverOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "DeliverOrderItemDirectly"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "CancelOrderItem"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerCreateServiceRequest"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "AttendServiceRequest"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+) {
   membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
     @redact
     @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
@@ -50,6 +112,17 @@ query FloorView($tenantId: UUID!, $branchId: UUID!) @auth(level: USER) {
       tableSessions_on_table(where: { status: { eq: OPEN } }, limit: 1) {
         id
         openedAt
+        orders_on_session(where: { sentToKitchenAt: { isNull: false } }) {
+          orderItems_on_order(
+            where: { status: { in: [RECEIVED, IN_PREPARATION, READY, PICKED_UP] } }
+          ) {
+            status
+          }
+        }
+        serviceRequests_on_session(where: { status: { eq: PENDING } }) {
+          kind
+          createdAt
+        }
       }
     }
   }

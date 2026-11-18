@@ -18,6 +18,10 @@ export const RATE_LIMITS = {
   quotePerUser: { scope: 'quote.uid', limit: 30, windowSeconds: 60 },
   /** Autorizaciones de pago, por persona. */
   paymentPerUser: { scope: 'payment.uid', limit: 10, windowSeconds: 60 },
+  /** «Llamar al mesero» y «Pedir la cuenta», por persona. */
+  servicePerUser: { scope: 'service.uid', limit: 6, windowSeconds: 600 },
+  /** Solicitudes de una misma mesa: frena a quien crea muchas cuentas anónimas. */
+  servicePerSession: { scope: 'service.session', limit: 30, windowSeconds: 600 },
 } as const satisfies Record<string, RateLimitRule>;
 
 export interface RateLimiter {

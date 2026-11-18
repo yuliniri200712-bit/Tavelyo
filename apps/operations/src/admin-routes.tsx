@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { BranchMenuPage, CatalogAdminPage } from '@tavelyo/catalog';
+import { BranchMenuPage, CatalogAdminPage, StationsAdminPage } from '@tavelyo/catalog';
 import { EmptyState } from '@tavelyo/design-system';
 import { FloorServicePage, LayoutAdminPage, PrintQrPage } from '@tavelyo/floor';
+import { useInactivityHold } from '@tavelyo/identity';
+import { KitchenPage } from '@tavelyo/kitchen';
+import { PickupPage, SessionOrdersPanel } from '@tavelyo/orders';
+import { ServiceRequestsPanel } from '@tavelyo/service-requests';
 import { BranchesAdminPage, useTenancy } from '@tavelyo/tenancy';
 import { useAppContext } from './app-context.tsx';
 
@@ -17,10 +21,23 @@ export interface StaffModule {
 /** Módulos del personal y los permisos que habilitan cada uno en la interfaz. */
 export const STAFF_MODULES: readonly StaffModule[] = [
   {
+    path: '/cocina',
+    title: 'Cocina',
+    description: 'Cola de tu estación en tiempo real: empezar, marcar listo y cancelar con motivo.',
+    permissions: ['kitchen.advance'],
+  },
+  {
     path: '/salon',
     title: 'Salón',
-    description: 'Mesas libres y abiertas por sector: abrir, cerrar y ver quién se unió.',
+    description:
+      'Mesas en vivo: pedidos en curso, platos listos y solicitudes; abrir, cerrar y ver quién se unió.',
     permissions: ['session.open'],
+  },
+  {
+    path: '/entregas',
+    title: 'Listos para recoger',
+    description: 'Platos que cocina marcó listos, en vivo: recoger y entregar en la mesa.',
+    permissions: ['delivery.pickup'],
   },
   {
     path: '/mesas',
@@ -39,6 +56,12 @@ export const STAFF_MODULES: readonly StaffModule[] = [
     title: 'Carta de la sucursal',
     description: 'Disponibilidad, horario y precio de cada producto en esta sucursal.',
     permissions: ['catalog.manage', 'price.change'],
+  },
+  {
+    path: '/carta/estaciones',
+    title: 'Estaciones de cocina',
+    description: 'Estaciones de la sucursal (cocina caliente, bar…) y la predeterminada.',
+    permissions: ['catalog.manage'],
   },
   {
     path: '/sucursales',
@@ -102,6 +125,55 @@ export function FloorServiceRoute() {
       branchName={branchName}
       timezone={timezone}
       canClose={can('session.close')}
+      requestsPanel={
+        can('service_request.handle') ? (
+          <ServiceRequestsPanel
+            gateway={services.serviceRequests}
+            scope={scope}
+            timezone={timezone}
+          />
+        ) : null
+      }
+      renderOrders={(session, tableCode) => (
+        <SessionOrdersPanel
+          gateway={services.orders}
+          scope={scope}
+          sessionId={session.id}
+          tableCode={tableCode}
+          timezone={timezone}
+          canCancel={can('order_item.cancel')}
+          canDeliverDirectly={can('delivery.skip_sequence')}
+        />
+      )}
+    />
+  );
+}
+
+export function PickupRoute() {
+  const { services } = useAppContext();
+  const { scope, branchName, timezone, can } = useStaffContext();
+  return (
+    <PickupPage
+      gateway={services.orders}
+      scope={scope}
+      branchName={branchName}
+      timezone={timezone}
+      canDeliver={can('delivery.deliver')}
+    />
+  );
+}
+
+export function KitchenRoute() {
+  const { services } = useAppContext();
+  const { scope, branchName, timezone } = useStaffContext();
+  // D-25: la pantalla de cocina no se cierra por inactividad mientras está visible.
+  useInactivityHold();
+  return (
+    <KitchenPage
+      gateway={services.kitchen}
+      scope={scope}
+      branchName={branchName}
+      timezone={timezone}
     />
   );
 }
@@ -175,6 +247,23 @@ export function BranchMenuRoute() {
       catalogLink={
         <Link className="tv-link-button" to="/carta">
           Carta de la empresa
+        </Link>
+      }
+    />
+  );
+}
+
+export function StationsAdminRoute() {
+  const { services } = useAppContext();
+  const { scope, branchName } = useStaffContext();
+  return (
+    <StationsAdminPage
+      gateway={services.catalogAdmin}
+      scope={scope}
+      branchName={branchName}
+      branchMenuLink={
+        <Link className="tv-link-button" to="/carta/sucursal">
+          Carta de la sucursal
         </Link>
       }
     />

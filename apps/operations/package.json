@@ -19,6 +19,9 @@
     "@tavelyo/data-access": "*",
     "@tavelyo/floor": "*",
     "@tavelyo/identity": "*",
-    "@tavelyo/tenancy": "*"
+    "@tavelyo/kitchen": "*",
+    "@tavelyo/tenancy": "*",
+    "@tavelyo/orders": "*",
+    "@tavelyo/service-requests": "*"
   }
 }

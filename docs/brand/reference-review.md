@@ -1,6 +1,6 @@
 # Revisión de referencias visuales
 
-Estado: **Fase 0** · Fecha: 2026-11-13. Revisión de las seis imágenes adjuntas por el propietario (IV §12). Las referencias orientan el diseño, pero las reglas escritas, la accesibilidad y los estados reales prevalecen sobre ellas. Las imágenes no se copiaron al repositorio (ver `asset-manifest.md`).
+Estado: **Fase 0** · Fecha: 2026-11-13. Revisión de las seis imágenes adjuntas por el propietario (IV §12). Las referencias orientan el diseño, pero las reglas escritas, la accesibilidad y los estados reales prevalecen sobre ellas. Desde el 2026-11-17 las cinco composiciones de interfaz (imágenes 2 a 6) están en `docs/brand/referencias/`: `cliente.webp` (2), `personal.webp` (3), `cocina.webp` (4), `caja.webp` (5) y `administracion.webp` (6). La del logotipo (1) no se guardó; el logotipo aprobado está en `assets/branding/`.
 
 ## 1. Logotipo (imagen 1)
 

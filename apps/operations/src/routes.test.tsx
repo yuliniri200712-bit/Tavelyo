@@ -6,6 +6,9 @@ import { ok } from '@tavelyo/core';
 import { SessionProvider, type AuthGateway, type StaffUser } from '@tavelyo/identity';
 import type { CatalogAdminGateway } from '@tavelyo/catalog';
 import type { FloorAdminGateway, FloorServiceGateway } from '@tavelyo/floor';
+import type { KitchenGateway } from '@tavelyo/kitchen';
+import type { StaffOrdersGateway } from '@tavelyo/orders';
+import type { ServiceRequestsGateway } from '@tavelyo/service-requests';
 import type { BranchAdminGateway, TenancyGateway } from '@tavelyo/tenancy';
 import { AppContext } from './app-context.tsx';
 import { routes } from './routes.tsx';
@@ -37,7 +40,13 @@ const tenancy: TenancyGateway = {
         tenantName: 'La Fonda',
         roleCode: 'waiter',
         roleName: 'Mesero',
-        permissions: ['session.open', 'session.close'],
+        permissions: [
+          'session.open',
+          'session.close',
+          'delivery.pickup',
+          'delivery.deliver',
+          'service_request.handle',
+        ],
       },
       {
         tenantId: 'b',
@@ -96,6 +105,7 @@ const floorService: FloorServiceGateway = {
       },
     ]),
   ),
+  watchFloor: vi.fn(() => () => undefined),
   participants: vi.fn(async () => ok([])),
   openTable: vi.fn(async () => ok(undefined)),
   closeSession: vi.fn(async () => ok(undefined)),
@@ -118,12 +128,42 @@ const catalogAdmin: CatalogAdminGateway = {
   updateModifierOption: done,
   setAvailability: done,
   changePrice: done,
+  stations: vi.fn(async () => ok([])),
+  createStation: done,
+  updateStation: done,
+  setProductStation: done,
 };
 
 const branchAdmin: BranchAdminGateway = {
   branches: vi.fn(async () => ok([])),
   createBranch: done,
   updateBranch: done,
+};
+
+const kitchen: KitchenGateway = {
+  stations: vi.fn(async () => ok([])),
+  queue: vi.fn(async () => ok([])),
+  watchQueue: vi.fn(() => () => undefined),
+  start: done,
+  finish: done,
+  cancel: done,
+};
+
+const orders: StaffOrdersGateway = {
+  pickupQueue: vi.fn(async () => ok([])),
+  watchPickupQueue: vi.fn(() => () => undefined),
+  pickUp: done,
+  deliver: done,
+  sessionOrders: vi.fn(async () => ok([])),
+  watchSessionOrders: vi.fn(() => () => undefined),
+  deliverDirectly: done,
+  cancel: done,
+};
+
+const serviceRequests: ServiceRequestsGateway = {
+  pending: vi.fn(async () => ok([])),
+  watchPending: vi.fn(() => () => undefined),
+  attend: done,
 };
 
 function renderAt(path: string, user: StaffUser | null) {
@@ -136,6 +176,9 @@ function renderAt(path: string, user: StaffUser | null) {
     floorService,
     catalogAdmin,
     branchAdmin,
+    kitchen,
+    orders,
+    serviceRequests,
     menuWebUrl: 'https://carta.example',
     usesEmulators: true,
   };
@@ -203,14 +246,37 @@ describe('rutas de operations', () => {
     expect(floorAdmin.layout).toHaveBeenCalledWith({ tenantId: 'c', branchId: 'c1' });
   });
 
-  it('el mesero ve solo el salón y lo abre en su sucursal', async () => {
+  it('el mesero ve el salón con las solicitudes de su sucursal y no la gestión de mesas', async () => {
     renderAt('/', ana);
     fireEvent.click(await screen.findByRole('button', { name: 'La Fonda · Mesero' }));
-    fireEvent.click(await screen.findByRole('link', { name: 'Salón' }));
+    expect(await screen.findByRole('link', { name: 'Listos para recoger' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Mesas y códigos QR' })).toBeNull();
+    fireEvent.click(screen.getByRole('link', { name: 'Salón' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Salón' })).toBeTruthy();
     expect(await screen.findByText('Mesa T1')).toBeTruthy();
     expect(floorService.floor).toHaveBeenCalledWith({ tenantId: 'a', branchId: 'a1' });
-    expect(screen.queryByRole('link', { name: 'Mesas y códigos QR' })).toBeNull();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Solicitudes de las mesas' }),
+    ).toBeTruthy();
+    expect(serviceRequests.pending).toHaveBeenCalledWith({ tenantId: 'a', branchId: 'a1' });
+  });
+
+  it('el mesero abre «Listos para recoger» de su sucursal', async () => {
+    renderAt('/entregas', ana);
+    fireEvent.click(await screen.findByRole('button', { name: 'La Fonda · Mesero' }));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Listos para recoger' }),
+    ).toBeTruthy();
+    expect(await screen.findByText('No hay platos listos')).toBeTruthy();
+    expect(orders.pickupQueue).toHaveBeenCalledWith({ tenantId: 'a', branchId: 'a1' });
+  });
+
+  it('un rol sin delivery.pickup no ve «Listos para recoger»', async () => {
+    renderAt('/entregas', ana);
+    fireEvent.click(await screen.findByRole('button', { name: 'El Puerto · Cajero' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Esta sección no está disponible para tu rol' }),
+    ).toBeTruthy();
   });
 
   it('un rol sin session.open no ve el salón', async () => {

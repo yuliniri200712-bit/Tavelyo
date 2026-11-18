@@ -16,9 +16,12 @@
     "@tavelyo/dataconnect-sdk": "file:dataconnect-generated",
     "firebase": "12.19.0",
     "@tavelyo/floor": "*",
+    "@tavelyo/kitchen": "*",
     "@tavelyo/identity": "*",
     "@tavelyo/tenancy": "*",
     "@tavelyo/contracts": "*",
-    "@tavelyo/table-session": "*"
+    "@tavelyo/table-session": "*",
+    "@tavelyo/orders": "*",
+    "@tavelyo/service-requests": "*"
   }
 }

@@ -95,15 +95,15 @@ test('el cliente pide desde el QR: mesa cerrada, precio cambiado, pago rechazado
 
   // Pago simulado rechazado: hay que revisar otra vez; luego aprobado.
   await page.getByLabel('Resultado del pago simulado').selectOption('declined');
-  await page.getByRole('button', { name: named('Autorizar pago simulado · $ 35.000') }).click();
+  await page.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 35.000') }).click();
   await expectNotice(
     page,
-    'El pago simulado fue rechazado. Revisa el pedido para intentarlo de nuevo.',
+    'El pago simulado fue rechazado y el pedido no se envió a cocina. Revisa el pedido para intentarlo de nuevo.',
   );
   await page.getByRole('button', { name: 'Revisar pedido' }).click();
   await page.getByLabel('Resultado del pago simulado').selectOption('approved');
-  await page.getByRole('button', { name: named('Autorizar pago simulado · $ 35.000') }).click();
-  await expect(page.getByRole('heading', { name: 'Pedido listo' })).toBeVisible();
+  await page.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 35.000') }).click();
+  await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible();
   await expect(page.getByText('Pago autorizado (simulado)')).toBeVisible();
 
   // Caso 12: al cerrar la mesa, el cliente pierde el acceso; la sesión siguiente exige reabrirla.

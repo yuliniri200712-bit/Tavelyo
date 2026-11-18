@@ -1,0 +1,21 @@
+{
+  "name": "@tavelyo/orders",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pedidos para el personal del salón: «Listos para recoger», recoger y entregar, y los pedidos de cada mesa con cancelación y entrega directa",
+  "exports": {
+    ".": "./src/index.ts",
+    "./domain": "./src/domain/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@tavelyo/core": "*",
+    "@tavelyo/design-system": "*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.7"
+  }
+}

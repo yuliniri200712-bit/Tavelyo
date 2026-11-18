@@ -10,6 +10,8 @@ export interface JoinTableSessionRequest {
 
 export interface JoinTableSessionResponse {
   readonly sessionId: string;
+  /** Sucursal de la mesa: acota la actualización en vivo de «Mis pedidos» (ADR-0007). */
+  readonly branchId: string;
   readonly participantId: string;
   readonly tableCode: string;
   /** La participación vence en este instante UTC (o antes, si se cierra la mesa). */
@@ -92,7 +94,7 @@ export type QuoteOrderResponse =
       readonly quoteId: string;
       readonly fingerprint: string;
       readonly expiresAt: string;
-      readonly status: 'QUOTED' | 'AUTHORIZED' | 'DECLINED' | 'EXPIRED';
+      readonly status: 'QUOTED' | 'AUTHORIZED' | 'DECLINED' | 'EXPIRED' | 'RELEASE_PENDING';
       readonly summary: QuoteSummary;
     }
   /** No se guardó nada: el resumen trae los importes actuales para confirmarlos y reenviar. */
@@ -106,16 +108,57 @@ export type QuoteOrderResponse =
 /** Resultados que se pueden forzar en el adaptador simulado (solo con el proyecto demo). */
 export type SimulatedPaymentOutcome = 'approved' | 'declined' | 'requires_action' | 'timeout';
 
+/**
+ * Versión vigente del texto de preautorización (RF-PA-02). El servidor solo autoriza si el cliente
+ * aceptó esta versión y la guarda con el resumen. Cambiar el texto exige una versión nueva.
+ */
+export const PREAUTHORIZATION_CONSENT_VERSION = '2026-11-16';
+
+/**
+ * Texto de la preautorización en la versión vigente: importe, moneda y para qué es. `amount` es el
+ * importe ya formateado con su moneda (p. ej. «$ 32.000»).
+ */
+export function preauthorizationConsentText(amount: string): string {
+  return (
+    `Autorizas una reserva de ${amount} en tu medio de pago para garantizar este pedido antes ` +
+    'de que llegue a cocina. No es un cobro: al pagar la cuenta se cobra solo lo consumido y se ' +
+    'libera el resto, también si pagas en efectivo.'
+  );
+}
+
 export interface AuthorizeQuoteRequest {
   readonly quoteId: string;
+  /** Versión del texto de preautorización que la persona leyó y aceptó. */
+  readonly consentTextVersion: string;
   readonly simulatedOutcome?: SimulatedPaymentOutcome;
 }
 
-export interface AuthorizeQuoteResponse {
-  readonly quoteId: string;
-  readonly status: 'authorized' | 'declined' | 'requires_action';
-  /** Siempre true en la Fase 2: la interfaz lo rotula como pago simulado. */
-  readonly simulated: boolean;
+export type AuthorizeQuoteResponse =
+  /** Autorizado y enviado a cocina (D-04): orderId es el pedido creado para el resumen. */
+  | {
+      readonly quoteId: string;
+      readonly status: 'authorized';
+      readonly orderId: string;
+      /** true mientras solo exista el adaptador simulado: la interfaz lo rotula como tal. */
+      readonly simulated: boolean;
+    }
+  | {
+      readonly quoteId: string;
+      readonly status: 'declined' | 'requires_action';
+      readonly simulated: boolean;
+    };
+
+/** Solicitudes al personal desde la mesa (Fase 3). Pedir la cuenta solo avisa al mesero. */
+export type ServiceRequestKind = 'call_waiter' | 'request_bill';
+
+export interface RequestServiceRequest {
+  readonly sessionId: string;
+  readonly kind: ServiceRequestKind;
+}
+
+export interface RequestServiceResponse {
+  /** already-pending: la mesa ya tenía ese aviso sin atender; no se crea otro. */
+  readonly status: 'sent' | 'already-pending';
 }
 
 /** Límites de un pedido: el servidor los exige y la interfaz los respeta antes de enviar. */

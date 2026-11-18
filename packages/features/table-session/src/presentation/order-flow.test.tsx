@@ -1,11 +1,22 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { err, ok } from '@tavelyo/core';
-import type { QuoteOrderResponse, QuoteSummary } from '@tavelyo/contracts';
+import {
+  PREAUTHORIZATION_CONSENT_VERSION,
+  type QuoteOrderResponse,
+  type QuoteSummary,
+} from '@tavelyo/contracts';
 import type { CartStorage } from '@tavelyo/cart';
-import type { CustomerGateway, MenuProduct, PublicMenu } from '../domain/index.ts';
+import type {
+  CustomerGateway,
+  MenuProduct,
+  MyOrder,
+  MyOrdersObserver,
+  PublicMenu,
+} from '../domain/index.ts';
+import { MyOrdersPage } from './MyOrdersPage.tsx';
 import { OrderReviewPage } from './OrderReviewPage.tsx';
 import { TableMenuPage } from './TableMenuPage.tsx';
 import { TableOrderProvider } from './TableOrderProvider.tsx';
@@ -88,20 +99,48 @@ const quoted = (unitMinor = '3200000'): QuoteOrderResponse => ({
   summary: summary(unitMinor),
 });
 
+const seated = {
+  sessionId: 's1',
+  branchId: 'b1',
+  participantId: 'part1',
+  tableCode: 'M1',
+  expiresAt: '2026-11-16T05:00:00Z',
+};
+
+const myOrder = (status: MyOrder['items'][number]['status']): MyOrder => ({
+  id: 'o1',
+  sentAt: new Date('2026-11-16T00:50:00Z'),
+  currency: 'COP',
+  totalMinor: '3740000',
+  items: [
+    {
+      id: 'l1',
+      status,
+      quantity: 1,
+      productName: 'Hamburguesa',
+      modifiers: ['Medio', 'Aguacate'],
+      note: null,
+      lineTotalMinor: '3740000',
+    },
+  ],
+});
+
+let ordersObserver: MyOrdersObserver | null = null;
+
 function fakeGateway(overrides: Partial<CustomerGateway> = {}): CustomerGateway {
   return {
     menu: vi.fn(async () => ok(menu)),
-    join: vi.fn(async () =>
-      ok({
-        sessionId: 's1',
-        participantId: 'part1',
-        tableCode: 'M1',
-        expiresAt: '2026-11-16T05:00:00Z',
-      }),
-    ),
+    join: vi.fn(async () => ok(seated)),
+    resume: vi.fn(async () => ok(seated)),
+    myOrders: vi.fn(async () => ok([myOrder('RECEIVED')])),
+    watchMyOrders: vi.fn((_seat, observer: MyOrdersObserver) => {
+      ordersObserver = observer;
+      return () => undefined;
+    }),
+    requestService: vi.fn(async () => ok({ status: 'sent' as const })),
     quote: vi.fn(async () => ok(quoted())),
     authorize: vi.fn(async () =>
-      ok({ quoteId: 'q1', status: 'authorized' as const, simulated: true }),
+      ok({ quoteId: 'q1', status: 'authorized' as const, orderId: 'o1', simulated: true }),
     ),
     ...overrides,
   };
@@ -121,7 +160,8 @@ function memoryStorage(): CartStorage {
 }
 
 function Harness({ gateway, storage }: { gateway: CustomerGateway; storage: CartStorage }) {
-  const [page, setPage] = useState<'menu' | 'order'>('menu');
+  const [page, setPage] = useState<'menu' | 'order' | 'mine'>('menu');
+  const myOrdersLink = <button onClick={() => setPage('mine')}>Mis pedidos</button>;
   let uuid = 0;
   return (
     <TableOrderProvider
@@ -134,13 +174,21 @@ function Harness({ gateway, storage }: { gateway: CustomerGateway; storage: Cart
       {page === 'menu' ? (
         <TableMenuPage
           orderLink={(label) => <button onClick={() => setPage('order')}>{label}</button>}
+          myOrdersLink={myOrdersLink}
         />
-      ) : (
+      ) : null}
+      {page === 'order' ? (
         <OrderReviewPage
           offerSimulatedOutcomes
+          myOrdersLink={(label) => <button onClick={() => setPage('mine')}>{label}</button>}
           menuLink={<button onClick={() => setPage('menu')}>Volver a la carta</button>}
         />
-      )}
+      ) : null}
+      {page === 'mine' ? (
+        <MyOrdersPage
+          menuLink={<button onClick={() => setPage('menu')}>Volver a la carta</button>}
+        />
+      ) : null}
     </TableOrderProvider>
   );
 }
@@ -187,7 +235,7 @@ describe('carta y pedido del cliente', () => {
     ).toBeTruthy();
   });
 
-  it('revisa con el servidor, muestra su resumen y autoriza el pago simulado', async () => {
+  it('revisa con el servidor, autoriza y envía a cocina, y lleva a «Mis pedidos»', async () => {
     const { gateway } = renderFlow();
     await addBurger();
     await openOrder();
@@ -206,14 +254,28 @@ describe('carta y pedido del cliente', () => {
     expect(screen.getByText(/Este resumen vale hasta las 20:15/)).toBeTruthy();
     expect(screen.getByText(/no cobra dinero real/)).toBeTruthy();
 
+    expect(screen.getByText(/Sin autorización no se envía/)).toBeTruthy();
     fireEvent.click(
-      screen.getByRole('button', { name: named('Autorizar pago simulado · $ 37.400') }),
+      screen.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 37.400') }),
     );
-    expect(await screen.findByText('Pedido listo')).toBeTruthy();
-    expect(gateway.authorize).toHaveBeenCalledWith({ quoteId: 'q1', simulatedOutcome: 'approved' });
-    expect(screen.getByText(/El envío a cocina todavía no está disponible/)).toBeTruthy();
+    expect(await screen.findByText('Pedido enviado a cocina')).toBeTruthy();
+    expect(gateway.authorize).toHaveBeenCalledWith({
+      quoteId: 'q1',
+      consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
+      simulatedOutcome: 'approved',
+    });
+    expect(screen.getByText(/Tu pedido llegó a cocina/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Hacer otro pedido' }));
     expect(screen.getByText('Tu pedido está vacío')).toBeTruthy();
+    // La mesa ya está en este teléfono: «Mis pedidos» no vuelve a unirse.
+    fireEvent.click(screen.getByRole('button', { name: 'Volver a la carta' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mis pedidos' }));
+    expect(await screen.findByText('1 × Hamburguesa')).toBeTruthy();
+    expect(gateway.resume).not.toHaveBeenCalled();
+    expect(gateway.watchMyOrders).toHaveBeenCalledWith(
+      { sessionId: 's1', branchId: 'b1' },
+      expect.any(Object),
+    );
   });
 
   it('si el precio cambió, muestra antes y ahora y no sigue sin confirmación (caso 5)', async () => {
@@ -337,9 +399,13 @@ describe('carta y pedido del cliente', () => {
     fireEvent.change(screen.getByLabelText('Resultado del pago simulado'), {
       target: { value: 'declined' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /Autorizar pago simulado/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Autorizar y enviar a cocina/ }));
     expect(await screen.findByText(/El pago simulado fue rechazado/)).toBeTruthy();
-    expect(gateway.authorize).toHaveBeenCalledWith({ quoteId: 'q1', simulatedOutcome: 'declined' });
+    expect(gateway.authorize).toHaveBeenCalledWith({
+      quoteId: 'q1',
+      consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
+      simulatedOutcome: 'declined',
+    });
     expect(screen.getByRole('button', { name: 'Revisar pedido' })).toBeTruthy();
   });
 
@@ -353,5 +419,74 @@ describe('carta y pedido del cliente', () => {
       await screen.findByRole('button', { name: named('Ver mi pedido · 1 producto · $ 37.400') }),
     ).toBeTruthy();
     await waitFor(() => expect(screen.queryByText('Cargando la carta…')).toBeNull());
+  });
+
+  it('«Mis pedidos» muestra el estado de cada línea y anuncia en texto lo que cambia', async () => {
+    const { gateway } = renderFlow();
+    fireEvent.click(await screen.findByRole('button', { name: 'Mis pedidos' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mis pedidos' })).toBeTruthy();
+    const line = (await screen.findByText('1 × Hamburguesa')).closest('li') as HTMLElement;
+    expect(within(line).getByText('Recibido en cocina')).toBeTruthy();
+    expect(within(line).getByText(named('$ 37.400'))).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: 'Pedido de las 19:50 · Recibido en cocina' }),
+    ).toBeTruthy();
+    expect(screen.getByText('En vivo')).toBeTruthy();
+    // Tras recargar el teléfono, la mesa se recupera sin crear otra sesión anónima.
+    expect(gateway.resume).toHaveBeenCalledWith('qr-1');
+    expect(gateway.join).not.toHaveBeenCalled();
+
+    act(() => ordersObserver?.onData([myOrder('PICKED_UP')]));
+    expect(within(line).getByText('En camino a tu mesa')).toBeTruthy();
+    expect(screen.getByText('Hamburguesa: en camino a tu mesa.')).toBeTruthy();
+  });
+
+  it('sin pedidos en este teléfono lo dice y no se une a la mesa solo por mirar', async () => {
+    const { gateway } = renderFlow(fakeGateway({ resume: vi.fn(async () => ok(null)) }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mis pedidos' }));
+    expect(await screen.findByText('Todavía no tienes pedidos')).toBeTruthy();
+    expect(gateway.join).not.toHaveBeenCalled();
+    expect(gateway.watchMyOrders).not.toHaveBeenCalled();
+  });
+
+  it('llamar al mesero y pedir la cuenta avisan, y un aviso repetido no crea otro', async () => {
+    const requestService = vi
+      .fn<CustomerGateway['requestService']>()
+      .mockResolvedValueOnce(ok({ status: 'sent' }))
+      .mockResolvedValueOnce(ok({ status: 'already-pending' }))
+      .mockResolvedValueOnce(ok({ status: 'sent' }));
+    const { gateway } = renderFlow(
+      fakeGateway({ resume: vi.fn(async () => ok(null)), requestService }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Mis pedidos' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Llamar al mesero' }));
+    expect(await screen.findByText('Avisamos al mesero. Viene a tu mesa.')).toBeTruthy();
+    // Sin estar en la mesa todavía, se une para poder avisar.
+    expect(gateway.join).toHaveBeenCalledWith('qr-1');
+    expect(requestService).toHaveBeenCalledWith({ sessionId: 's1', kind: 'call_waiter' });
+    fireEvent.click(screen.getByRole('button', { name: 'Llamar al mesero' }));
+    expect(await screen.findByText('El mesero ya tiene tu aviso. Viene en camino.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Pedir la cuenta' }));
+    expect(await screen.findByText('Avisamos al mesero que quieres la cuenta.')).toBeTruthy();
+    expect(requestService).toHaveBeenLastCalledWith({ sessionId: 's1', kind: 'request_bill' });
+  });
+
+  it('un aviso rechazado por el límite muestra el motivo del servidor', async () => {
+    renderFlow(
+      fakeGateway({
+        requestService: vi.fn(async () =>
+          err({
+            kind: 'rejected' as const,
+            reason: 'other' as const,
+            message: 'Hiciste demasiados intentos. Espera unos minutos.',
+          }),
+        ),
+      }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Mis pedidos' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pedir la cuenta' }));
+    expect(
+      await screen.findByText('Hiciste demasiados intentos. Espera unos minutos.'),
+    ).toBeTruthy();
   });
 });

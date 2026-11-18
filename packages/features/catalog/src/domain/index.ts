@@ -64,6 +64,22 @@ export interface BranchProduct {
     readonly currency: string;
     readonly validFrom: string;
   } | null;
+  /** Estación de cocina que lo prepara; null: la predeterminada de la sucursal. */
+  readonly stationId: string | null;
+}
+
+/** Estación de cocina de la sucursal (Fase 3). La predeterminada recibe lo que no tiene estación. */
+export interface StationAdmin {
+  readonly id: string;
+  readonly name: string;
+  readonly sort: number;
+  readonly isDefault: boolean;
+  readonly archived: boolean;
+}
+
+export interface StationInput {
+  readonly name: string;
+  readonly sort: number;
 }
 
 export interface BranchScope {
@@ -162,4 +178,12 @@ export interface CatalogAdminGateway {
     amountMinor: string,
     currency: string,
   ): CatalogResult<void>;
+  stations(scope: BranchScope): CatalogResult<readonly StationAdmin[]>;
+  createStation(scope: BranchScope, input: StationInput): CatalogResult<void>;
+  updateStation(
+    scope: BranchScope,
+    stationId: string,
+    input: Archivable<StationInput>,
+  ): CatalogResult<void>;
+  setProductStation(scope: BranchScope, productId: string, stationId: string): CatalogResult<void>;
 }

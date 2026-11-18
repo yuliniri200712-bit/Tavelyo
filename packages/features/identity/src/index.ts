@@ -26,6 +26,11 @@ export {
   type InactivityGuardProps,
 } from './presentation/InactivityGuard.tsx';
 export {
+  InactivityHoldProvider,
+  useInactivityHold,
+  type InactivityHolds,
+} from './presentation/InactivityHold.tsx';
+export {
   INACTIVITY_POLICY,
   inactivityPhase,
   type InactivityPhase,

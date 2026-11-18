@@ -1,0 +1,128 @@
+# Registro de pruebas — Fase 3
+
+Rama: `fase-3-pedidos`. Se registra cada ejecución con el comando, el resultado real y lo que no se pudo ejecutar. Todas las pruebas de integración corren contra los emuladores (`demo-tavelyo`); no hay nada desplegado.
+
+**Entorno local:** Windows bloquea el emulador y la CLI de SQL Connect (Control inteligente de aplicaciones). Desde el bloque 2, con aprobación del propietario, los emuladores y la generación del SDK corren en un contenedor temporal de Docker (`node:24-bookworm-slim`, `firebase-tools` 15.30.2, puertos solo en `127.0.0.1`), igual que en la Fase 2. CI vuelve a validar todo.
+
+## 2026-11-16 — Bloque 1: esquema de pedidos, estaciones y solicitudes
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Máquina de estados de la línea y estado derivado del pedido | `npx vitest run packages/core/src/order-status.test.ts` | ✅ 15 pruebas: secuencia completa, entregar sin recoger solo desde «listo», pasos saltados y repetidos rechazados, cancelar solo antes de salir de cocina, nunca retrocede (D-26), motivo y merma, y los seis estados derivados |
+| Catálogo de permisos y matriz | `npx vitest run packages/contracts` | ✅ 38 pruebas con `service_request.handle` |
+| Capacidades del esquema | `npm run test:integration` (`capacidades-fase-3.int.test.ts`) | ✅ 8 pruebas en CI #36: estación predeterminada única, estaciones y opciones de otra sucursal o empresa rechazadas, un pedido por resumen, cambio condicionado por versión que gana una sola vez y una solicitud pendiente por tipo y mesa |
+| Conjunto | CI #37 | ✅ Verde en las tres partes. CI #36 falló solo porque el SDK escrito a mano no tenía las interfaces `_Key` de las tablas nuevas |
+
+## 2026-11-16 — Bloque 2: conectores y autorización
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Reglas de los conectores | `npm run check` (`connector-rules.test.ts`) | ✅ Todas las operaciones nuevas, con `MyOrders` en la lista blanca del cliente |
+| Autorización de pedidos, cocina y solicitudes | `npx vitest run --config vitest.integration.config.ts dataconnect/tests` (`pedidos-fase-3.int.test.ts`) | ✅ 19 pruebas, detalle abajo |
+| Conjunto | `npm run check` / integración contra el contenedor | ✅ 576 unitarias; 98 de SQL Connect y 23 del backend (114 + 23 = 137 de integración) |
+
+Lo que cubre `pedidos-fase-3.int.test.ts`:
+
+- **Estaciones:** la predeterminada es única, nace con cada sucursal nueva (`CreateBranch`) y no se archiva. Crear y asignar exige `catalog.manage`. Una estación de otra sucursal o archivada no se asigna.
+- **D-04:** un pedido con el resumen sin autorizar no llega a cocina ni aparece en la cola. Autorizado, se envía una sola vez, y el reintento lo encuentra ya enviado. Otra persona, otra mesa o una persona retirada no lo envían. Solo el servidor ejecuta el envío.
+- **Cocina:** la cola muestra la mesa, los alérgenos, las opciones y la nota, y **ningún importe ni dato del cliente**. El mesero, la cocina de otra sucursal y la otra empresa no la leen. Los pasos fuera de orden y repetidos se rechazan con «Esta línea ya cambió».
+- **Caso 4:** **tres «Empezar» simultáneos sobre la misma línea: gana uno, los otros dos reciben «Esta línea ya cambió» y queda un solo registro de auditoría.**
+- **IDs alterados:** la cocina de otra empresa, declarando su propia empresa, no toca una línea ajena.
+- **Meseros:** recoger y entregar; cocina no recoge; entregar sin recoger exige `delivery.skip_sequence` y motivo, que queda en la auditoría. Cancelar exige motivo, marca merma si la línea ya se empezó y no se puede después de entregar. El salón y los pedidos de la mesa muestran las líneas en curso.
+- **D-06:** «Mis pedidos» muestra a cada persona solo los suyos, nada a alguien ajeno y nada con otra sucursal.
+- **Solicitudes:** una pendiente de cada tipo por mesa; el personal sin `service_request.handle` no las ve ni las atiende; atendida, sale de la lista y se puede volver a pedir.
+- **Caso 12:** al cerrar la mesa, el cliente deja de ver sus pedidos y no puede enviar pedidos ni crear solicitudes.
+
+Hallazgos del bloque:
+
+- **El SDK web no admite listas de entrada:** el pedido se guarda con un documento fijo y se envía a cocina con una operación del conector (ADR-0007, implementación).
+- **El emulador genera el SDK al cargar el conector** y necesita el `package.json` de `packages/data-access` en su copia de trabajo; sin él se detiene sin un error claro. Se añadió a la copia del contenedor.
+- En local, las pruebas del backend necesitan `FIREBASE_AUTH_EMULATOR_HOST`, `DATA_CONNECT_EMULATOR_HOST` y `GCLOUD_PROJECT`, que en CI define `emulators:exec`. Esa variable de SQL Connect hace fallar la prueba de pasarelas del SDK web, así que en local las dos suites se ejecutan por separado.
+
+## 2026-11-16 — Bloque 3: backend del envío a cocina y solicitudes
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Backend, unitarias | `npx vitest run backend/src` | ✅ 101 pruebas. `authorizeQuote` (6): versión del texto, envío tras autorizar, rechazado y con acción pendiente sin pedido, reintento sin cobro doble, retención para liberar y mesa cerrada. Envío a cocina (9): estación y alérgenos por línea, opciones en orden, pedido ya enviado, recuperación, choque de unicidad y estación predeterminada creada. `requestService` (4) |
+| Backend, integración | `npx vitest run --config vitest.integration.config.ts backend/tests` | ✅ 47 pruebas con las funciones reales. Nuevas: el pedido llega a la cola de cocina con sus líneas y el consentimiento queda guardado; **dos pulsaciones simultáneas dan un solo pedido**; sin autorización no hay pedido; texto viejo rechazado; **recuperación tras las dos caídas simuladas**; la persona retirada antes del envío deja el resumen `RELEASE_PENDING`; solicitudes con aviso repetido y personas ajenas |
+| Recorridos del cliente | `npx playwright test --config playwright.emulators.config.ts --project=chrome customer-order accessibility-fase-2` | ✅ 4 en Chrome, con el texto de la preautorización en la tarjeta de pago |
+| Conjunto | `npm run check` / integración de SQL Connect | ✅ 592 unitarias / 98 |
+
+Hallazgo: las pruebas nuevas sentaron más de 20 personas en la misma mesa y el límite por mesa de `joinTableSession` las detuvo, como debía. Cada grupo nuevo usa su propia mesa.
+
+## 2026-11-16 — Bloque 4: estaciones y pantalla de cocina en tiempo real
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Estaciones (4a) | `npx vitest run packages/features/catalog` | ✅ Lista con estado en texto, la predeterminada sin «Archivar», validación al crear, archivar; estación de cada producto en la carta de la sucursal, solo entre las activas y sin consultarlas si falta `catalog.manage`. CI #40 en verde |
+| Lógica de la cola | `npx vitest run packages/features/kitchen` | ✅ 4 pruebas: minutos de espera (nunca negativos), resumen en texto, pedidos nuevos con su mesa y motivo de cancelación |
+| Pantalla de cocina | ídem (`KitchenPage.test.tsx`) | ✅ 7 pruebas: detalle de la línea con alérgenos y sin importes, «Empezar» con la versión vista y nueva lectura, «Esta línea ya cambió», pedido nuevo con aviso, marca y sonido opcional, sin conexión con los botones bloqueados y reintento, elección y recuerdo de la estación, cancelación con motivo y aviso de merma |
+| D-25 | `npx vitest run packages/features/identity` | ✅ 3 pruebas nuevas: con la cocina visible no avisa ni cierra en 40 minutos; con la pestaña oculta cierra a los 15; al salir de la cocina vuelve el cierre normal |
+| **Tiempo real en navegador (caso 11)** | `npx playwright test --config playwright.emulators.config.ts kitchen-realtime` | ✅ **5 navegadores** de D-15. Cocina ve el pedido sin recargar, con aviso y marca de «Nuevo»; «Empezar» y «Listo» cambian la línea; sin red bloquea los botones; al volver recupera el pedido hecho mientras estaba sin conexión. axe sin infracciones |
+| Conjunto | `npm run check` | ✅ 609 pruebas unitarias |
+
+Hallazgo: en el SDK web 12.19 la suscripción funciona sin `clientCache` (ADR-0007, implementación), así que se conserva ADR-0008 §8: no se guardan datos que haya que vaciar al cerrar sesión.
+
+## 2026-11-16 — Bloque 5: meseros
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Tiempo real compartido | `npx vitest run packages/design-system/src/components/live-data` | ✅ 6 pruebas: lectura al abrir y cambios de la suscripción; sin red conserva lo último, explica qué se bloquea y se vuelve a suscribir solo; sin permiso no reintenta; un cambio propio avisa y vuelve a leer; al volver la red se suscribe y lee todo. Diálogo de motivo: no confirma sin un motivo válido |
+| Cocina tras el cambio | `npx vitest run packages/features/kitchen` | ✅ Las 11 pruebas del bloque 4 siguen pasando con `useLiveData`, `LiveStatus` y `ReasonDialog` |
+| Salón | `npx vitest run packages/features/floor` | ✅ 4 de lógica (actividad en texto, en singular y plural, solicitudes con la hora de la sucursal) y 11 de pantalla, 3 nuevas: se actualiza solo con cada cambio, sin conexión no deja abrir ni cerrar, solicitudes arriba y pedidos de la mesa al pedirlos |
+| «Listos para recoger» y pedidos de la mesa | `npx vitest run packages/features/orders` | ✅ 15 pruebas: resumen y espera en texto, aviso del plato que queda listo, acciones según estado y permiso; «Recogido» con la versión vista, «Esta línea ya cambió», sin `delivery.deliver` no hay «Entregado»; estado derivado del pedido, cancelar con motivo y merma, entregar sin recoger con motivo, sin permisos solo estados |
+| Solicitudes | `npx vitest run packages/features/service-requests` | ✅ 4 pruebas: mesa, tipo y espera en texto; «Atendida» y nueva lectura; ya atendida por otra persona; aviso de la solicitud nueva en vivo |
+| Capa de datos | `npx vitest run packages/data-access/src/staff-mappers` | ✅ 4 pruebas de traducción de las lecturas: sin importes ni datos de quien pidió, y conteo por mesa |
+| Rutas | `npx vitest run apps/operations` | ✅ El mesero ve el salón con solicitudes y «Listos para recoger»; un rol sin `delivery.pickup` no la ve |
+| **Meseros en navegador** | `npx playwright test --config playwright.emulators.config.ts waiter-service` | ✅ **5 navegadores** de D-15. Con un pedido real autorizado: la mesa muestra la línea en cocina; el cliente llama al mesero y aparece **sin recargar** en la mesa y en la lista; «Atendida». Cocina termina la línea y el salón muestra «1 lista para recoger» sin recargar. «Recogido»; sin red no deja entregar y al volver sí; «Entregado». Un segundo plato que queda listo se anuncia en texto. En los pedidos de la mesa se cancela con motivo y aviso de merma. axe sin infracciones en el salón, en «Listos para recoger» y con los pedidos abiertos |
+| Regresión en navegador | ídem con `kitchen-realtime waiter-floor`, y `accessibility-fase-2` en Chrome y Safari de iPhone | ✅ Cocina y el salón de la Fase 2 en los 5 navegadores; 320 px, texto al 200 % y teclado sin cambios (Tab omitido en Safari, como antes) |
+| Conjunto | `npm run check` | ✅ 648 pruebas unitarias, tipos, ESLint y Prettier |
+
+Hallazgo durante la prueba: el recorrido pedía la solicitud con el código `CALL_WAITER` del esquema, y `requestService` la rechazó como inválida, como debía: el contrato del cliente usa `call_waiter`. Se corrigió la prueba.
+
+## 2026-11-17 — Bloque 6: cliente
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Flujo del cliente | `npx vitest run packages/features/table-session` | ✅ 21 pruebas. Nuevas: «Autorizar y enviar a cocina» lleva a «Mis pedidos» sin volver a unirse; «Mis pedidos» muestra el estado de cada línea y anuncia los cambios; tras recargar recupera la mesa sin crear sesión; sin pedidos no se une solo por mirar; llamar al mesero y pedir la cuenta, con aviso repetido; límite del servidor con su motivo; lógica de textos y de cambios de estado |
+| Rutas de `menu-web` | `npx vitest run apps/menu-web` | ✅ La carta lleva a «Mis pedidos», que ofrece llamar al mesero |
+| Capa de datos | `npx vitest run packages/data-access` | ✅ Traducción de «Mis pedidos» con su total y el estado e importe de cada línea; un pedido sin enviar no aparece |
+| Backend | `npx vitest run backend/src/table-session` e integración `backend/tests` | ✅ `joinTableSession` devuelve la sucursal; 47 de integración contra los emuladores |
+| Tiempo real compartido | `npx vitest run packages/design-system/src/components/live-data` | ✅ 7 pruebas; nueva: una respuesta que llega tras perder la red actualiza los datos, pero no dice «En vivo» |
+| **Cliente en navegador** | `npx playwright test --config playwright.emulators.config.ts customer-live` | ✅ **5 navegadores** de D-15. Autoriza y envía; «Mis pedidos» pasa de «Recibido en cocina» a «En preparación» **sin recargar** y lo anuncia; llamar al mesero (con el aviso repetido) y pedir la cuenta llegan a `PendingServiceRequests`; al recargar se recupera el pedido; **sin red lo dice y, al volver, muestra lo que pasó entretanto** («En camino a tu mesa») y luego «Entregado». axe sin infracciones |
+| Regresión en navegador | ídem con `customer-order accessibility-fase-2 waiter-service` | ✅ 5 navegadores, con los textos nuevos del pago |
+| Conjunto | `npm run check` | ✅ 659 pruebas unitarias, dos veces seguidas con los emuladores en marcha |
+
+Hallazgos:
+- **Real, corregido:** en Safari (escritorio e iPhone), al cortar la red justo después de «Recogido», la lectura que ya venía en camino volvía a marcar «En vivo» y dejaba activo «Entregado». `useLiveData` ahora mantiene «Sin conexión» mientras el navegador no tenga red.
+- **De las pruebas, no de la app:**
+  - en el emulador en Docker, `requestService` tardó más de 5 s en 2 de 74 llamadas (la media es 1 s; el resto de funciones no pasa de 3 s). Los recorridos esperan hasta 30 s esos avisos. La latencia real se mide al desplegar (ADR-0007);
+  - la primera carga de la carta en Chrome de Android tardó más de 5 s; ahora espera hasta 15 s;
+  - un fallo aislado de conexión con el servidor local y uno de WebKit al esperar un botón estable no se repitieron.
+- **Pruebas unitarias intermitentes:** con todo el conjunto en paralelo, la primera búsqueda de algunos archivos pasaba de 1 s (ya había ocurrido en el bloque 4). `vitest.setup.ts` sube a 5 s la espera de Testing Library; no cambia lo que se comprueba.
+
+Pendiente de verificar en los bloques siguientes: TalkBack y el Android real (bloque 7).
+
+CI #43 en verde.
+
+## 2026-11-17 — Bloque 7: cierre
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| **Concurrencia (caso 4)** | `npx playwright test --config playwright.emulators.config.ts concurrency` | ✅ **5 navegadores** de D-15, con dos personas en navegadores separados. Dos cocineros pulsan «Empezar» en la misma línea a la vez: la línea queda «En preparación» en las dos pantallas y solo una recibe «Esta línea ya cambió. La pantalla muestra el estado actual.». Dos meseros pulsan «Atendida» en la misma solicitud a la vez: una persona la atiende, la otra recibe «ya atendida», y las dos pantallas quedan sin solicitudes pendientes |
+| **Accesibilidad de la Fase 3** | ídem con `accessibility-fase-3` | ✅ **320 px y texto al 200 %** sin desplazamiento horizontal en los 5 navegadores: «Pedido enviado a cocina», «Mis pedidos» con una solicitud hecha, cocina con los alérgenos, salón con solicitudes y pedidos abiertos, «Listos para recoger» y «Estaciones de cocina». **Solo con el teclado** (Chrome, Edge y Chrome Android; omitido en Safari, que no enfoca botones con Tab, como en la Fase 2): el cliente va a «Mis pedidos» y llama al mesero; cocina empieza, termina y cancela con motivo: Escape cierra el diálogo y devuelve el foco al botón, el foco empieza en «Volver» y el motivo está justo antes; el mesero recoge y entrega. axe ya corre en cada recorrido de la fase |
+| Reconexión de cocina (caso 11) | `kitchen-realtime`, dentro de la tanda completa | ✅ Sin cambios desde el bloque 4: sin red bloquea los botones y al volver recupera lo hecho entretanto |
+| **Tanda completa con emuladores** | `npx playwright test --config playwright.emulators.config.ts` | ✅ **81 superadas y 4 omitidas** (Tab en Safari, Fase 2 y Fase 3) en los 5 navegadores, 37 min: todos los recorridos de las fases 1 a 3, incluidos mesero, cocina y cliente |
+| **Android real** | Motorola edge 50 fusion, Android 16, Chrome 157; emuladores en Docker y puertos con `adb reverse` | ✅ Teléfono como cliente; computador como mesero y como cocina (ventana de incógnito). El teléfono tenía la versión de una prueba anterior y ofreció «Actualizar». El mesero abre la mesa M1, el cliente pide 2 bandejas paisa bien asadas y autoriza; cocina las ve sin recargar; «Mis pedidos» sigue en vivo «Empezar», «Listo», «Recogido» y «Entregado»; «Llamar al mesero» llega al salón y se marca «Atendida». Resultado: «Pedido de las 15:30 · Entregado» con «En vivo» en el teléfono |
+| Conjunto | `npm run check` | ✅ 659 pruebas unitarias, tipos, ESLint y Prettier |
+
+Hallazgos:
+- **De las pruebas, no de la app:** con varios navegadores abiertos a la vez, entrar como personal superó la espera habitual, y una llamada a `requestService` desde el navegador llegó a tardar unos 25 s. Medida sin navegador, la misma llamada tarda menos de 1 s: la demora es el emulador de Functions en Docker, que arranca un proceso nuevo (también para la consulta previa de CORS). Los recorridos esperan hasta 30 s el acceso y hasta 60 s los avisos que dependen del backend (`FUNCTION_WAIT`), con 180 s por prueba en los recorridos de varias personas.
+- **Para el despliegue:** un arranque en frío de las funciones puede retrasar el primer «Llamar al mesero» o el primer envío a cocina. Mantener instancias activas (`minInstances`) lo evita, pero tiene coste: se decide con el propietario al desplegar, después de medir la latencia real (ADR-0007).
+- En el panel de pedidos de la mesa, el mesero ve «Cancelar» en un plato «Listo para recoger»: es lo esperado (`order_item.cancel` vale mientras el plato no sale de cocina; «Entregar sin recoger» es solo del dueño y del administrador).
+- **Del equipo local, no del código:** lanzado desde `c:\…` (unidad en minúscula), Vitest carga dos veces su propio módulo y los 58 archivos fallan con «Vitest failed to find the current suite». Desde `C:\…` pasan todos. Hay que lanzar las pruebas desde la ruta con la unidad en mayúscula.
+- Ayudas compartidas nuevas en `e2e/support`: `a11y.ts` (`tabTo`, `expectReflow`, antes dentro de `accessibility-fase-2.spec.ts`) y, en `orders.ts`, `openStaffPage`, `orderFromMenu` y `named`.
+
+CI: la #44 falló en «Auditoría de dependencias» por GHSA-fc5q-39xc-vjpf (`picomatch` 4.0.7, solo herramientas de desarrollo, sin versión corregida); con la regla nueva de ADR-0010, la **#46 quedó en verde** en los tres trabajos (calidad 2,5 min; integración 6,5 min; Playwright 32,3 min: PWA 81 superadas y 4 omitidas, emuladores 81 y 4). La #45 la canceló GitHub al relanzarse la #44.
+
+No verificado en el bloque 7: TalkBack en las pantallas nuevas (se revisó en la Fase 1; en esta fase los cambios se anuncian en texto y lo comprueban las pruebas de componentes) y VoiceOver en iPhone (pendiente desde la Fase 1).

@@ -501,6 +501,41 @@
   font-weight: var(--tv-type-h2-weight);
 }
 
+/* Cocina (Fase 3): tarjetas de línea legibles a distancia. El estado, la espera y lo nuevo siempre
+   van también en texto; el color solo acompaña (PM §7). */
+.tv-kitchen-queue {
+  display: grid;
+  gap: var(--tv-space-3);
+  padding: 0;
+  list-style: none;
+}
+.tv-kitchen-item {
+  display: grid;
+  gap: var(--tv-space-2);
+  padding: var(--tv-space-4);
+  border: var(--tv-stroke-control) solid var(--tv-color-border-subtle);
+  border-radius: var(--tv-radius-card);
+  background: var(--tv-color-surface-card);
+}
+.tv-kitchen-item--new {
+  border-color: var(--tv-color-status-info);
+}
+.tv-kitchen-item__title {
+  margin: 0;
+  font-size: var(--tv-type-h2-size);
+  line-height: var(--tv-type-h2-line-height);
+  font-weight: var(--tv-type-h2-weight);
+}
+.tv-kitchen-allergens {
+  margin: 0;
+  padding: var(--tv-space-2) var(--tv-space-3);
+  border-inline-start: var(--tv-stroke-control) solid var(--tv-color-status-warning);
+  background: var(--tv-color-surface-grouped);
+}
+.tv-kitchen-item .tv-toolbar .tv-button {
+  flex: 1 1 auto;
+}
+
 @media print {
   .tv-app-header,
   .tv-skip-link,

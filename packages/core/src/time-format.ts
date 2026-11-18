@@ -16,3 +16,8 @@ export function formatLocalTime(
     timeZone,
   }).format(instant);
 }
+
+/** Minutos completos transcurridos desde un instante (nunca negativos, aunque el reloj difiera). */
+export function elapsedMinutes(since: Date, now: Date): number {
+  return Math.max(0, Math.floor((now.getTime() - since.getTime()) / 60_000));
+}

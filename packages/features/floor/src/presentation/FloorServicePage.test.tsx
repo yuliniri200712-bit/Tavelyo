@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { err, ok } from '@tavelyo/core';
-import type { FloorSector, FloorServiceGateway, SessionParticipant } from '../domain/index.ts';
+import type {
+  FloorError,
+  FloorSector,
+  FloorServiceGateway,
+  SessionParticipant,
+} from '../domain/index.ts';
+import type { LiveObserver } from '@tavelyo/core';
 import { FloorServicePage } from './FloorServicePage.tsx';
 
 beforeAll(() => {
@@ -28,7 +34,16 @@ const sectors: FloorSector[] = [
         id: 'm2',
         code: '2',
         seats: 2,
-        session: { id: 'ses2', openedAt: new Date('2026-11-16T00:42:00Z') },
+        session: {
+          id: 'ses2',
+          openedAt: new Date('2026-11-16T00:42:00Z'),
+          activity: {
+            inKitchen: 2,
+            ready: 1,
+            pickedUp: 0,
+            requests: [{ kind: 'REQUEST_BILL', createdAt: new Date('2026-11-16T00:58:00Z') }],
+          },
+        },
       },
     ],
   },
@@ -49,9 +64,16 @@ const people: SessionParticipant[] = [
   },
 ];
 
+type FloorObserver = LiveObserver<readonly FloorSector[], FloorError>;
+let observer: FloorObserver | null = null;
+
 function fakeGateway(overrides: Partial<FloorServiceGateway> = {}): FloorServiceGateway {
   return {
     floor: vi.fn(async () => ok(sectors)),
+    watchFloor: vi.fn((_scope, next: FloorObserver) => {
+      observer = next;
+      return () => undefined;
+    }),
     participants: vi.fn(async () => ok(people)),
     openTable: vi.fn(async () => ok(undefined)),
     closeSession: vi.fn(async () => ok(undefined)),
@@ -60,7 +82,11 @@ function fakeGateway(overrides: Partial<FloorServiceGateway> = {}): FloorService
   };
 }
 
-function renderPage(gateway = fakeGateway(), canClose = true) {
+function renderPage(
+  gateway = fakeGateway(),
+  canClose = true,
+  slots: Pick<Parameters<typeof FloorServicePage>[0], 'requestsPanel' | 'renderOrders'> = {},
+) {
   render(
     <FloorServicePage
       gateway={gateway}
@@ -69,6 +95,7 @@ function renderPage(gateway = fakeGateway(), canClose = true) {
       timezone="America/Bogota"
       canClose={canClose}
       now={now}
+      {...slots}
     />,
   );
   return gateway;
@@ -89,6 +116,12 @@ describe('FloorServicePage', () => {
     const open = await tableItem('2');
     expect(within(open).getByText('Abierta')).toBeTruthy();
     expect(within(open).getByText('Abierta desde las 19:42')).toBeTruthy();
+    // RF-ME-01: pedidos y solicitudes de la mesa, en texto.
+    expect(within(open).getByText('2 líneas en cocina · 1 lista para recoger')).toBeTruthy();
+    expect(within(open).getByText('Pidió la cuenta a las 19:58')).toBeTruthy();
+    expect(within(open).getByText('Solicitud pendiente')).toBeTruthy();
+    expect(within(open).getByText('Platos listos')).toBeTruthy();
+    expect(screen.getByText('En vivo')).toBeTruthy();
     // Un sector sin mesas no ocupa la pantalla del servicio.
     expect(screen.queryByRole('heading', { name: 'Bodega' })).toBeNull();
   });
@@ -177,5 +210,71 @@ describe('FloorServicePage', () => {
     );
     expect(await screen.findByText('No se pudo cargar el salón')).toBeTruthy();
     expect(screen.getByText('Sin acceso a la sucursal')).toBeTruthy();
+  });
+
+  it('se actualiza solo con cada cambio que llega del servidor', async () => {
+    renderPage();
+    await tableItem('1');
+    const [terraza] = sectors;
+    if (!terraza) throw new Error('sin sector');
+    const opened = {
+      ...terraza,
+      tables: terraza.tables.map((table) =>
+        table.id === 'm1'
+          ? {
+              ...table,
+              session: {
+                id: 'ses1',
+                openedAt: new Date('2026-11-16T00:59:00Z'),
+                activity: {
+                  inKitchen: 0,
+                  ready: 0,
+                  pickedUp: 0,
+                  requests: [
+                    { kind: 'CALL_WAITER' as const, createdAt: new Date('2026-11-16T01:00:00Z') },
+                  ],
+                },
+              },
+            }
+          : table,
+      ),
+    };
+    act(() => observer?.onData([opened]));
+    const first = await tableItem('1');
+    expect(within(first).getByText('Abierta')).toBeTruthy();
+    expect(within(first).getByText('Sin pedidos en curso')).toBeTruthy();
+    expect(within(first).getByText('Llamó al mesero a las 20:00')).toBeTruthy();
+    expect(screen.getByText('Centro · 2 mesas abiertas · 0 libres')).toBeTruthy();
+  });
+
+  it('sin conexión lo dice y no deja abrir ni cerrar mesas', async () => {
+    renderPage();
+    const free = await tableItem('1');
+    act(() => observer?.onError({ kind: 'network' }));
+    expect(screen.getByText('Sin conexión con el servidor.')).toBeTruthy();
+    expect(screen.getByText(/No puedes abrir ni cerrar mesas/)).toBeTruthy();
+    const openButton = within(free).getByRole('button', {
+      name: 'Abrir mesa',
+    }) as HTMLButtonElement;
+    expect(openButton.disabled).toBe(true);
+  });
+
+  it('muestra las solicitudes arriba y los pedidos de la mesa al pedirlos', async () => {
+    const renderOrders = vi.fn((_session, tableCode: string) => (
+      <p>Pedidos de la mesa {tableCode}</p>
+    ));
+    renderPage(fakeGateway(), true, {
+      requestsPanel: <p>Solicitudes pendientes</p>,
+      renderOrders,
+    });
+    expect(await screen.findByText('Solicitudes pendientes')).toBeTruthy();
+    const open = await tableItem('2');
+    const toggle = within(open).getByRole('button', { name: 'Ver pedidos' });
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(within(open).getByText('Pedidos de la mesa 2')).toBeTruthy();
+    expect(renderOrders).toHaveBeenCalledWith(expect.objectContaining({ id: 'ses2' }), '2');
+    // Una mesa libre no tiene pedidos que ver.
+    expect(within(await tableItem('1')).queryByRole('button', { name: 'Ver pedidos' })).toBeNull();
   });
 });

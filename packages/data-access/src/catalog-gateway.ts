@@ -1,18 +1,22 @@
 import { QueryFetchPolicy, type DataConnect } from 'firebase/data-connect';
 import {
   branchCatalog,
+  branchStations,
   catalogAdmin,
   changePrice,
   createCategory,
   createModifierGroup,
   createModifierOption,
   createProduct,
+  createStation,
   createTaxRule,
   setProductAvailability,
+  setProductStation,
   updateCategory,
   updateModifierGroup,
   updateModifierOption,
   updateProduct,
+  updateStation,
   updateTaxRule,
 } from '@tavelyo/dataconnect-sdk';
 import { err, ok } from '@tavelyo/core';
@@ -115,6 +119,7 @@ export function createCatalogAdminGateway(dataConnect: DataConnect): CatalogAdmi
                     validFrom: entry.currentPrice.validFrom,
                   }
                 : null,
+              stationId: entry.stationId ?? null,
             };
           }),
         );
@@ -163,5 +168,28 @@ export function createCatalogAdminGateway(dataConnect: DataConnect): CatalogAdmi
       ),
     changePrice: (scope, productId, amountMinor, currency) =>
       command(() => changePrice(dataConnect, { ...scope, productId, amountMinor, currency })),
+
+    async stations(scope) {
+      try {
+        const { data } = await branchStations(dataConnect, scope, SERVER_ONLY);
+        return ok(
+          data.stations.map((station) => ({
+            id: station.id,
+            name: station.name,
+            sort: station.sort,
+            isDefault: station.defaultForBranchId != null,
+            archived: Boolean(station.archivedAt),
+          })),
+        );
+      } catch (error) {
+        return err(mapCommandError(error));
+      }
+    },
+    createStation: (scope, input) =>
+      command(() => createStation(dataConnect, { ...scope, ...input })),
+    updateStation: (scope, stationId, input) =>
+      command(() => updateStation(dataConnect, { ...scope, stationId, ...input })),
+    setProductStation: (scope, productId, stationId) =>
+      command(() => setProductStation(dataConnect, { ...scope, productId, stationId })),
   };
 }
