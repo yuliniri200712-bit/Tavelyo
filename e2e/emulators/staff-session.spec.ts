@@ -16,6 +16,10 @@ import {
   seedAuthorizationCatalog,
 } from '../../dataconnect/tests/support/provisioning.ts';
 
+// Al cargar o recargar, la app comprueba la sesión con Auth y SQL Connect; con la máquina cargada
+// (por ejemplo, al final de la tanda completa) Safari puede tardar más que la espera general de 5 s.
+const SESSION_WAIT = 20_000;
+
 interface Scenario {
   readonly waiter: TestUser;
   readonly tenantA: string;
@@ -55,7 +59,9 @@ test('acceso, selección de contexto, cambio de empresa, revocación y cierre de
 
   // Sin sesión, la app lleva al acceso, que es accesible.
   await page.goto(`${APPS.operations}/`);
-  await expect(page.getByRole('heading', { name: 'Acceso del personal' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Acceso del personal' })).toBeVisible({
+    timeout: SESSION_WAIT,
+  });
   expect(
     (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze())
       .violations,
@@ -87,13 +93,17 @@ test('acceso, selección de contexto, cambio de empresa, revocación y cierre de
   );
   expect(revoked.errors).toEqual([]);
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Aeropuerto' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Aeropuerto' })).toBeVisible({
+    timeout: SESSION_WAIT,
+  });
   await expect(page.getByText(nameA)).toHaveCount(0);
 
   // Cierre de sesión: vuelve al acceso y, al recargar, sigue sin sesión ni datos.
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
   await expect(page.getByRole('heading', { name: 'Acceso del personal' })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Acceso del personal' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Acceso del personal' })).toBeVisible({
+    timeout: SESSION_WAIT,
+  });
   await expect(page.getByText(nameB)).toHaveCount(0);
 });

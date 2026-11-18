@@ -5,6 +5,7 @@ import {
   describeMyOrders,
   describeStatusChanges,
   itemStatuses,
+  orderProgress,
   serviceRequestText,
 } from './my-orders.ts';
 
@@ -71,5 +72,50 @@ describe('«Mis pedidos» en texto', () => {
     expect(serviceRequestText('request_bill', 'already-pending')).toBe(
       'El mesero ya sabe que quieres la cuenta. Viene en camino.',
     );
+  });
+});
+
+describe('seguimiento del pedido', () => {
+  const states = (items: MyOrderItem[]) =>
+    orderProgress(order(items))?.map((step) => `${step.label}:${step.state}`);
+
+  it('marca hechos los pasos anteriores, en curso el actual y pendientes los siguientes', () => {
+    expect(states([item('l1', 'RECEIVED')])).toEqual([
+      'Recibido en cocina:current',
+      'En preparación:pending',
+      'Listo para servir:pending',
+      'Entregado:pending',
+    ]);
+    expect(states([item('l1', 'IN_PREPARATION'), item('l2', 'RECEIVED')])).toEqual([
+      'Recibido en cocina:done',
+      'En preparación:current',
+      'Listo para servir:pending',
+      'Entregado:pending',
+    ]);
+    expect(states([item('l1', 'PICKED_UP')])).toEqual([
+      'Recibido en cocina:done',
+      'En preparación:done',
+      'Listo para servir:current',
+      'Entregado:pending',
+    ]);
+  });
+
+  it('explica el paso en curso, también cuando solo una parte está lista', () => {
+    const progress = orderProgress(order([item('l1', 'READY'), item('l2', 'IN_PREPARATION')]));
+    expect(progress?.find((step) => step.state === 'current')).toEqual({
+      label: 'Listo para servir',
+      state: 'current',
+      detail: 'Una parte ya está lista.',
+    });
+  });
+
+  it('entregado completa todos los pasos; cancelado no tiene seguimiento', () => {
+    expect(states([item('l1', 'DELIVERED'), item('l2', 'CANCELLED')])).toEqual([
+      'Recibido en cocina:done',
+      'En preparación:done',
+      'Listo para servir:done',
+      'Entregado:done',
+    ]);
+    expect(orderProgress(order([item('l1', 'CANCELLED')]))).toBeNull();
   });
 });

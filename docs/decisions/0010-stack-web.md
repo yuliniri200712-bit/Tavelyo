@@ -106,6 +106,14 @@ Regla nueva del paso «Auditoría de dependencias»:
 
 Un aviso de desarrollo que no bloquea se registra aquí y se corrige en cuanto exista versión corregida (con `overrides` si hace falta, como en 2026-11-13). Pendiente: quitar la excepción de `picomatch` cuando se publique la corrección.
 
+### Iconos: Lucide (Fase 3B, 2026-11-17)
+
+Aprobado por el propietario con el plan de la Fase 3B (D-27). `lucide-react` **1.66.0** (2026-10-31, más de dos semanas), licencia **ISC**, sin dependencias, compatible con React 19 (`peerDependencies` `^16.5.1 || ^17 || ^18 || ^19`). Se instala solo en `@tavelyo/design-system`.
+
+- Verificado en el paquete instalado: cada icono es un componente que acepta `size`, `strokeWidth`, `className` y atributos SVG, y sin `aria-label` ni `title` sale con `aria-hidden`.
+- Los módulos no importan la biblioteca: usan `Icon` del sistema de diseño con un catálogo cerrado de nombres (`components/Icon.tsx`). Solo los iconos de ese catálogo llegan al navegador.
+- `npm audit --omit=dev`: 0 vulnerabilidades tras instalarlo.
+
 ## Verificación pendiente
 
 - Repetir la compatibilidad exacta de versiones al crear el monorepo en Fase 1 y fijar versiones con al menos dos semanas de publicadas.

@@ -96,7 +96,10 @@ describe('KitchenPage', () => {
     renderKitchen(gateway);
     const bandeja = await line(/Mesa M1 · 2 × Bandeja paisa/);
     expect(within(bandeja).getByText('Por empezar')).toBeTruthy();
-    expect(within(bandeja).getByText(/Hace 12 minutos · llegó a las 13:00/)).toBeTruthy();
+    // La espera se ve grande («12 min») y se lee completa; la hora de llegada va junto al estado.
+    expect(within(bandeja).getByText('12 min')).toBeTruthy();
+    expect(within(bandeja).getByText('Hace 12 minutos')).toBeTruthy();
+    expect(within(bandeja).getByText('Llegó a las 13:00')).toBeTruthy();
     expect(within(bandeja).getByText('Opciones: Bien asada')).toBeTruthy();
     expect(within(bandeja).getByText('Sin cebolla')).toBeTruthy();
     expect(within(bandeja).getByText('Alérgenos declarados:').parentElement?.textContent).toBe(
@@ -105,6 +108,30 @@ describe('KitchenPage', () => {
     expect(screen.getByText('1 por empezar · 0 en preparación')).toBeTruthy();
     expect(screen.getByText('En vivo')).toBeTruthy();
     expect(gateway.watchQueue).toHaveBeenCalledWith(scope, 's1', expect.any(Object));
+  });
+
+  it('filtra la cola por estado con su contador, sin perder las demás líneas', async () => {
+    const { gateway } = fakeGateway(
+      [COCINA],
+      [
+        item({}),
+        item({
+          id: 'l2',
+          orderId: 'o2',
+          productName: 'Ajiaco',
+          quantity: 1,
+          status: 'IN_PREPARATION',
+        }),
+      ],
+    );
+    renderKitchen(gateway);
+    await line(/Mesa M1 · 2 × Bandeja paisa/);
+    const filters = screen.getByRole('group', { name: 'Filtrar la cola por estado' });
+    fireEvent.click(within(filters).getByRole('button', { name: 'En preparación 1' }));
+    expect(screen.queryByRole('heading', { name: /Bandeja paisa/ })).toBeNull();
+    expect(screen.getByRole('heading', { name: /Mesa M1 · 1 × Ajiaco/ })).toBeTruthy();
+    fireEvent.click(within(filters).getByRole('button', { name: 'Todas 2' }));
+    expect(screen.getByRole('heading', { name: /Bandeja paisa/ })).toBeTruthy();
   });
 
   it('«Empezar» envía la versión vista y vuelve a leer la cola', async () => {

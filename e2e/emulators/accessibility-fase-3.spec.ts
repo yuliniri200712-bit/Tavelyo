@@ -6,8 +6,9 @@ import { expectReflow, tabTo } from '../support/a11y.ts';
 import { expectNotice } from '../support/notices.ts';
 import { customerOrders, FUNCTION_WAIT, openStaffPage, orderFromMenu } from '../support/orders.ts';
 
-// Varios navegadores a la vez contra los emuladores: más tiempo que el general (90 s).
-test.describe.configure({ timeout: 180_000 });
+// Varios navegadores a la vez y varias llamadas al backend: con el emulador frío, cada una puede
+// tardar (FUNCTION_WAIT), así que más tiempo que el general (90 s).
+test.describe.configure({ timeout: 300_000 });
 import { createUser, expectOk, mutate } from '../../dataconnect/tests/support/emulator.ts';
 import { buildFixture } from '../../dataconnect/tests/support/catalog-fixture.ts';
 import {

@@ -21,7 +21,8 @@ export const EMULATOR_ENV = {
 
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: '**/emulators/**',
+  // Los recorridos con emuladores y las capturas de diseño tienen su propia configuración.
+  testIgnore: ['**/emulators/**', '**/capturas/**'],
   // Dos versiones de operations para la prueba de actualización (e2e/pwa-update.spec.ts).
   globalSetup: './e2e/support/update-builds.ts',
   fullyParallel: true,

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   describeFloorCounts,
+  describeSectorSize,
   describeTableOrders,
   describeTableRequests,
   floorCounts,
   participantStatus,
+  tableTone,
 } from './floor-service.ts';
 
 const now = new Date('2026-11-15T20:00:00Z');
@@ -71,5 +73,22 @@ describe('actividad de la mesa en texto', () => {
         'America/Bogota',
       ),
     ).toEqual(['Llamó al mesero a las 19:45', 'Pidió la cuenta a las 19:50']);
+  });
+});
+
+describe('tono de cada mesa', () => {
+  const activity = { inKitchen: 0, ready: 0, pickedUp: 0, requests: [] };
+  const request = { kind: 'CALL_WAITER' as const, createdAt: now };
+
+  it('lo más urgente primero: solicitud, platos listos, abierta y libre', () => {
+    expect(tableTone(null)).toBe('free');
+    expect(tableTone({ ...activity, inKitchen: 2 })).toBe('open');
+    expect(tableTone({ ...activity, ready: 1 })).toBe('ready');
+    expect(tableTone({ ...activity, ready: 1, requests: [request] })).toBe('attention');
+  });
+
+  it('dice cuántas mesas tiene un sector', () => {
+    expect(describeSectorSize(1)).toBe('1 mesa');
+    expect(describeSectorSize(8)).toBe('8 mesas');
   });
 });

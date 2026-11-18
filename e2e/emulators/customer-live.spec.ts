@@ -98,7 +98,9 @@ test('el cliente autoriza y envía a cocina, sigue su pedido en vivo y llama al 
   await expect(pay).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/Sin autorización no se envía/)).toBeVisible();
   await pay.click();
-  await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible({
+    timeout: FUNCTION_WAIT,
+  });
 
   // «Mis pedidos»: el estado de la línea, en vivo.
   await page.getByRole('link', { name: 'Ver mis pedidos' }).click();

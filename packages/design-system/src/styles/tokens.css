@@ -32,6 +32,10 @@
   --tv-color-status-info: #1D4ED8;
   --tv-color-accent-identity: #E54835;
   --tv-color-accent-gastronomic: #EE8A34;
+  --tv-color-tint-success: #E6F4EA;
+  --tv-color-tint-warning: #FDF1DE;
+  --tv-color-tint-error: #FCE8E5;
+  --tv-color-tint-info: #E8EEFC;
   --tv-font-family-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --tv-font-weight-regular: 400;
   --tv-font-weight-semibold: 600;
@@ -78,6 +82,9 @@
   --tv-stroke-focus: 0.1875rem;
   --tv-stroke-focus-offset: 0.125rem;
   --tv-size-icon: 1.25rem;
+  --tv-size-icon-large: 1.75rem;
+  --tv-size-table-tile: 10rem;
+  --tv-size-ticket-table: 6rem;
   --tv-size-logo-header: 2.5rem;
   --tv-size-dialog-max-width: 30rem;
   --tv-size-content-max-width: 75rem;

@@ -69,6 +69,19 @@ describe('LayoutAdminPage', () => {
     ).toBeTruthy();
   });
 
+  it('cada mesa es una tarjeta: el panel solo aparece al ver su QR (y entonces ocupa la fila)', async () => {
+    renderPage();
+    const salon = await screen.findByRole('region', { name: 'Salón' });
+    const m1 = within(salon).getByText('Mesa M1').closest('li');
+    expect(m1?.querySelector('.tv-table-tile')).toBeTruthy();
+    expect(salon.querySelector('.tv-table-tile__panel')).toBeNull();
+
+    fireEvent.click(within(m1 as HTMLElement).getByRole('button', { name: 'Ver QR' }));
+    const panel = m1?.querySelector('.tv-table-tile__panel');
+    expect(panel?.querySelector('svg, img, [role="img"]')).toBeTruthy();
+    expect(within(panel as HTMLElement).getByText(/carta\.example/)).toBeTruthy();
+  });
+
   it('valida en el cliente antes de llamar al servidor', async () => {
     const gateway = renderPage();
     await screen.findByText('Mesa M1');

@@ -70,11 +70,15 @@ test('dos personas sobre la misma línea o la misma solicitud: un solo cambio y 
     await Promise.all(lines.map((line) => line.getByRole('button', { name: /^Empezar/ }).click()));
     // Las dos pantallas terminan mostrando el estado real: en preparación.
     for (const line of lines) await expect(line.getByText('En preparación')).toBeVisible();
-    // Exactamente una persona ve que otra se adelantó.
-    const warned = await Promise.all(
-      kitchens.map(({ page }) => page.getByText(CHANGED, { exact: true }).isVisible()),
-    );
-    expect(warned.filter(Boolean)).toHaveLength(1);
+    // Exactamente una persona ve que otra se adelantó. Quien pierde puede recibir el cambio en vivo
+    // antes que la respuesta de su propia pulsación, así que se espera al aviso en vez de mirar una vez.
+    const warned = async () =>
+      (
+        await Promise.all(
+          kitchens.map(({ page }) => page.getByText(CHANGED, { exact: true }).isVisible()),
+        )
+      ).filter(Boolean).length;
+    await expect.poll(warned, { timeout: 15_000 }).toBe(1);
 
     // Dos meseros marcan «Atendida» la misma solicitud a la vez.
     const called = await callFunction(seated.user, 'requestService', {

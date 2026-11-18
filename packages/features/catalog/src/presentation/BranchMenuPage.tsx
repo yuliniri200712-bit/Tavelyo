@@ -2,19 +2,21 @@ import { useCallback, useState, type FormEvent, type ReactNode } from 'react';
 import { formatMoney, isCurrencyCode, Money, ok } from '@tavelyo/core';
 import {
   ActionNotice,
-  serverErrorText,
-  useServerData,
-  type RunCommand,
   Card,
   CheckboxField,
   ConfirmDialog,
   EmptyState,
   ErrorState,
+  Icon,
   LoadingState,
+  PageTitle,
   SelectField,
+  serverErrorText,
   StatusChip,
   TavelyoButton,
   TextField,
+  useServerData,
+  type RunCommand,
 } from '@tavelyo/design-system';
 import {
   describeSchedule,
@@ -99,7 +101,7 @@ export function BranchMenuPage(props: BranchMenuPageProps) {
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Carta de la sucursal</h1>
+          <PageTitle icon="schedule">Carta de la sucursal</PageTitle>
           <p className="tv-list__meta">
             {props.branchName} · Disponibilidad, horario y precio con impuestos incluidos.
           </p>
@@ -201,6 +203,7 @@ function BranchProductItem({
       </p>
       {canEdit ? (
         <TavelyoButton variant="secondary" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <Icon name={open ? 'close' : 'edit'} />
           {open ? 'Cerrar' : 'Editar en esta sucursal'}
         </TavelyoButton>
       ) : null}

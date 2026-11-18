@@ -7,9 +7,11 @@ import {
 } from '@tavelyo/contracts';
 import { CartLines, cartTotal } from '@tavelyo/cart';
 import {
+  ActionBar,
   ActionNotice,
   Card,
   EmptyState,
+  Icon,
   SelectField,
   StatusChip,
   TavelyoButton,
@@ -80,7 +82,11 @@ function ReviewContent({
 
   if (state.step === 'done') {
     return (
-      <Card title="Pedido enviado a cocina" headingLevel={2}>
+      <section className="tv-card" aria-labelledby="pedido-enviado">
+        <div className="tv-success-head">
+          <Icon name="check" size="large" />
+          <h2 id="pedido-enviado">Pedido enviado a cocina</h2>
+        </div>
         <StatusChip tone="success" label="Pago autorizado (simulado)" />
         <QuoteLines summary={state.quote.summary} />
         <p>
@@ -93,7 +99,7 @@ function ReviewContent({
             Hacer otro pedido
           </TavelyoButton>
         </div>
-      </Card>
+      </section>
     );
   }
 
@@ -178,14 +184,18 @@ function ReviewContent({
     <>
       <ActionNotice notice={notice} />
       <CartLines lines={cart.lines} onQuantity={cart.setQuantity} onRemove={cart.remove} />
-      <p className="tv-list__title">
-        Total estimado: {formatMoney(cartTotal(cart.lines, menu.currency))}
+      <p className="tv-order__total">
+        <span>Total estimado</span>
+        <span className="tv-tabular">{formatMoney(cartTotal(cart.lines, menu.currency))}</span>
       </p>
-      <p className="tv-list__meta">
-        Los precios incluyen impuestos. Al revisar, el restaurante confirma los precios y el total;
-        si algo cambió, te lo mostramos antes de seguir.
+      <p className="tv-callout tv-callout--muted">
+        <Icon name="info" />
+        <span>
+          Los precios incluyen impuestos. Al revisar, el restaurante confirma los precios y el
+          total; si algo cambió, te lo mostramos antes de seguir.
+        </span>
       </p>
-      <div className="tv-toolbar">
+      <ActionBar label="Revisar tu pedido">
         <TavelyoButton
           loading={state.step === 'reviewing'}
           loadingLabel="Revisando…"
@@ -193,7 +203,7 @@ function ReviewContent({
         >
           Revisar pedido
         </TavelyoButton>
-      </div>
+      </ActionBar>
     </>
   );
 }
@@ -249,8 +259,16 @@ function PaymentCard({
   const [outcome, setOutcome] = useState<SimulatedPaymentOutcome>('approved');
   return (
     <Card title="Autorizar el pago y enviar a cocina" headingLevel={2}>
-      <p>{preauthorizationConsentText(total)}</p>
-      <p>Al autorizar, el restaurante recibe tu pedido en cocina. Sin autorización no se envía.</p>
+      <div className="tv-callout">
+        <Icon name="lock" />
+        <div className="tv-callout__body">
+          <p className="tv-callout__title">Preautorización de pago</p>
+          <p>{preauthorizationConsentText(total)}</p>
+          <p>
+            Al autorizar, el restaurante recibe tu pedido en cocina. Sin autorización no se envía.
+          </p>
+        </div>
+      </div>
       <p>
         Esta versión de prueba no cobra dinero real: el pago se simula y no se piden datos de
         tarjeta.
@@ -275,6 +293,7 @@ function PaymentCard({
           loadingLabel="Autorizando y enviando…"
           onClick={() => onAuthorize(offerSimulatedOutcomes ? outcome : undefined)}
         >
+          <Icon name="lock" />
           Autorizar y enviar a cocina · {total}
         </TavelyoButton>
         <TavelyoButton variant="secondary" disabled={busy} onClick={onEdit}>

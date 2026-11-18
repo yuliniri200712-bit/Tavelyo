@@ -5,10 +5,13 @@ import {
   ConfirmDialog,
   EmptyState,
   ErrorState,
+  Icon,
   LoadingState,
-  StatusChip,
-  TavelyoButton,
+  PageTitle,
   serverErrorText,
+  StatusChip,
+  TableTile,
+  TavelyoButton,
 } from '@tavelyo/design-system';
 import { tableMenuUrl } from '../application/forms.ts';
 import type {
@@ -47,7 +50,7 @@ export function LayoutAdminPage({
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Mesas y códigos QR</h1>
+          <PageTitle icon="qr">Mesas y códigos QR</PageTitle>
           <p className="tv-list__meta">{branchName}</p>
         </div>
         <div className="tv-toolbar">{printLink}</div>
@@ -134,15 +137,17 @@ function SectorCard({ sector, activeSectors, gateway, scope, menuWebUrl, run }: 
       ) : (
         <div className="tv-toolbar">
           <TavelyoButton variant="secondary" onClick={() => setEditing(true)}>
+            <Icon name="edit" />
             Editar sector
           </TavelyoButton>
           <TavelyoButton variant="secondary" onClick={() => void update(!sector.archived)}>
+            <Icon name={sector.archived ? 'restore' : 'archive'} />
             {sector.archived ? 'Restaurar sector' : 'Archivar sector'}
           </TavelyoButton>
         </div>
       )}
       {sector.tables.length > 0 ? (
-        <ul className="tv-list" aria-label={`Mesas de ${sector.name}`}>
+        <ul className="tv-table-grid tv-table-grid--wide" aria-label={`Mesas de ${sector.name}`}>
           {sector.tables.map((table) => (
             <TableItem
               key={table.id}
@@ -197,68 +202,77 @@ function TableItem({
   const base = { sectorId: sector.id, code: table.code, seats: table.seats };
 
   return (
-    <li className="tv-list__item">
-      <div className="tv-list__summary">
-        <span className="tv-list__title">Mesa {table.code}</span>
-        <span className="tv-list__meta">{table.seats} puestos</span>
-        <StatusChip
-          tone={table.archived ? 'neutral' : 'success'}
-          label={table.archived ? 'Archivada' : 'Activa'}
-        />
-      </div>
-      {mode === 'editing' ? (
-        <TableForm
-          initial={base}
-          sectors={activeSectors.length > 0 ? activeSectors : [sector]}
-          submitLabel="Guardar mesa"
-          onCancel={() => setMode('idle')}
-          onSubmit={async (input) => {
-            const accepted = await run(
-              () => gateway.updateTable(scope, table.id, { ...input, archived: table.archived }),
-              `Mesa ${input.code} guardada.`,
-            );
-            if (accepted) setMode('idle');
-            return accepted;
-          }}
-        />
-      ) : (
-        <div className="tv-toolbar">
-          {table.archived ? null : (
-            <TavelyoButton
-              variant="secondary"
-              aria-expanded={mode === 'qr'}
-              onClick={() => setMode(mode === 'qr' ? 'idle' : 'qr')}
-            >
-              {mode === 'qr' ? 'Ocultar QR' : 'Ver QR'}
-            </TavelyoButton>
-          )}
-          <TavelyoButton variant="secondary" onClick={() => setMode('editing')}>
-            Editar mesa
-          </TavelyoButton>
-          <TavelyoButton
-            variant="secondary"
-            onClick={() =>
-              void run(
-                () => gateway.updateTable(scope, table.id, { ...base, archived: !table.archived }),
-                table.archived ? `Mesa ${table.code} restaurada.` : `Mesa ${table.code} archivada.`,
-              )
-            }
-          >
-            {table.archived ? 'Restaurar mesa' : 'Archivar mesa'}
-          </TavelyoButton>
-          {table.archived ? null : (
-            <TavelyoButton variant="secondary" onClick={() => setConfirmRotate(true)}>
-              Generar QR nuevo
-            </TavelyoButton>
-          )}
-        </div>
-      )}
-      {mode === 'qr' ? (
-        <div className="tv-form">
-          <TableQrCode url={url} label={`Código QR de la mesa ${table.code}`} />
-          <p className="tv-url">{url}</p>
-        </div>
-      ) : null}
+    <li>
+      <TableTile
+        code={table.code}
+        status={table.archived ? 'Archivada' : 'Activa'}
+        tone="free"
+        icon={table.archived ? 'archive' : 'freeTable'}
+        badges={<span className="tv-list__meta">{table.seats} puestos</span>}
+        actions={
+          mode === 'editing' ? undefined : (
+            <>
+              {table.archived ? null : (
+                <TavelyoButton
+                  variant="secondary"
+                  aria-expanded={mode === 'qr'}
+                  onClick={() => setMode(mode === 'qr' ? 'idle' : 'qr')}
+                >
+                  <Icon name="qr" />
+                  {mode === 'qr' ? 'Ocultar QR' : 'Ver QR'}
+                </TavelyoButton>
+              )}
+              <TavelyoButton variant="secondary" onClick={() => setMode('editing')}>
+                <Icon name="edit" />
+                Editar mesa
+              </TavelyoButton>
+              <TavelyoButton
+                variant="secondary"
+                onClick={() =>
+                  void run(
+                    () =>
+                      gateway.updateTable(scope, table.id, { ...base, archived: !table.archived }),
+                    table.archived
+                      ? `Mesa ${table.code} restaurada.`
+                      : `Mesa ${table.code} archivada.`,
+                  )
+                }
+              >
+                <Icon name={table.archived ? 'restore' : 'archive'} />
+                {table.archived ? 'Restaurar mesa' : 'Archivar mesa'}
+              </TavelyoButton>
+              {table.archived ? null : (
+                <TavelyoButton variant="secondary" onClick={() => setConfirmRotate(true)}>
+                  <Icon name="refresh" />
+                  Generar QR nuevo
+                </TavelyoButton>
+              )}
+            </>
+          )
+        }
+      >
+        {mode === 'editing' ? (
+          <TableForm
+            initial={base}
+            sectors={activeSectors.length > 0 ? activeSectors : [sector]}
+            submitLabel="Guardar mesa"
+            onCancel={() => setMode('idle')}
+            onSubmit={async (input) => {
+              const accepted = await run(
+                () => gateway.updateTable(scope, table.id, { ...input, archived: table.archived }),
+                `Mesa ${input.code} guardada.`,
+              );
+              if (accepted) setMode('idle');
+              return accepted;
+            }}
+          />
+        ) : mode === 'qr' ? (
+          <div className="tv-form">
+            <TableQrCode url={url} label={`Código QR de la mesa ${table.code}`} />
+            <p className="tv-url">{url}</p>
+          </div>
+        ) : null}
+      </TableTile>
       <ConfirmDialog
         open={confirmRotate}
         title={`¿Generar un QR nuevo para la mesa ${table.code}?`}

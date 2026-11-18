@@ -16,7 +16,7 @@ export {
   type WeeklySchedule,
 } from './weekly-schedule';
 export { parseMajorAmount, toMajorInput, type MoneyInputError } from './money-input';
-export { elapsedMinutes, formatLocalTime } from './time-format';
+export { elapsedMinutes, formatLocalTime, formatShortWait } from './time-format';
 export {
   applyOrderItemAction,
   availableOrderItemActions,

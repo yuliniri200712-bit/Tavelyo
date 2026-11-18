@@ -22,6 +22,7 @@
     "test:e2e": "playwright test",
     "test:integration": "npm run build -w backend && npx --yes firebase-tools@15.30.2 emulators:exec --project demo-tavelyo --only auth,dataconnect,functions \"vitest run --config vitest.integration.config.ts\"",
     "test:e2e:emulators": "npm run build -w backend && npx --yes firebase-tools@15.30.2 emulators:exec --project demo-tavelyo --only auth,dataconnect,functions \"playwright test --config playwright.emulators.config.ts\"",
+    "capturas": "playwright test --config playwright.capturas.config.ts",
     "check:secrets": "node tools/check-secrets/check-secrets.ts"
   },
   "devDependencies": {

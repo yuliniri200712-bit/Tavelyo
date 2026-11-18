@@ -70,7 +70,10 @@ describe('PickupPage', () => {
     renderPage(gateway);
     const ready = await line(/Mesa M1 · 2 × Bandeja paisa/);
     expect(within(ready).getByText('Listo para recoger')).toBeTruthy();
-    expect(within(ready).getByText('Lista hace 4 minutos · Cocina')).toBeTruthy();
+    // La espera se ve grande («4 min») y se lee completa; la estación va junto al estado.
+    expect(within(ready).getByText('4 min')).toBeTruthy();
+    expect(within(ready).getByText('Lista hace 4 minutos')).toBeTruthy();
+    expect(within(ready).getByText('Cocina')).toBeTruthy();
     expect(within(ready).getByText('Opciones: Bien asada')).toBeTruthy();
     expect(within(ready).getByText('Sin cebolla')).toBeTruthy();
     expect(

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { BranchMenuPage, CatalogAdminPage, StationsAdminPage } from '@tavelyo/catalog';
-import { EmptyState } from '@tavelyo/design-system';
+import { EmptyState, type IconName } from '@tavelyo/design-system';
 import { FloorServicePage, LayoutAdminPage, PrintQrPage } from '@tavelyo/floor';
 import { useInactivityHold } from '@tavelyo/identity';
 import { KitchenPage } from '@tavelyo/kitchen';
@@ -14,6 +14,7 @@ export interface StaffModule {
   readonly path: string;
   readonly title: string;
   readonly description: string;
+  readonly icon: IconName;
   /** Basta con uno de estos permisos para ver el módulo en la interfaz. */
   readonly permissions: readonly string[];
 }
@@ -22,12 +23,14 @@ export interface StaffModule {
 export const STAFF_MODULES: readonly StaffModule[] = [
   {
     path: '/cocina',
+    icon: 'kitchen',
     title: 'Cocina',
     description: 'Cola de tu estación en tiempo real: empezar, marcar listo y cancelar con motivo.',
     permissions: ['kitchen.advance'],
   },
   {
     path: '/salon',
+    icon: 'floor',
     title: 'Salón',
     description:
       'Mesas en vivo: pedidos en curso, platos listos y solicitudes; abrir, cerrar y ver quién se unió.',
@@ -35,36 +38,42 @@ export const STAFF_MODULES: readonly StaffModule[] = [
   },
   {
     path: '/entregas',
+    icon: 'readyToServe',
     title: 'Listos para recoger',
     description: 'Platos que cocina marcó listos, en vivo: recoger y entregar en la mesa.',
     permissions: ['delivery.pickup'],
   },
   {
     path: '/mesas',
+    icon: 'qr',
     title: 'Mesas y códigos QR',
     description: 'Sectores, mesas y el QR imprimible de cada una.',
     permissions: ['table.manage'],
   },
   {
     path: '/carta',
+    icon: 'menu',
     title: 'Carta de la empresa',
     description: 'Categorías, productos, opciones, alérgenos e impuestos.',
     permissions: ['catalog.manage', 'price.change'],
   },
   {
     path: '/carta/sucursal',
+    icon: 'schedule',
     title: 'Carta de la sucursal',
     description: 'Disponibilidad, horario y precio de cada producto en esta sucursal.',
     permissions: ['catalog.manage', 'price.change'],
   },
   {
     path: '/carta/estaciones',
+    icon: 'stations',
     title: 'Estaciones de cocina',
     description: 'Estaciones de la sucursal (cocina caliente, bar…) y la predeterminada.',
     permissions: ['catalog.manage'],
   },
   {
     path: '/sucursales',
+    icon: 'branch',
     title: 'Sucursales',
     description: 'Crear, editar y archivar las sucursales de la empresa.',
     permissions: ['tenant.settings'],

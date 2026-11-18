@@ -5,6 +5,7 @@ import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { APPS } from '../../playwright.config.ts';
 import { expectReflow, tabTo } from '../support/a11y.ts';
 import { expectNotice } from '../support/notices.ts';
+import { FUNCTION_WAIT } from '../support/orders.ts';
 import {
   createUser,
   expectOk,
@@ -82,7 +83,9 @@ test('el cliente pide y paga en simulado usando solo el teclado', async ({
   await expect(pay).toBeVisible({ timeout: 30_000 });
   await tabTo(page, pay);
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible({
+    timeout: FUNCTION_WAIT,
+  });
 });
 
 test('las pantallas de la Fase 2 se leen a 320 px y con el texto al 200 %', async ({
@@ -100,11 +103,10 @@ test('las pantallas de la Fase 2 se leen a 320 px y con el texto al 200 %', asyn
   await page.getByRole('link', { name: named('Ver mi pedido · 1 producto · $ 32.000') }).click();
   await expectReflow(page, 'Pedido', page.getByRole('list', { name: 'Productos de tu pedido' }));
   await page.getByRole('button', { name: 'Revisar pedido' }).click();
-  await expectReflow(
-    page,
-    'Resumen del pedido',
-    page.getByRole('heading', { name: 'Resumen confirmado por el restaurante' }),
-  );
+  // El resumen lo calcula el backend; con el emulador frío, la primera llamada puede tardar.
+  const summary = page.getByRole('heading', { name: 'Resumen confirmado por el restaurante' });
+  await expect(summary).toBeVisible({ timeout: FUNCTION_WAIT });
+  await expectReflow(page, 'Resumen del pedido', summary);
 
   // Personal: el propietario ve todas las pantallas nuevas.
   await page.setViewportSize({ width: 1280, height: 800 });

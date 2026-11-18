@@ -5,7 +5,9 @@ import {
   ConfirmDialog,
   EmptyState,
   ErrorState,
+  Icon,
   LoadingState,
+  PageTitle,
   SelectField,
   serverErrorText,
   StatusChip,
@@ -53,7 +55,7 @@ export function BranchesAdminPage(props: BranchesAdminPageProps) {
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Sucursales</h1>
+          <PageTitle icon="branch">Sucursales</PageTitle>
           <p className="tv-list__meta">
             Todas usan la moneda de la empresa ({props.currency}). El horario de la carta se aplica
             en la zona horaria de cada sucursal.
@@ -163,6 +165,7 @@ function BranchItem({
       ) : (
         <div className="tv-toolbar">
           <TavelyoButton variant="secondary" onClick={() => setEditing(true)}>
+            <Icon name="edit" />
             Editar sucursal
           </TavelyoButton>
           {branch.archived ? (
@@ -170,12 +173,14 @@ function BranchItem({
               variant="secondary"
               onClick={() => void save(base, false, `Sucursal «${branch.name}» restaurada.`)}
             >
+              <Icon name="restore" />
               Restaurar sucursal
             </TavelyoButton>
           ) : current ? (
             <p className="tv-list__meta">Para archivarla, cambia antes a otra sucursal.</p>
           ) : (
             <TavelyoButton variant="secondary" onClick={() => setConfirmArchive(true)}>
+              <Icon name="archive" />
               Archivar sucursal
             </TavelyoButton>
           )}

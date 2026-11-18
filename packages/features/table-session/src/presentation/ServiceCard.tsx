@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ServiceRequestKind } from '@tavelyo/contracts';
-import { ActionNotice, Card, TavelyoButton, type ActionResult } from '@tavelyo/design-system';
+import { ActionNotice, Card, Icon, TavelyoButton, type ActionResult } from '@tavelyo/design-system';
 import { serviceRequestText } from '../application/my-orders.ts';
 import { useTableOrder } from './TableOrderProvider.tsx';
 import { customerErrorText } from './useCheckout.ts';
@@ -51,6 +51,7 @@ export function ServiceCard() {
           disabled={busy !== null}
           onClick={() => void send('call_waiter')}
         >
+          <Icon name="callWaiter" />
           Llamar al mesero
         </TavelyoButton>
         <TavelyoButton
@@ -60,6 +61,7 @@ export function ServiceCard() {
           disabled={busy !== null}
           onClick={() => void send('request_bill')}
         >
+          <Icon name="bill" />
           Pedir la cuenta
         </TavelyoButton>
       </div>

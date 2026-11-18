@@ -21,3 +21,8 @@ export function formatLocalTime(
 export function elapsedMinutes(since: Date, now: Date): number {
   return Math.max(0, Math.floor((now.getTime() - since.getTime()) / 60_000));
 }
+
+/** Espera corta para leer de un vistazo, p. ej. «12 min» (el texto completo va aparte). */
+export function formatShortWait(minutes: number): string {
+  return `${Math.max(0, Math.floor(minutes))} min`;
+}

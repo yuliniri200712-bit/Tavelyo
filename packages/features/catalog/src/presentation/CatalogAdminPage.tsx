@@ -2,15 +2,17 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { isCurrencyCode, Money, formatMoney } from '@tavelyo/core';
 import {
   ActionNotice,
-  serverErrorText,
-  useServerData,
-  type RunCommand,
   Card,
   EmptyState,
   ErrorState,
+  Icon,
   LoadingState,
+  PageTitle,
+  serverErrorText,
   StatusChip,
   TavelyoButton,
+  useServerData,
+  type RunCommand,
 } from '@tavelyo/design-system';
 import { formatRate, minorToInput } from '../application/forms.ts';
 import type {
@@ -62,7 +64,7 @@ export function CatalogAdminPage(props: CatalogAdminPageProps) {
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Carta de la empresa</h1>
+          <PageTitle icon="menu">Carta de la empresa</PageTitle>
           <p className="tv-list__meta">
             Productos, opciones e impuestos comunes a todas las sucursales.
             {props.canEditCatalog ? '' : ' Solo el propietario puede modificarlos.'}
@@ -192,6 +194,7 @@ function TaxItem({ tax, shared }: { readonly tax: TaxRuleAdmin; readonly shared:
       ) : canEdit ? (
         <div className="tv-toolbar">
           <TavelyoButton variant="secondary" onClick={() => setEditing(true)}>
+            <Icon name="edit" />
             Editar impuesto
           </TavelyoButton>
           <TavelyoButton
@@ -210,6 +213,7 @@ function TaxItem({ tax, shared }: { readonly tax: TaxRuleAdmin; readonly shared:
               )
             }
           >
+            <Icon name={tax.archived ? 'restore' : 'archive'} />
             {tax.archived ? 'Restaurar impuesto' : 'Archivar impuesto'}
           </TavelyoButton>
         </div>
@@ -259,9 +263,11 @@ function CategoryCard({
         ) : (
           <div className="tv-toolbar">
             <TavelyoButton variant="secondary" onClick={() => setEditing(true)}>
+              <Icon name="edit" />
               Editar categoría
             </TavelyoButton>
             <TavelyoButton variant="secondary" onClick={() => void update(!category.archived)}>
+              <Icon name={category.archived ? 'restore' : 'archive'} />
               {category.archived ? 'Restaurar categoría' : 'Archivar categoría'}
             </TavelyoButton>
           </div>
@@ -383,6 +389,7 @@ function ProductItem({
           {canEdit ? (
             <>
               <TavelyoButton variant="secondary" onClick={() => setMode('editing')}>
+                <Icon name="edit" />
                 Editar producto
               </TavelyoButton>
               <TavelyoButton
@@ -400,6 +407,7 @@ function ProductItem({
                   )
                 }
               >
+                <Icon name={product.archived ? 'restore' : 'archive'} />
                 {product.archived ? 'Restaurar producto' : 'Archivar producto'}
               </TavelyoButton>
             </>
@@ -505,6 +513,7 @@ function GroupItem({
         ) : (
           <div className="tv-toolbar">
             <TavelyoButton variant="secondary" onClick={() => setEditing(true)}>
+              <Icon name="edit" />
               Editar grupo
             </TavelyoButton>
             <TavelyoButton
@@ -522,6 +531,7 @@ function GroupItem({
                 )
               }
             >
+              <Icon name={group.archived ? 'restore' : 'archive'} />
               {group.archived ? 'Restaurar grupo' : 'Archivar grupo'}
             </TavelyoButton>
           </div>
@@ -591,6 +601,7 @@ function OptionItem({
         ) : (
           <div className="tv-toolbar">
             <TavelyoButton variant="secondary" onClick={() => setEditing(true)}>
+              <Icon name="edit" />
               Editar opción
             </TavelyoButton>
             <TavelyoButton
@@ -610,6 +621,7 @@ function OptionItem({
                 )
               }
             >
+              <Icon name={option.archived ? 'restore' : 'archive'} />
               {option.archived ? 'Restaurar opción' : 'Archivar opción'}
             </TavelyoButton>
           </div>

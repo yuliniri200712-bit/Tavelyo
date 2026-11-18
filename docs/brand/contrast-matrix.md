@@ -98,6 +98,34 @@ Colores funcionales nuevos, medidos antes de adoptarlos: `text.secondary #6B5650
 | white | status.error `#B91C1C` | 6.47:1 | ✅ AA |
 | white | status.info `#1D4ED8` | 6.70:1 | ✅ AA |
 
+## Pares de la Fase 3B (diseño visual)
+
+Medidos el 2026-11-17 con `contrast.ts` antes de adoptarlos; también están en `contrast-pairs.ts`, así que las pruebas fallan si alguno baja de su mínimo.
+
+Colores nuevos: fondos suaves de estado `tint.success #E6F4EA`, `tint.warning #FDF1DE`, `tint.error #FCE8E5` y `tint.info #E8EEFC`. Sobre ellos el color de estado como texto queda por debajo de 4,5:1 (entre 4,25 y 4,50), así que **el texto va siempre en espresso o en `text.secondary`, y el color de estado solo como icono o borde** (señal gráfica, 3:1). En el ticket de cocina, el bloque «en preparación» usa paprika como superficie con texto espresso, como recomienda la conclusión 3.
+
+| Uso | Primer plano | Fondo | Relación | Mínimo | Resultado |
+|---|---|---|---|---|---|
+| text.primary sobre tint.success | `#35241F` | `#E6F4EA` | 12,99:1 | 4,5:1 | ✅ |
+| text.secondary sobre tint.success | `#6B5650` | `#E6F4EA` | 6,02:1 | 4,5:1 | ✅ |
+| status.success (icono o borde) sobre tint.success | `#15803D` | `#E6F4EA` | 4,42:1 | 3:1 | ✅ |
+| text.primary sobre tint.warning | `#35241F` | `#FDF1DE` | 13,22:1 | 4,5:1 | ✅ |
+| text.secondary sobre tint.warning | `#6B5650` | `#FDF1DE` | 6,12:1 | 4,5:1 | ✅ |
+| status.warning (icono o borde) sobre tint.warning | `#B45309` | `#FDF1DE` | 4,50:1 | 3:1 | ✅ |
+| text.primary sobre tint.error | `#35241F` | `#FCE8E5` | 12,51:1 | 4,5:1 | ✅ |
+| text.secondary sobre tint.error | `#6B5650` | `#FCE8E5` | 5,80:1 | 4,5:1 | ✅ |
+| status.error (icono o borde) sobre tint.error | `#B91C1C` | `#FCE8E5` | 5,49:1 | 3:1 | ✅ |
+| text.primary sobre tint.info | `#35241F` | `#E8EEFC` | 12,69:1 | 4,5:1 | ✅ |
+| text.secondary sobre tint.info | `#6B5650` | `#E8EEFC` | 5,88:1 | 4,5:1 | ✅ |
+| status.info (icono o borde) sobre tint.info | `#1D4ED8` | `#E8EEFC` | 5,77:1 | 3:1 | ✅ |
+| action.primary (icono de mesa abierta) sobre surface.grouped | `#BA3526` | `#FCE6D8` | 4,81:1 | 3:1 | ✅ |
+| border.control (icono de mesa libre) sobre surface.card | `#8A766F` | `#FFFFFF` | 4,28:1 | 3:1 | ✅ |
+| Ticket recibido: text.onAction sobre action.primary | `#FFFFFF` | `#BA3526` | 5,79:1 | 4,5:1 | ✅ |
+| Ticket en preparación: text.primary sobre accent.gastronomic | `#35241F` | `#EE8A34` | 5,84:1 | 4,5:1 | ✅ |
+| Ticket listo: text.onAction sobre status.success | `#FFFFFF` | `#15803D` | 5,02:1 | 4,5:1 | ✅ |
+| Cabecera: accent.gastronomic (sección activa) sobre surface.inverse | `#EE8A34` | `#35241F` | 5,84:1 | 3:1 | ✅ |
+| Contador de píldora: text.primary sobre surface.grouped | `#35241F` | `#FCE6D8` | 12,26:1 | 4,5:1 | ✅ |
+
 ## Conclusiones para el sistema de diseño
 
 1. **Botón primario:** fondo `action.primary #BA3526` con texto blanco. No usar `#E54835` como fondo de botón con texto normal.

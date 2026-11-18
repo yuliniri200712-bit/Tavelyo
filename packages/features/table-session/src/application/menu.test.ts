@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MenuProduct, PublicMenu } from '../domain/index.ts';
-import { describeOffering, menuSections } from './menu.ts';
+import { describeOffering, filterMenuSections, menuSections, normalizeSearch } from './menu.ts';
 
 function at<T>(list: readonly T[], index: number): T {
   const value = list[index];
@@ -84,5 +84,57 @@ describe('carta por categorías', () => {
     expect(describeOffering({ daysMask: 0b1111111, startMinute: 360, endMinute: 660 })).toBe(
       'Se ofrece todos los días de 06:00 a 11:00',
     );
+  });
+});
+
+const menuOf = (products: MenuProduct[]): PublicMenu => ({ ...menu, products });
+
+describe('buscar y filtrar la carta', () => {
+  const sections = menuSections(
+    menuOf([
+      product('p1', 'Bandeja paisa', mains, { description: 'Frijoles, arroz y huevo' }),
+      product('p2', 'Ajiaco santafereño', mains, { allergens: ['lácteos'], sort: 2 }),
+      product('p3', 'Limonada de coco', drinks),
+    ]),
+    fridayNight,
+  );
+  const names = (result: ReturnType<typeof filterMenuSections>) =>
+    result.flatMap((section) => section.products.map(({ product }) => product.name));
+
+  it('sin filtro deja la carta igual', () => {
+    expect(names(filterMenuSections(sections, { categoryId: null, query: '  ' }))).toEqual([
+      'Bandeja paisa',
+      'Ajiaco santafereño',
+      'Limonada de coco',
+    ]);
+  });
+
+  it('busca en el nombre, la descripción y los alérgenos, sin distinguir tildes ni mayúsculas', () => {
+    expect(names(filterMenuSections(sections, { categoryId: null, query: 'AJÍACO' }))).toEqual([
+      'Ajiaco santafereño',
+    ]);
+    expect(names(filterMenuSections(sections, { categoryId: null, query: 'arroz' }))).toEqual([
+      'Bandeja paisa',
+    ]);
+    expect(names(filterMenuSections(sections, { categoryId: null, query: 'lacteos' }))).toEqual([
+      'Ajiaco santafereño',
+    ]);
+  });
+
+  it('exige todas las palabras y quita las secciones que quedan vacías', () => {
+    const result = filterMenuSections(sections, { categoryId: null, query: 'limonada coco' });
+    expect(result.map((section) => section.name)).toEqual(['Bebidas']);
+    expect(filterMenuSections(sections, { categoryId: null, query: 'pizza' })).toEqual([]);
+  });
+
+  it('filtra por categoría y combina con la búsqueda', () => {
+    expect(names(filterMenuSections(sections, { categoryId: 'c2', query: '' }))).toEqual([
+      'Limonada de coco',
+    ]);
+    expect(filterMenuSections(sections, { categoryId: 'c2', query: 'bandeja' })).toEqual([]);
+  });
+
+  it('normaliza el texto de búsqueda', () => {
+    expect(normalizeSearch('  Ajíaco SANTAFEREÑO ')).toBe('ajiaco santafereno');
   });
 });

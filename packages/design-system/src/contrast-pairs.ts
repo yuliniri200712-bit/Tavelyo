@@ -115,6 +115,73 @@ export const contrastPairs: readonly ContrastPair[] = [
       minimum: 4.5 as const,
     })),
   ),
+  // Fase 3B. Fondos suaves de estado: el texto va en text.primary/secondary; el color de estado solo
+  // como icono o borde (señal gráfica, 3:1).
+  ...(['success', 'warning', 'error', 'info'] as const).flatMap((status) => [
+    {
+      use: `text.primary sobre tint.${status}`,
+      foreground: color.text.primary,
+      background: color.tint[status],
+      minimum: 4.5 as const,
+    },
+    {
+      use: `text.secondary sobre tint.${status}`,
+      foreground: color.text.secondary,
+      background: color.tint[status],
+      minimum: 4.5 as const,
+    },
+    {
+      use: `status.${status} (icono o borde) sobre tint.${status}`,
+      foreground: color.status[status],
+      background: color.tint[status],
+      minimum: 3 as const,
+    },
+  ]),
+  {
+    use: 'action.primary (icono de mesa abierta) sobre surface.grouped',
+    foreground: color.action.primary,
+    background: color.surface.grouped,
+    minimum: 3,
+  },
+  {
+    use: 'border.control (icono de mesa libre) sobre surface.card',
+    foreground: color.border.control,
+    background: color.surface.card,
+    minimum: 3,
+  },
+  // Bloque de la mesa en el ticket de cocina, según el estado.
+  {
+    use: 'Ticket recibido: text.onAction sobre action.primary',
+    foreground: color.text.onAction,
+    background: color.action.primary,
+    minimum: 4.5,
+  },
+  {
+    use: 'Ticket en preparación: text.primary sobre accent.gastronomic',
+    foreground: color.text.primary,
+    background: color.accent.gastronomic,
+    minimum: 4.5,
+  },
+  {
+    use: 'Ticket listo: text.onAction sobre status.success',
+    foreground: color.text.onAction,
+    background: color.status.success,
+    minimum: 4.5,
+  },
+  // Cabecera oscura del personal: enlaces crema y marca de la sección activa en paprika.
+  {
+    use: 'Cabecera: accent.gastronomic (sección activa) sobre surface.inverse',
+    foreground: color.accent.gastronomic,
+    background: color.surface.inverse,
+    minimum: 3,
+  },
+  // Píldora de filtro seleccionada: texto blanco sobre action.primary (ya medido) y contador.
+  {
+    use: 'Contador de píldora: text.primary sobre surface.grouped',
+    foreground: color.text.primary,
+    background: color.surface.grouped,
+    minimum: 4.5,
+  },
   // Código QR de las mesas: módulos espresso sobre blanco, en pantalla y al imprimir (señal gráfica).
   {
     use: 'QR: text.primary sobre surface.card',

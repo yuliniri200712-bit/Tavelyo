@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { formatLocalTime } from '@tavelyo/core';
+import { elapsedMinutes, formatLocalTime, formatShortWait } from '@tavelyo/core';
 import {
   ActionNotice,
   EmptyState,
+  Icon,
+  KitchenTicket,
   LiveStatus,
   LoadingState,
+  PageTitle,
   StatusChip,
   TavelyoButton,
   useLiveData,
@@ -81,7 +84,7 @@ export function PickupPage({
     <div className="tv-page">
       <header className="tv-page__header">
         <div>
-          <h1>Listos para recoger</h1>
+          <PageTitle icon="readyToServe">Listos para recoger</PageTitle>
           <p className="tv-list__meta">{branchName}</p>
         </div>
       </header>
@@ -166,46 +169,52 @@ function PickupLine({
   const what = `${item.quantity} × ${item.productName}`;
   const status = ITEM_STATUS[item.status];
   return (
-    <li className="tv-kitchen-item">
-      <div className="tv-list__summary">
-        <h2 className="tv-kitchen-item__title">
-          Mesa {item.tableCode} · {what}
-        </h2>
-        <StatusChip tone={status.tone} label={status.label} />
-      </div>
-      <p className="tv-list__meta">
-        {describeReadySince(item.readyAt, now)} · {item.stationName}
-      </p>
-      {item.modifiers.length > 0 ? <p>Opciones: {item.modifiers.join(', ')}</p> : null}
-      {item.note ? (
-        <p>
-          <strong>Nota:</strong> {item.note}
-        </p>
-      ) : null}
-      <div className="tv-toolbar">
-        {item.status === 'READY' ? (
-          <TavelyoButton
-            loading={busy}
-            loadingLabel="Marcando…"
-            disabled={disabled}
-            aria-label={`Recogido ${what}, mesa ${item.tableCode}`}
-            onClick={onPickUp}
-          >
-            Recogido
-          </TavelyoButton>
+    <li>
+      <KitchenTicket
+        tableCode={item.tableCode}
+        tone={item.status === 'READY' ? 'ready' : 'pickedUp'}
+        title={`Mesa ${item.tableCode} · ${what}`}
+        headingLevel={2}
+        waiting={item.readyAt ? formatShortWait(elapsedMinutes(item.readyAt, now)) : '—'}
+        waitingLabel={describeReadySince(item.readyAt, now)}
+      >
+        <div className="tv-list__summary">
+          <StatusChip tone={status.tone} label={status.label} />
+          <span className="tv-list__meta">{item.stationName}</span>
+        </div>
+        {item.modifiers.length > 0 ? <p>Opciones: {item.modifiers.join(', ')}</p> : null}
+        {item.note ? (
+          <p>
+            <strong>Nota:</strong> {item.note}
+          </p>
         ) : null}
-        {item.status === 'PICKED_UP' && canDeliver ? (
-          <TavelyoButton
-            loading={busy}
-            loadingLabel="Marcando…"
-            disabled={disabled}
-            aria-label={`Entregado ${what}, mesa ${item.tableCode}`}
-            onClick={onDeliver}
-          >
-            Entregado
-          </TavelyoButton>
-        ) : null}
-      </div>
+        <div className="tv-toolbar">
+          {item.status === 'READY' ? (
+            <TavelyoButton
+              loading={busy}
+              loadingLabel="Marcando…"
+              disabled={disabled}
+              aria-label={`Recogido ${what}, mesa ${item.tableCode}`}
+              onClick={onPickUp}
+            >
+              <Icon name="readyToServe" />
+              Recogido
+            </TavelyoButton>
+          ) : null}
+          {item.status === 'PICKED_UP' && canDeliver ? (
+            <TavelyoButton
+              loading={busy}
+              loadingLabel="Marcando…"
+              disabled={disabled}
+              aria-label={`Entregado ${what}, mesa ${item.tableCode}`}
+              onClick={onDeliver}
+            >
+              <Icon name="serve" />
+              Entregado
+            </TavelyoButton>
+          ) : null}
+        </div>
+      </KitchenTicket>
     </li>
   );
 }

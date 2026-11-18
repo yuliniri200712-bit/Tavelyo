@@ -4,6 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { APPS } from '../../playwright.config.ts';
 import { expectNotice } from '../support/notices.ts';
+import { FUNCTION_WAIT } from '../support/orders.ts';
 import { createUser, expectOk, mutate, query } from '../../dataconnect/tests/support/emulator.ts';
 import { buildFixture } from '../../dataconnect/tests/support/catalog-fixture.ts';
 import {
@@ -82,14 +83,17 @@ test('el cliente pide desde el QR: mesa cerrada, precio cambiado, pago rechazado
     'ChangePrice',
   );
   await page.getByRole('button', { name: 'Revisar pedido' }).click();
-  await expect(page.getByRole('heading', { name: 'Algunos importes cambiaron' })).toBeVisible();
+  // Cada paso espera al backend: con el emulador frío, la respuesta puede tardar (FUNCTION_WAIT).
+  await expect(page.getByRole('heading', { name: 'Algunos importes cambiaron' })).toBeVisible({
+    timeout: FUNCTION_WAIT,
+  });
   await expect(
     page.getByText(/^Bandeja paisa: antes .*32\.000, ahora .*35\.000 por unidad\.$/),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Aceptar los importes actuales' }).click();
   await expect(
     page.getByRole('heading', { name: 'Resumen confirmado por el restaurante' }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: FUNCTION_WAIT });
   await expect(page.getByText('Impuestos incluidos')).toBeVisible();
   await expectNoAxeViolations(page);
 
@@ -99,11 +103,14 @@ test('el cliente pide desde el QR: mesa cerrada, precio cambiado, pago rechazado
   await expectNotice(
     page,
     'El pago simulado fue rechazado y el pedido no se envió a cocina. Revisa el pedido para intentarlo de nuevo.',
+    FUNCTION_WAIT,
   );
   await page.getByRole('button', { name: 'Revisar pedido' }).click();
   await page.getByLabel('Resultado del pago simulado').selectOption('approved');
   await page.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 35.000') }).click();
-  await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible({
+    timeout: FUNCTION_WAIT,
+  });
   await expect(page.getByText('Pago autorizado (simulado)')).toBeVisible();
 
   // Caso 12: al cerrar la mesa, el cliente pierde el acceso; la sesión siguiente exige reabrirla.
