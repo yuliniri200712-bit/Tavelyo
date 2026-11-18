@@ -5,6 +5,7 @@ import {
   ConfirmDialog,
   EmptyState,
   ErrorState,
+  Icon,
   LoadingState,
   PageTitle,
   SelectField,
@@ -164,6 +165,7 @@ function BranchItem({
       ) : (
         <div className="tv-toolbar">
           <TavelyoButton variant="secondary" onClick={() => setEditing(true)}>
+            <Icon name="edit" />
             Editar sucursal
           </TavelyoButton>
           {branch.archived ? (
@@ -171,12 +173,14 @@ function BranchItem({
               variant="secondary"
               onClick={() => void save(base, false, `Sucursal «${branch.name}» restaurada.`)}
             >
+              <Icon name="restore" />
               Restaurar sucursal
             </TavelyoButton>
           ) : current ? (
             <p className="tv-list__meta">Para archivarla, cambia antes a otra sucursal.</p>
           ) : (
             <TavelyoButton variant="secondary" onClick={() => setConfirmArchive(true)}>
+              <Icon name="archive" />
               Archivar sucursal
             </TavelyoButton>
           )}

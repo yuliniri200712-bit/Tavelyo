@@ -7,6 +7,7 @@ import {
   ConfirmDialog,
   EmptyState,
   ErrorState,
+  Icon,
   LoadingState,
   PageTitle,
   SelectField,
@@ -202,6 +203,7 @@ function BranchProductItem({
       </p>
       {canEdit ? (
         <TavelyoButton variant="secondary" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <Icon name={open ? 'close' : 'edit'} />
           {open ? 'Cerrar' : 'Editar en esta sucursal'}
         </TavelyoButton>
       ) : null}

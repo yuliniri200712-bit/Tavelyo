@@ -61,5 +61,13 @@ Hallazgos de la tanda completa (de las pruebas, no de la app):
 | **Tanda completa con emuladores** | `npx playwright test --config playwright.emulators.config.ts` | ✅ **5 navegadores**: 80 superadas, 4 omitidas (Tab en Safari, como antes) y 1 fallida en Safari de escritorio (`staff-session`, ver hallazgos). Corregida la espera de la prueba: ✅ pasa 5 de 5 seguidas en Safari de escritorio |
 | Conjunto | `npm run check` y `npm run check:secrets` | ✅ 712 pruebas unitarias, tipos, ESLint y Prettier; sin secretos en 448 archivos |
 
+Pulido pedido por el propietario al aprobar el bloque (iconos en las acciones de administración y mesas como tarjetas):
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Mesas y códigos QR | `npx vitest run packages/features/floor` | ✅ Prueba nueva: cada mesa es una tarjeta y el panel solo aparece al ver su QR (y entonces ocupa la fila). Las pruebas de estado en texto («Activa», «Archivada») siguen igual |
+| Capturas | `npm run capturas -- administracion --output=capturas/bloque-4-pulido` | ✅ Las mismas pantallas y una nueva con el QR de una mesa abierto. Hallazgo corregido: la tarjeta recibía un panel vacío y ocupaba toda la fila; en el móvil, dos mesas por fila partían el texto de los botones, así que en administración van más anchas (una por fila en el móvil) |
+| Conjunto | `npm run check` | ✅ 713 pruebas unitarias, tipos, ESLint y Prettier |
+
 Hallazgos de la tanda completa (de las pruebas, no de la app):
 - **Comprobación de la sesión lenta en Safari con la máquina cargada:** al cargar o recargar, la app muestra «Comprobando la sesión…» mientras consulta Auth y SQL Connect. Justo después de la tanda completa (38 minutos), en Safari de escritorio esa comprobación superó la espera general de 5 s de `staff-session` (3 de 3 intentos, cada uno de 28 a 33 s). Con el equipo descansado pasó 5 de 5 con este bloque (unos 20 s cada uno) y 2 de 2 sin él, así que no es una regresión del diseño. Las esperas tras cargar y recargar pasan a 20 s, como las demás esperas de conexión de las pruebas; los pasos y lo que comprueban no cambian.

@@ -1102,6 +1102,13 @@
 .tv-table-grid > li:has(.tv-table-tile__panel) {
   grid-column: 1 / -1;
 }
+/* Mesas en administración: cuatro acciones por mesa, así que tarjetas más anchas (en móvil, una por fila). */
+.tv-table-grid.tv-table-grid--wide {
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, calc(var(--tv-size-table-tile) * 1.75)), 1fr)
+  );
+}
 
 /* Sector del salón: título con icono y cuántas mesas tiene. */
 .tv-sector {

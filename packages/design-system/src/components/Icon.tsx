@@ -1,5 +1,6 @@
 import {
   Archive,
+  ArchiveRestore,
   Armchair,
   BellRing,
   BookOpenText,
@@ -83,6 +84,7 @@ const ICONS = {
   readyToServe: ConciergeBell,
   refresh: RefreshCw,
   remove: Minus,
+  restore: ArchiveRestore,
   schedule: CalendarClock,
   search: Search,
   serve: HandPlatter,

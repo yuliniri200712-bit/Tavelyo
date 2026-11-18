@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   EmptyState,
   ErrorState,
+  Icon,
   LoadingState,
   PageTitle,
   serverErrorText,
@@ -62,7 +63,10 @@ export function PrintQrPage({
         <div className="tv-toolbar">
           {backLink}
           {tables.length > 0 ? (
-            <TavelyoButton onClick={() => window.print()}>Imprimir</TavelyoButton>
+            <TavelyoButton onClick={() => window.print()}>
+              <Icon name="print" />
+              Imprimir
+            </TavelyoButton>
           ) : null}
         </div>
       </header>

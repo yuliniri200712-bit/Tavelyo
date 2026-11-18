@@ -4,6 +4,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  Icon,
   LoadingState,
   PageTitle,
   serverErrorText,
@@ -148,6 +149,7 @@ function StationItem({
             aria-label={`Editar ${station.name}`}
             onClick={() => setEditing(true)}
           >
+            <Icon name="edit" />
             Editar
           </TavelyoButton>
           {station.isDefault ? null : (
@@ -156,6 +158,7 @@ function StationItem({
               aria-label={`${station.archived ? 'Restaurar' : 'Archivar'} ${station.name}`}
               onClick={() => void onSave(current, !station.archived)}
             >
+              <Icon name={station.archived ? 'restore' : 'archive'} />
               {station.archived ? 'Restaurar' : 'Archivar'}
             </TavelyoButton>
           )}

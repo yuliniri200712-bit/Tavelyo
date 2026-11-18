@@ -64,6 +64,13 @@ test('administración: entrada, inicio, carta, estaciones, mesas y sucursales', 
       await p.goBack();
       await expect(p.getByRole('heading', { name: `${tenantName} · Centro` })).toBeVisible();
     }
+
+    // Una mesa con su QR abierto: la tarjeta pasa a ocupar toda la fila.
+    await p.getByRole('link', { name: 'Mesas y códigos QR', exact: true }).click();
+    const m1 = p.getByRole('listitem').filter({ hasText: 'Mesa M1' });
+    await m1.getByRole('button', { name: 'Ver QR' }).click();
+    await expect(m1.getByRole('img', { name: 'Código QR de la mesa M1' })).toBeVisible();
+    await capture(p, testInfo, '08-mesa-con-qr');
   } finally {
     await admin.context.close();
   }
