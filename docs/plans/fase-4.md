@@ -1,0 +1,272 @@
+# Plan de Fase 4 — Caja y pagos
+
+Estado: **propuesto, pendiente de aprobación del propietario** (2026-11-18). Rama de trabajo: `fase-4-caja-pagos`.
+
+## 1. Objetivo
+
+Según PM §11: pasarela en entorno de pruebas, autorización, captura, división de la cuenta, reembolso y cierre.
+
+**Condición para terminar (PM §11):**
+- conciliación correcta;
+- pruebas de duplicados, fallos y vencimientos aprobadas;
+- **la habilitación real queda separada**: esta fase no cobra dinero real ni despliega nada. Pasar a cobros reales exige otra autorización expresa.
+
+Hoy cada pedido llega a cocina con una preautorización **simulada** (D-04, Fase 3), y esa retención nunca se cobra ni se libera. Esta fase cierra el ciclo:
+1. la cuenta de la mesa;
+2. el cobro de lo consumido;
+3. la liberación de lo sobrante;
+4. el efectivo;
+5. la caja;
+6. los reembolsos;
+7. la conciliación.
+
+Todo esto primero con el adaptador simulado y después con una pasarela real en su entorno de pruebas.
+
+## 2. Decisiones
+
+### Ya tomadas
+
+| ID | Decisión | Efecto en esta fase |
+|---|---|---|
+| D-01, D-01b | Colombia, COP, precios con impuestos incluidos | La cuenta desglosa el impuesto contenido; una sola moneda por cuenta |
+| D-04 | Preautorización obligatoria antes de cocina; quien paga en efectivo puede pedir, y su retención se libera en esta fase | El cierre captura o libera cada preautorización |
+| D-23 | El mesero no tomaba pedidos en la Fase 3; pasa a esta fase con datáfono o enlace de pago | Ver D-29 |
+| ADR-0006 | Contrato `PaymentGateway` con autorizar, consultar, capturar, liberar y reembolsar | Ya existe en `packages/contracts`; se amplía, no se reemplaza |
+
+### Pendientes que esta fase necesita
+
+**D-02 — Pasarela de pago (la más importante).** La pasarela tiene que permitir, en Colombia, **autorizar ahora y capturar después** (D-04), capturar **menos** de lo autorizado y liberar el resto. Lo que dicen las documentaciones oficiales que revisé hoy, por orden de idoneidad:
+
+| Proveedor | Autorizar y capturar después en Colombia | Observaciones |
+|---|---|---|
+| **Kushki** | Sí, documentado para Colombia | Marcado como **beta**; la documentación completa está protegida con contraseña (hay que pedirla al comercial). Según su API, la captura admite hasta un 10 % más de lo autorizado; su guía de Perú indica una sola captura por autorización (falta confirmarlo para Colombia) |
+| **PayU** | **Solo bajo solicitud** al representante comercial | Sin la habilitación, solo cobra en un paso |
+| **Mercado Pago** | Sí, con `capture=false` | **Solo Visa y Mastercard de Bancolombia** (la página en inglés añade BBVA) y la reserva **vence a los 7 días**. Dejaría fuera a la mayoría de las tarjetas |
+| **Wompi** | No encontré documentación de preautorización | Habría que preguntarlo directamente |
+
+Fuentes: [Kushki, autorización y captura (Colombia)](https://docs.kushki.com/co/en/card-payments/two-steps-payments/authorization-capture-overview), [Kushki, API de Colombia](https://api-docs.kushkipagos.com/colombia/online-payments/card-payments/pre-authorization), [PayU, pagos](https://developers-payu-latam.github.io/latam/en/docs/services/payments.html), [Mercado Pago, reservar fondos (Colombia)](https://www.mercadopago.com.co/developers/es/docs/checkout-api-payments/payment-management/make-value-reserve). Lo comercial (tarifas, requisitos y titular de la cuenta) lo confirma el propietario con cada proveedor.
+
+**Qué preguntar a cada proveedor:**
+1. ¿Preautorización y captura posterior para tarjetas de cualquier banco colombiano?
+2. ¿Cuántos días dura la autorización?
+3. ¿Se puede capturar menos de lo autorizado y liberar el resto?
+4. ¿Hay entorno de pruebas (sandbox) gratuito?
+5. ¿Avisan por *webhook* firmado?
+6. ¿Ofrecen campos de tarjeta propios (tokenización), para que Tavelyo nunca vea el número?
+
+**Si ninguno ofrece preautorización amplia**, D-04 tendría que revisarse como una decisión nueva. La alternativa sería **cobrar cada pedido al enviarlo a cocina** y devolver lo cancelado. Funciona con más medios de pago, pero quien paga en efectivo ya no podría pedir desde su teléfono.
+
+**Recomendación:** construir primero todo lo que no depende del proveedor (bloques 1 a 7, con el adaptador simulado) mientras eliges la pasarela. El bloque 8 conecta la pasarela real en su entorno de pruebas. **La fase no se cierra sin ese bloque**, porque es su condición de salida. Si la elección se demora, te aviso al terminar el bloque 7 para decidir cómo seguir.
+
+**D-05 — Propina.**
+**Recomendación:** propina voluntaria que se ofrece **al pagar la cuenta**:
+- sugerida en 10 %;
+- la persona la cambia o la quita;
+- nunca se incluye sin que la elija.
+
+No forma parte de la preautorización. Se paga en el pago final: en efectivo, o con un cobro aparte con tarjeta. Así no hay que capturar más de lo autorizado. El reparto de propinas entre el personal queda fuera de esta fase.
+
+**D-06 — Quién ve y quién paga qué en la mesa compartida.**
+**Recomendación:**
+- **cada persona paga lo que pidió**, que es lo que cubren sus preautorizaciones;
+- en su teléfono ve solo su parte;
+- la caja y el mesero ven la cuenta de toda la mesa;
+- si alguien quiere pagar por otros, o dividir en partes iguales, lo hace la caja a petición de la mesa, con reparto exacto (la suma de las partes es igual al total, al peso).
+
+**D-29 — Pedidos tomados por el mesero (D-23).**
+**Recomendación:** el mesero arma el pedido en su equipo y le muestra al cliente un **QR de pago**. El cliente lo escanea y autoriza en su teléfono, y solo entonces el pedido va a cocina. Así se cumple D-04 sin datáfono.
+
+Alternativas:
+- **Datáfono:** depende de la pasarela; se vería al elegirla.
+- **Excepción para efectivo con permiso de un administrador:** cambia D-04, no la recomiendo ahora.
+
+**D-30 — Cerrar la mesa.**
+**Recomendación:** una mesa se cierra solo cuando:
+- su saldo es cero;
+- no le quedan líneas en cocina o por entregar (se entregan o se cancelan con motivo).
+
+Al cerrar, toda retención sin capturar se libera.
+
+## 3. Diseño propuesto
+
+### La cuenta de la mesa
+
+- **Qué incluye:** la cuenta de una sesión de mesa reúne sus pedidos. Las líneas canceladas no se cobran. El impuesto se desglosa como contenido (D-01b).
+- **Cómo se calcula:** lo calcula **el servidor**, siempre desde las instantáneas de cada línea (PM §6). Los importes van en unidades menores enteras; nunca hay números con decimales flotantes.
+- **Reparto:** las asignaciones de pago suman exactamente el total. El redondeo es determinista y la diferencia de un peso va a una sola parte conocida.
+- **Concurrencia:** la cuenta tiene versión. Si dos cajeros cobran o cierran a la vez, uno gana y el otro ve el conflicto, sin cobrar dos veces (caso 9).
+
+### Pagos
+
+- **Con tarjeta**, por cada preautorización:
+  - al cobrar se **captura** solo lo consumido de ese pedido;
+  - lo sobrante se **libera**.
+  - Una autorización vencida no se captura: se pide un pago nuevo (PM §8, paso 9).
+- **En efectivo:** la caja lo registra con el importe recibido y el cambio, y libera las preautorizaciones que cubría.
+- **Reembolsos:**
+  - operación aparte, con permiso, **motivo** y tope;
+  - nunca superan lo capturado menos lo ya reembolsado (caso 10);
+  - no se marcan como hechos hasta que la pasarela los confirma.
+- **Fiabilidad entre Tavelyo y la pasarela:**
+  - cada operación tiene un intento guardado antes de llamar a la pasarela, con una clave de idempotencia;
+  - si se agota el tiempo, se consulta o se repite la misma operación; nunca se crea un cobro nuevo (caso 7).
+- **Avisos de la pasarela (*webhooks*):**
+  - se verifica la firma, el importe, la moneda y la referencia;
+  - los repetidos, los tardíos o los que llegan fuera de orden no retroceden un estado confirmado (caso 8).
+- **Conciliación:** una tarea revisa cada cierto tiempo:
+  - las operaciones con resultado desconocido;
+  - las autorizaciones a punto de vencer, y avisa;
+  - las retenciones pendientes de liberar.
+
+  En producción la lanzaría Cloud Scheduler (tarea de despliegue ya aprobada); aquí se prueba en los emuladores.
+- **Adaptador simulado:**
+  - se amplía para reproducir lo que hace una pasarela real: rechazos, tiempo agotado, resultado desconocido, vencimiento, avisos repetidos o desordenados y capacidades declaradas (captura parcial, autorización incremental);
+  - **sigue bloqueado fuera de los emuladores**.
+
+### Caja (POS, `operations`)
+
+- **Sesión de caja:**
+  - apertura con fondo inicial;
+  - entradas y salidas con motivo;
+  - efectivo esperado, conteo, diferencia y cierre auditado (RF-PA-07).
+- **Pantalla de caja:**
+  - mesas con cuenta abierta;
+  - detalle por persona y total;
+  - cobrar con tarjeta (captura) o en efectivo;
+  - dividir;
+  - reembolsar;
+  - cerrar la mesa.
+- **Comprobante comercial** del pago, para ver e imprimir. **No es factura electrónica:** en Colombia la factura electrónica de la DIAN es otra obligación, que sigue fuera del alcance (RF-PA-08) y hay que tratar aparte con tu contador.
+
+### Meseros
+
+- **Pedido con QR de pago** (D-29).
+- **Trasladar una mesa:** pasar la sesión abierta a otra mesa libre. Es transaccional, auditado y con `session.transfer`.
+- **Unir mesas** se propone para más adelante: mezcla dos cuentas con personas y retenciones distintas, y conviene hacerlo cuando la cuenta ya esté probada.
+
+### Cliente (`menu-web`)
+
+- **«Mi cuenta»:**
+  - lo que pidió y lo que ya está pagado;
+  - la propina voluntaria (D-05);
+  - el pago de su parte;
+  - su comprobante.
+- «Pedir la cuenta» (Fase 3) lleva a esta pantalla y avisa al mesero.
+
+## 4. Alcance por bloques
+
+1. **Decisiones y esquema:**
+   - D-02 (si ya está), D-05, D-06, D-29 y D-30 registradas;
+   - entidades de cuenta, intentos de pago, capturas, liberaciones, reembolsos, asignaciones, avisos de la pasarela, idempotencia, tareas pendientes (*outbox*) y caja (sesión, movimientos y conteo);
+   - claves foráneas con empresa y sucursal en todas;
+   - permisos de la matriz (`bill.*`, `payment.*`, `cash_session.*`) con sus topes.
+2. **Dinero de la cuenta (`core`, lógica pura con pruebas):**
+   - cálculo de la cuenta y del impuesto contenido;
+   - reparto exacto y redondeo;
+   - propina;
+   - qué capturar y qué liberar de cada autorización.
+3. **Pagos en el backend con el adaptador simulado:**
+   - captura, liberación, reembolso y consulta de estado;
+   - idempotencia;
+   - *webhooks* firmados;
+   - conciliación;
+   - fallos simulados.
+4. **Cuenta y cierre:**
+   - cobro por persona (D-06), efectivo y división;
+   - cierre de mesa (D-30);
+   - reembolsos con permiso y tope;
+   - concurrencia de dos cajeros.
+5. **Caja:** apertura, movimientos, conteo y cierre.
+6. **Operaciones:**
+   - pantalla de caja y comprobante;
+   - el mesero toma pedidos con QR de pago (D-29);
+   - trasladar mesa.
+7. **Cliente:** «Mi cuenta», propina, pago de su parte y comprobante.
+8. **Pasarela real en su entorno de pruebas (necesita D-02):**
+   - adaptador del proveedor;
+   - campos de tarjeta del proveedor (Tavelyo nunca ve el número ni el CVV);
+   - *webhooks* verificados;
+   - pruebas contra el entorno de pruebas: rechazo, autenticación adicional (3DS), vencimiento, captura menor, liberación y reembolso.
+9. **Cierre:**
+   - recorridos de caja, mesero y cliente en los 5 navegadores;
+   - accesibilidad;
+   - prueba en tu Android;
+   - documentación y resumen para aprobación.
+
+**Fuera de alcance:**
+- cobros reales y despliegue (habilitación real separada);
+- factura electrónica de la DIAN;
+- datáfono físico;
+- descuentos y cargos de servicio (necesitan su política: quién los aprueba y con qué tope);
+- unir mesas;
+- reparto de propinas al personal;
+- informes de ventas e inventario (Fase 5);
+- notificaciones fuera de la app.
+
+## 5. Archivos y áreas afectadas
+
+| Área | Contenido |
+|---|---|
+| `dataconnect/` | Esquema de cuenta, pagos y caja; conectores de caja, mesero y cliente, con pruebas de aislamiento |
+| `backend/` | Cobro, liberación, reembolso, efectivo, cierre, *webhooks*, conciliación y adaptadores (simulado y real) |
+| `packages/core` | Cálculo de la cuenta, reparto, redondeo y propina |
+| `packages/contracts` | Ampliación de `PaymentGateway` (capacidades declaradas) y contratos nuevos |
+| `packages/data-access` | Pasarelas nuevas y SDK regenerado |
+| `packages/features/` | Módulos nuevos `billing` (cuenta y cobro) y `cash` (caja); cambios en `floor`, `orders` y `table-session` |
+| `apps/operations`, `apps/menu-web` | Pantallas de caja, del mesero y «Mi cuenta» |
+| `e2e/` | Recorridos nuevos de caja, efectivo, división, reembolso y conciliación |
+| `docs/` | Plan, decisiones, modelo de datos, permisos, estados, amenazas, ADR-0006 (proveedor) y pruebas |
+
+**Paquetes nuevos:** ninguno en los bloques 1 a 7. Para el bloque 8 intentaré usar la API del proveedor con `fetch`, sin SDK. Si el proveedor exige su script de campos de tarjeta, o un paquete, lo traigo como aprobación aparte, con su efecto en la seguridad de la página.
+
+## 6. Pruebas
+
+- **Unitarias:**
+  - cuenta, impuesto contenido, reparto exacto y redondeo (la suma de las partes es siempre el total);
+  - propina;
+  - qué capturar y liberar;
+  - estados del intento de pago y del reembolso.
+- **Integración (emuladores):**
+  - empresas e IDs alterados en cada operación (caso 1);
+  - membresía revocada (caso 2);
+  - doble pulsación y reintento tras tiempo agotado: un solo cobro (caso 3);
+  - dos cajeros a la vez (casos 4 y 9);
+  - rechazo, autenticación adicional, vencimiento, consumo mayor que lo autorizado y captura menor (caso 6);
+  - captura hecha en la pasarela y caída antes de guardarla: la conciliación la recupera sin volver a cobrar (caso 7);
+  - *webhook* inválido, repetido o fuera de orden (caso 8);
+  - reembolso repetido o mayor que lo disponible (caso 10);
+  - mesa cerrada sin acceso a la cuenta siguiente (caso 12).
+- **Navegador:**
+  - caja, mesero y cliente en los 5 navegadores de D-15;
+  - axe, teclado, 320 px y texto al 200 %.
+- **Pasarela real (bloque 8):** las mismas situaciones contra el entorno de pruebas del proveedor, con sus tarjetas de prueba.
+- **Dispositivo real:** tu Android como cliente que paga y el computador como caja.
+
+## 7. Criterios de aceptación
+
+1. **Nunca se cobra dos veces** y nunca se captura más de lo autorizado. Los reembolsos no superan lo capturado.
+2. Una cuenta solo queda pagada con capturas confirmadas o efectivo registrado. La suma de los pagos es exactamente el total, y ninguna retención queda olvidada: se captura o se libera.
+3. Los fallos entre Tavelyo y la pasarela (tiempo agotado, caída, avisos repetidos o desordenados) se resuelven con la conciliación sin cobros dobles.
+4. La caja cuadra: efectivo esperado, conteo y diferencia, con auditoría.
+5. Aislamiento por empresa, sucursal y mesa, y permisos con topes, validados en el servidor.
+6. Pantallas accesibles como en las fases anteriores; el estado de un pago nunca depende solo del color.
+7. La pasarela elegida funciona en su entorno de pruebas (bloque 8). CI en verde, sin secretos y con la documentación al día. Sin cobros reales ni despliegue.
+
+## 8. Aprobaciones que pide este plan
+
+- El plan y su alcance (secciones 3 y 4).
+- Las recomendaciones de **D-05, D-06, D-29 y D-30** (sección 2).
+- **D-02:** no hace falta decidirla para empezar, pero sí antes del bloque 8.
+- **Volver a crear el contenedor de Docker de los emuladores** (`tavelyo-emu`, el mismo de las fases 3 y 3B), que se borró al cerrar la Fase 3B. Se borra al cerrar esta fase.
+- Más adelante, en el bloque 8 y por separado:
+  - las credenciales de prueba del proveedor, que van fuera del repositorio;
+  - cómo recibir sus *webhooks* de prueba, que necesitan una dirección pública (desplegar el backend en el proyecto de desarrollo o usar un túnel). Te mostraré el costo, si lo tiene, antes de activar nada.
+
+## 9. Riesgos
+
+- **La pasarela es la mayor incertidumbre:** en Colombia la preautorización no está disponible en todos los proveedores ni para todas las tarjetas. Si no hay una opción amplia, D-04 tendría que revisarse.
+- **Autorizar, capturar y guardar no es atómico** entre Tavelyo y la pasarela (PM §8). Se cubre con intentos persistentes, idempotencia, conciliación y pruebas de caídas.
+- **Las autorizaciones vencen** (por ejemplo, 7 días en Mercado Pago). Una cena dura horas, pero una mesa olvidada abierta podría perder cobertura. La conciliación avisa antes del vencimiento.
+- **El adaptador simulado no garantiza el comportamiento real:** por eso el bloque 8 es obligatorio para cerrar la fase.
+- **Factura electrónica:** el comprobante de Tavelyo no la sustituye. Hay que decidir aparte cómo se factura (con tu contador o un proveedor de facturación).
+- **Es la fase más grande hasta ahora.** Si hace falta, el bloque 8 puede ir en una fase propia cuando la pasarela tarde. Esa decisión sería tuya, al terminar el bloque 7.
