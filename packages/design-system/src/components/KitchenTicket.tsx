@@ -3,7 +3,7 @@ import { Icon } from './Icon.tsx';
 import { classNames } from './class-names.ts';
 
 /** Estado visual del ticket: el texto del estado lo pone quien lo usa. */
-export type TicketTone = 'received' | 'preparing' | 'ready';
+export type TicketTone = 'received' | 'preparing' | 'ready' | 'pickedUp';
 
 export interface KitchenTicketProps {
   /** Código de la mesa, p. ej. «M1». */

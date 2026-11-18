@@ -184,12 +184,12 @@ export function DesignSystemCatalog() {
           <li>
             <TableTile
               code="S6"
-              status="Lista para entregar"
+              status="Abierta"
               tone="ready"
+              badges={<StatusChip tone="info" label="Platos listos" />}
               detail="1 lista para recoger"
-            >
-              <TavelyoButton variant="secondary">Ver pedidos</TavelyoButton>
-            </TableTile>
+              actions={<TavelyoButton variant="secondary">Ver pedidos</TavelyoButton>}
+            />
           </li>
         </ul>
       </section>

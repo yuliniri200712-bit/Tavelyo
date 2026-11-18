@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { formatLocalTime } from '@tavelyo/core';
+import { formatLocalTime, formatShortWait } from '@tavelyo/core';
 import {
   ActionNotice,
   CheckboxField,
   EmptyState,
   ErrorState,
+  FilterPills,
+  Icon,
+  KitchenTicket,
   LiveStatus,
   LoadingState,
   ReasonDialog,
@@ -87,6 +90,9 @@ export function browserChime(): void {
 }
 
 const CHANGED_TEXT = 'Esta línea ya cambió. La pantalla muestra el estado actual.';
+
+/** Filtro de la cola por estado (solo cambia lo que se ve; la cola sigue completa). */
+type QueueFilter = 'all' | 'RECEIVED' | 'IN_PREPARATION';
 const NEW_HIGHLIGHT_MS = 60_000;
 
 function errorText(error: KitchenError): string {
@@ -179,7 +185,9 @@ function StationQueue({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<KitchenItem | null>(null);
   const [sound, setSound] = useState(false);
+  const [filter, setFilter] = useState<QueueFilter>('all');
   const items = state.data;
+  const shown = items?.filter((item) => filter === 'all' || item.status === filter) ?? null;
   const fresh = useFreshOrders(items, sound ? chime : null, now);
   const [, setTick] = useState(0);
 
@@ -204,7 +212,7 @@ function StationQueue({
   };
 
   return (
-    <section aria-label={`Cola de ${station.name}`}>
+    <section className="tv-page" aria-label={`Cola de ${station.name}`}>
       <LiveStatus
         state={state}
         formatTime={(date) => formatLocalTime(date, timezone)}
@@ -228,8 +236,29 @@ function StationQueue({
       {items ? (
         <>
           <p className="tv-list__meta">{describeQueue(items)}</p>
+          {items.length > 0 ? (
+            <FilterPills
+              label="Filtrar la cola por estado"
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: 'all', label: 'Todas', count: items.length },
+                {
+                  value: 'RECEIVED',
+                  label: 'Por empezar',
+                  count: items.filter((item) => item.status === 'RECEIVED').length,
+                },
+                {
+                  value: 'IN_PREPARATION',
+                  label: 'En preparación',
+                  icon: 'kitchen',
+                  count: items.filter((item) => item.status === 'IN_PREPARATION').length,
+                },
+              ]}
+            />
+          ) : null}
           <ul className="tv-kitchen-queue" aria-label={`Líneas de ${station.name}`}>
-            {items.map((item) => (
+            {(shown ?? []).map((item) => (
               <QueueItem
                 key={item.id}
                 item={item}
@@ -319,68 +348,78 @@ function QueueItem({
 }) {
   const what = `${item.quantity} × ${item.productName}`;
   const waiting = item.status === 'RECEIVED';
+  const minutes = elapsedMinutes(item.sentAt, now);
   return (
-    <li className={`tv-kitchen-item${isNew ? ' tv-kitchen-item--new' : ''}`}>
-      <div className="tv-list__summary">
-        <h2 className="tv-kitchen-item__title">
-          Mesa {item.tableCode} · {what}
-        </h2>
-        <StatusChip
-          tone={waiting ? 'warning' : 'info'}
-          label={waiting ? 'Por empezar' : 'En preparación'}
-        />
-        {isNew ? <StatusChip tone="info" label="Nuevo" /> : null}
-      </div>
-      <p className="tv-list__meta">
-        {describeElapsed(elapsedMinutes(item.sentAt, now))} · llegó a las{' '}
-        {formatLocalTime(item.sentAt, timezone)}
-      </p>
-      {item.modifiers.length > 0 ? <p>Opciones: {item.modifiers.join(', ')}</p> : null}
-      {item.note ? (
-        <p>
-          <strong>Nota:</strong> {item.note}
+    <li>
+      <KitchenTicket
+        tableCode={item.tableCode}
+        tone={waiting ? 'received' : 'preparing'}
+        title={`Mesa ${item.tableCode} · ${what}`}
+        headingLevel={2}
+        waiting={formatShortWait(minutes)}
+        waitingLabel={describeElapsed(minutes)}
+        isNew={isNew}
+      >
+        <div className="tv-list__summary">
+          <StatusChip
+            tone={waiting ? 'warning' : 'info'}
+            label={waiting ? 'Por empezar' : 'En preparación'}
+          />
+          {isNew ? <StatusChip tone="info" label="Nuevo" /> : null}
+          <span className="tv-list__meta">
+            Llegó a las {formatLocalTime(item.sentAt, timezone)}
+          </span>
+        </div>
+        {item.modifiers.length > 0 ? <p>Opciones: {item.modifiers.join(', ')}</p> : null}
+        {item.note ? (
+          <p>
+            <strong>Nota:</strong> {item.note}
+          </p>
+        ) : null}
+        <p className="tv-kitchen-allergens">
+          {item.allergens.length > 0 ? (
+            <>
+              <strong>Alérgenos declarados:</strong> {item.allergens.join(', ')}
+            </>
+          ) : (
+            'Sin alérgenos declarados.'
+          )}
         </p>
-      ) : null}
-      <p className="tv-kitchen-allergens">
-        {item.allergens.length > 0 ? (
-          <>
-            <strong>Alérgenos declarados:</strong> {item.allergens.join(', ')}
-          </>
-        ) : (
-          'Sin alérgenos declarados.'
-        )}
-      </p>
-      <div className="tv-toolbar">
-        {waiting ? (
+        <div className="tv-toolbar">
+          {waiting ? (
+            <TavelyoButton
+              loading={busy}
+              loadingLabel="Empezando…"
+              disabled={disabled}
+              aria-label={`Empezar ${what}, mesa ${item.tableCode}`}
+              onClick={onStart}
+            >
+              <Icon name="kitchen" />
+              Empezar
+            </TavelyoButton>
+          ) : (
+            <TavelyoButton
+              loading={busy}
+              loadingLabel="Marcando…"
+              disabled={disabled}
+              aria-label={`Listo ${what}, mesa ${item.tableCode}`}
+              onClick={onFinish}
+            >
+              <Icon name="check" />
+              Listo
+            </TavelyoButton>
+          )}
           <TavelyoButton
-            loading={busy}
-            loadingLabel="Empezando…"
+            variant="secondary"
             disabled={disabled}
-            aria-label={`Empezar ${what}, mesa ${item.tableCode}`}
-            onClick={onStart}
+            aria-label={`Cancelar ${what}, mesa ${item.tableCode}`}
+            onClick={onCancel}
           >
-            Empezar
+            <Icon name="close" />
+            Cancelar
           </TavelyoButton>
-        ) : (
-          <TavelyoButton
-            loading={busy}
-            loadingLabel="Marcando…"
-            disabled={disabled}
-            aria-label={`Listo ${what}, mesa ${item.tableCode}`}
-            onClick={onFinish}
-          >
-            Listo
-          </TavelyoButton>
-        )}
-        <TavelyoButton
-          variant="secondary"
-          disabled={disabled}
-          aria-label={`Cancelar ${what}, mesa ${item.tableCode}`}
-          onClick={onCancel}
-        >
-          Cancelar
-        </TavelyoButton>
-      </div>
+        </div>
+      </KitchenTicket>
     </li>
   );
 }

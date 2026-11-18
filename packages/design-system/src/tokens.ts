@@ -137,7 +137,7 @@ export const size = {
   icon: 20,
   iconLarge: 28,
   /** Ancho mínimo de la tarjeta de mesa en la cuadrícula del salón. */
-  tableTile: 128,
+  tableTile: 160,
   /** Ancho del bloque de la mesa en el ticket de cocina. */
   ticketTable: 96,
   /** Altura del logotipo horizontal en la cabecera: 40 px dan ≥ 120 px de ancho (IV §3). */

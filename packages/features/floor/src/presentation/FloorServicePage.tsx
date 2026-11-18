@@ -2,13 +2,15 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { formatLocalTime } from '@tavelyo/core';
 import {
   ActionNotice,
-  Card,
   ConfirmDialog,
   EmptyState,
   ErrorState,
+  FilterPills,
+  Icon,
   LiveStatus,
   LoadingState,
   StatusChip,
+  TableTile,
   TavelyoButton,
   serverErrorText,
   useLiveData,
@@ -17,9 +19,11 @@ import {
 } from '@tavelyo/design-system';
 import {
   describeFloorCounts,
+  describeSectorSize,
   describeTableOrders,
   describeTableRequests,
   floorCounts,
+  tableTone,
 } from '../application/floor-service.ts';
 import type {
   BranchScope,
@@ -47,6 +51,7 @@ export interface FloorServicePageProps {
 }
 
 const systemNow = () => new Date();
+const ALL_SECTORS = 'todos';
 
 /**
  * Vista del salón para el personal en servicio (session.open; lo comprueba el servidor). Se
@@ -74,8 +79,10 @@ export function FloorServicePage({
     [gateway, tenantId, branchId],
   );
   const { state, notice, refresh, run } = useLiveData(load, watch, { now });
+  const [sectorFilter, setSectorFilter] = useState(ALL_SECTORS);
   const data = state.data;
   const sectors = data ? data.filter((s) => s.tables.length > 0) : [];
+  const shown = sectors.filter((s) => sectorFilter === ALL_SECTORS || s.id === sectorFilter);
   const reload = () => void refresh();
 
   return (
@@ -90,6 +97,7 @@ export function FloorServicePage({
         </div>
         <div className="tv-toolbar">
           <TavelyoButton variant="secondary" onClick={reload}>
+            <Icon name="refresh" />
             Actualizar salón
           </TavelyoButton>
         </div>
@@ -121,9 +129,51 @@ export function FloorServicePage({
           description="La administración agrega los sectores y las mesas en «Mesas y códigos QR»."
         />
       ) : null}
-      {sectors.map((sector) => (
-        <Card key={sector.id} title={sector.name} headingLevel={2}>
-          <ul className="tv-list" aria-label={`Mesas de ${sector.name}`}>
+      {sectors.length > 0 ? (
+        <>
+          {sectors.length > 1 ? (
+            <FilterPills
+              label="Sectores del salón"
+              value={sectorFilter}
+              onChange={setSectorFilter}
+              options={[
+                { value: ALL_SECTORS, label: 'Todos' },
+                ...sectors.map((sector) => ({
+                  value: sector.id,
+                  label: sector.name,
+                  count: sector.tables.length,
+                })),
+              ]}
+            />
+          ) : null}
+          <ul className="tv-legend" aria-label="Estados de las mesas">
+            <li>
+              <Icon name="freeTable" className="tv-legend__free" />
+              Mesa libre
+            </li>
+            <li>
+              <Icon name="people" className="tv-legend__open" />
+              Mesa abierta
+            </li>
+            <li>
+              <Icon name="callWaiter" className="tv-legend__attention" />
+              Con solicitud pendiente
+            </li>
+            <li>
+              <Icon name="readyToServe" className="tv-legend__ready" />
+              Con platos listos
+            </li>
+          </ul>
+        </>
+      ) : null}
+      {shown.map((sector) => (
+        <section key={sector.id} className="tv-sector" aria-labelledby={`sector-${sector.id}`}>
+          <div className="tv-sector__head">
+            <Icon name="floor" />
+            <h2 id={`sector-${sector.id}`}>{sector.name}</h2>
+            <span className="tv-list__meta">{describeSectorSize(sector.tables.length)}</span>
+          </div>
+          <ul className="tv-table-grid" aria-label={`Mesas de ${sector.name}`}>
             {sector.tables.map((table) => (
               <FloorTableItem
                 key={table.id}
@@ -139,7 +189,7 @@ export function FloorServicePage({
               />
             ))}
           </ul>
-        </Card>
+        </section>
       ))}
     </div>
   );
@@ -181,114 +231,134 @@ function FloorTableItem({
     return accepted;
   };
 
+  const closeDialog = session ? (
+    <ConfirmDialog
+      open={confirmClose}
+      title={`¿Cerrar la mesa ${table.code}?`}
+      confirmLabel="Cerrar mesa"
+      destructive
+      busy={busy}
+      onCancel={() => setConfirmClose(false)}
+      onConfirm={() => {
+        void execute(
+          () => gateway.closeSession(scope, session.id),
+          `Mesa ${table.code} cerrada. Quedó libre.`,
+        ).then(() => {
+          setConfirmClose(false);
+          setShowPeople(false);
+          setShowOrders(false);
+        });
+      }}
+    >
+      <p>
+        Las personas unidas a la mesa pierden el acceso y no pueden seguir pidiendo. La mesa queda
+        libre para los siguientes clientes, que tendrán que volver a unirse.
+      </p>
+    </ConfirmDialog>
+  ) : null;
+  const expanded =
+    session && ((showOrders && renderOrders) || showPeople) ? (
+      <>
+        {showOrders && renderOrders ? renderOrders(session, table.code) : null}
+        {showPeople ? (
+          <ParticipantsPanel
+            gateway={gateway}
+            scope={scope}
+            sessionId={session.id}
+            tableCode={table.code}
+            timezone={timezone}
+            canRemove={canClose}
+            now={now}
+          />
+        ) : null}
+      </>
+    ) : null;
+
   return (
-    <li className="tv-list__item">
-      <div className="tv-list__summary">
-        <span className="tv-list__title">Mesa {table.code}</span>
-        <span className="tv-list__meta">{table.seats} puestos</span>
-        <StatusChip tone={session ? 'warning' : 'success'} label={session ? 'Abierta' : 'Libre'} />
-        {session && session.activity.requests.length > 0 ? (
-          <StatusChip tone="warning" label="Solicitud pendiente" />
-        ) : null}
-        {session && session.activity.ready > 0 ? (
-          <StatusChip tone="info" label="Platos listos" />
-        ) : null}
-      </div>
-      {session ? (
-        <>
-          <p className="tv-list__meta">
-            Abierta desde las {formatLocalTime(session.openedAt, timezone)}
-          </p>
-          <p>{describeTableOrders(session.activity)}</p>
-          {describeTableRequests(session.activity.requests, timezone).map((text) => (
-            <p key={text}>
-              <strong>{text}</strong>
-            </p>
-          ))}
-        </>
-      ) : null}
-      <div className="tv-toolbar">
-        {session ? (
+    <li>
+      <TableTile
+        code={table.code}
+        status={session ? 'Abierta' : 'Libre'}
+        tone={tableTone(session ? session.activity : null)}
+        badges={
           <>
-            {renderOrders ? (
-              <TavelyoButton
-                variant="secondary"
-                aria-expanded={showOrders}
-                onClick={() => setShowOrders(!showOrders)}
-              >
-                {showOrders ? 'Ocultar pedidos' : 'Ver pedidos'}
-              </TavelyoButton>
+            <span className="tv-list__meta">{table.seats} puestos</span>
+            {session && session.activity.requests.length > 0 ? (
+              <StatusChip tone="warning" label="Solicitud pendiente" />
             ) : null}
-            <TavelyoButton
-              variant="secondary"
-              aria-expanded={showPeople}
-              onClick={() => setShowPeople(!showPeople)}
-            >
-              {showPeople ? 'Ocultar personas' : 'Ver personas en la mesa'}
-            </TavelyoButton>
-            {canClose ? (
-              <TavelyoButton
-                variant="secondary"
-                disabled={offline}
-                onClick={() => setConfirmClose(true)}
-              >
-                Cerrar mesa
-              </TavelyoButton>
+            {session && session.activity.ready > 0 ? (
+              <StatusChip tone="info" label="Platos listos" />
             ) : null}
           </>
-        ) : (
-          <TavelyoButton
-            loading={busy}
-            loadingLabel="Abriendo…"
-            disabled={offline}
-            onClick={() =>
-              void execute(
-                () => gateway.openTable(scope, table.id),
-                `Mesa ${table.code} abierta. Los clientes ya pueden unirse desde el QR.`,
-              )
-            }
-          >
-            Abrir mesa
-          </TavelyoButton>
-        )}
-      </div>
-      {session && showOrders && renderOrders ? renderOrders(session, table.code) : null}
-      {session && showPeople ? (
-        <ParticipantsPanel
-          gateway={gateway}
-          scope={scope}
-          sessionId={session.id}
-          tableCode={table.code}
-          timezone={timezone}
-          canRemove={canClose}
-          now={now}
-        />
-      ) : null}
-      {session ? (
-        <ConfirmDialog
-          open={confirmClose}
-          title={`¿Cerrar la mesa ${table.code}?`}
-          confirmLabel="Cerrar mesa"
-          destructive
-          busy={busy}
-          onCancel={() => setConfirmClose(false)}
-          onConfirm={() => {
-            void execute(
-              () => gateway.closeSession(scope, session.id),
-              `Mesa ${table.code} cerrada. Quedó libre.`,
-            ).then(() => {
-              setConfirmClose(false);
-              setShowPeople(false);
-              setShowOrders(false);
-            });
-          }}
-        >
-          <p>
-            Las personas unidas a la mesa pierden el acceso y no pueden seguir pidiendo. La mesa
-            queda libre para los siguientes clientes, que tendrán que volver a unirse.
-          </p>
-        </ConfirmDialog>
-      ) : null}
+        }
+        detail={
+          session ? (
+            <>
+              <p className="tv-list__meta">
+                Abierta desde las {formatLocalTime(session.openedAt, timezone)}
+              </p>
+              <p>{describeTableOrders(session.activity)}</p>
+              {describeTableRequests(session.activity.requests, timezone).map((text) => (
+                <p key={text}>
+                  <strong>{text}</strong>
+                </p>
+              ))}
+            </>
+          ) : null
+        }
+        actions={
+          session ? (
+            <>
+              {renderOrders ? (
+                <TavelyoButton
+                  variant="secondary"
+                  aria-expanded={showOrders}
+                  onClick={() => setShowOrders(!showOrders)}
+                >
+                  <Icon name="bill" />
+                  {showOrders ? 'Ocultar pedidos' : 'Ver pedidos'}
+                </TavelyoButton>
+              ) : null}
+              <TavelyoButton
+                variant="secondary"
+                aria-expanded={showPeople}
+                onClick={() => setShowPeople(!showPeople)}
+              >
+                <Icon name="people" />
+                {showPeople ? 'Ocultar personas' : 'Ver personas en la mesa'}
+              </TavelyoButton>
+              {canClose ? (
+                <TavelyoButton
+                  variant="secondary"
+                  disabled={offline}
+                  onClick={() => setConfirmClose(true)}
+                >
+                  <Icon name="lock" />
+                  Cerrar mesa
+                </TavelyoButton>
+              ) : null}
+              {closeDialog}
+            </>
+          ) : (
+            <TavelyoButton
+              loading={busy}
+              loadingLabel="Abriendo…"
+              disabled={offline}
+              onClick={() =>
+                void execute(
+                  () => gateway.openTable(scope, table.id),
+                  `Mesa ${table.code} abierta. Los clientes ya pueden unirse desde el QR.`,
+                )
+              }
+            >
+              <Icon name="add" />
+              Abrir mesa
+            </TavelyoButton>
+          )
+        }
+      >
+        {expanded}
+      </TableTile>
     </li>
   );
 }

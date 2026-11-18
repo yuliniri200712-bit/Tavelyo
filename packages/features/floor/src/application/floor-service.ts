@@ -60,3 +60,18 @@ export function describeTableRequests(
       `${REQUEST_TEXT[request.kind]} a las ${formatLocalTime(request.createdAt, timezone)}`,
   );
 }
+
+/** Tono visual de una mesa: lo más urgente primero (solicitud, platos listos, abierta, libre). */
+export type TableTone = 'free' | 'open' | 'attention' | 'ready';
+
+export function tableTone(activity: TableActivity | null): TableTone {
+  if (!activity) return 'free';
+  if (activity.requests.length > 0) return 'attention';
+  if (activity.ready > 0) return 'ready';
+  return 'open';
+}
+
+/** Mesas de un sector, en texto: «8 mesas» o «1 mesa». */
+export function describeSectorSize(tables: number): string {
+  return tables === 1 ? '1 mesa' : `${tables} mesas`;
+}

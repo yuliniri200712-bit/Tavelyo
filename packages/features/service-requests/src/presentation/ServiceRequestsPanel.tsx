@@ -4,6 +4,7 @@ import {
   ActionNotice,
   Card,
   ErrorState,
+  Icon,
   LiveStatus,
   LoadingState,
   StatusChip,
@@ -94,9 +95,15 @@ export function ServiceRequestsPanel({
       {requests && requests.length > 0 ? (
         <ul className="tv-list" aria-label="Solicitudes pendientes">
           {requests.map((request) => (
-            <li key={request.id} className="tv-list__item">
+            <li
+              key={request.id}
+              className={`tv-list__item tv-request${request.kind === 'REQUEST_BILL' ? ' tv-request--bill' : ''}`}
+            >
               <div className="tv-list__summary">
-                <span className="tv-list__title">Mesa {request.tableCode}</span>
+                <span className="tv-list__title tv-request__title">
+                  <Icon name={request.kind === 'REQUEST_BILL' ? 'bill' : 'callWaiter'} />
+                  Mesa {request.tableCode}
+                </span>
                 <StatusChip
                   tone={request.kind === 'REQUEST_BILL' ? 'info' : 'warning'}
                   label={REQUEST_KIND_TEXT[request.kind]}
@@ -116,6 +123,7 @@ export function ServiceRequestsPanel({
                   ].toLowerCase()}`}
                   onClick={() => void attend(request)}
                 >
+                  <Icon name="check" />
                   Atendida
                 </TavelyoButton>
               </div>

@@ -1068,6 +1068,116 @@
   font-weight: var(--tv-font-weight-bold);
 }
 
+/* ---------- Fase 3B, bloque 3: personal ---------- */
+
+/* Mesa: estado y avisos en una fila; con un panel desplegado ocupa toda la fila de la cuadrícula. */
+.tv-table-tile__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tv-space-2);
+}
+.tv-table-tile__detail p {
+  margin: 0;
+}
+.tv-table-tile__detail {
+  display: grid;
+  gap: var(--tv-space-1);
+}
+.tv-table-tile__panel {
+  display: grid;
+  gap: var(--tv-space-3);
+  padding-top: var(--tv-space-3);
+  border-top: var(--tv-stroke-hairline) solid var(--tv-color-border-subtle);
+}
+.tv-table-grid {
+  align-items: start;
+}
+/* En pantallas anchas (desde 1024 px = 64rem) las mesas son más anchas y los botones caben en una línea. */
+@media (min-width: 64rem) {
+  .tv-table-grid {
+    grid-template-columns: repeat(auto-fill, minmax(calc(var(--tv-size-table-tile) * 1.5), 1fr));
+  }
+}
+.tv-table-grid > li:has(.tv-table-tile__panel) {
+  grid-column: 1 / -1;
+}
+
+/* Sector del salón: título con icono y cuántas mesas tiene. */
+.tv-sector {
+  display: grid;
+  gap: var(--tv-space-3);
+}
+.tv-sector__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tv-space-2);
+}
+.tv-sector__head h2 {
+  margin: 0;
+}
+.tv-sector__head .tv-icon {
+  color: var(--tv-color-action-primary);
+}
+
+/* Leyenda de los estados de mesa: icono y texto, nunca solo color. */
+.tv-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tv-space-2) var(--tv-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--tv-color-text-secondary);
+  font-size: var(--tv-type-label-size);
+  line-height: var(--tv-type-label-line-height);
+}
+.tv-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tv-space-1);
+}
+.tv-legend__free {
+  color: var(--tv-color-border-control);
+}
+.tv-legend__open {
+  color: var(--tv-color-action-primary);
+}
+.tv-legend__attention {
+  color: var(--tv-color-status-warning);
+}
+.tv-legend__ready {
+  color: var(--tv-color-status-success);
+}
+
+/* Ticket recogido, camino a la mesa: espresso con texto crema. */
+.tv-ticket__table--pickedUp {
+  background: var(--tv-color-surface-inverse);
+  color: var(--tv-color-text-on-inverse);
+}
+
+/* Solicitud de una mesa: franja e icono del tipo; el texto siempre en espresso. */
+.tv-request {
+  border-inline-start: var(--tv-space-1) solid var(--tv-color-status-warning);
+  background: var(--tv-color-tint-warning);
+}
+.tv-request--bill {
+  border-inline-start-color: var(--tv-color-status-info);
+  background: var(--tv-color-tint-info);
+}
+.tv-request__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tv-space-2);
+}
+.tv-request__title .tv-icon {
+  color: var(--tv-color-status-warning);
+}
+.tv-request--bill .tv-request__title .tv-icon {
+  color: var(--tv-color-status-info);
+}
+
 @media print {
   .tv-app-header,
   .tv-skip-link,

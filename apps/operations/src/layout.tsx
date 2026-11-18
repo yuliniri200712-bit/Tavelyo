@@ -25,7 +25,7 @@ export function AppLayout() {
 
   if (session.status !== 'signed-in') {
     return (
-      <PwaShell appLabel={APP_LABEL} update={update}>
+      <PwaShell appLabel={APP_LABEL} update={update} headerTone="dark">
         {session.status === 'checking' ? (
           <LoadingState message="Comprobando la sesión…" />
         ) : (
@@ -40,6 +40,7 @@ export function AppLayout() {
       <PwaShell
         appLabel={APP_LABEL}
         update={update}
+        headerTone="dark"
         headerActions={
           <ContextBar
             userName={session.user.displayName || session.user.email}

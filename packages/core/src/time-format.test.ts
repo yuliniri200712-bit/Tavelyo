@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatLocalTime } from './time-format';
+import { formatLocalTime, formatShortWait } from './time-format';
 
 describe('formatLocalTime', () => {
   it('muestra la hora de la sucursal en 24 horas, no la del equipo', () => {
@@ -10,5 +10,13 @@ describe('formatLocalTime', () => {
 
   it('la medianoche se escribe 00:00', () => {
     expect(formatLocalTime(new Date('2026-11-15T05:00:00Z'), 'America/Bogota')).toBe('00:00');
+  });
+});
+
+describe('formatShortWait', () => {
+  it('muestra los minutos enteros, nunca negativos', () => {
+    expect(formatShortWait(0)).toBe('0 min');
+    expect(formatShortWait(12.7)).toBe('12 min');
+    expect(formatShortWait(-3)).toBe('0 min');
   });
 });

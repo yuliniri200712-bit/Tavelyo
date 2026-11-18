@@ -31,3 +31,22 @@ Hallazgos:
 - Playwright vacía `test-results` al empezar cada ejecución, así que las capturas van a `capturas/` (excluida de git).
 - **CI #50 (bloque 1):** la prueba de concurrencia falló una vez en Safari de iPhone porque miraba el aviso «Esta línea ya cambió» una sola vez, justo cuando la pantalla que pierde ya tenía el cambio en vivo pero aún no la respuesta de su pulsación. Ahora espera hasta 15 s a que exactamente una pantalla lo muestre. No es un fallo de la app.
 - **Fuera de alcance, a propósito:** el «consumo acumulado» de las referencias suma importes en el teléfono; la cuenta y sus totales son de la Fase 4 y los calcula el servidor.
+
+## 2026-11-18 — Bloque 3: personal
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Lógica nueva | `npx vitest run packages/features/floor packages/core` | ✅ Tono de cada mesa, de lo más urgente a lo menos (solicitud, platos listos, abierta, libre) y tamaño del sector en texto; `formatShortWait` («12 min», nunca negativo) |
+| Pantallas | `npx vitest run packages/features/kitchen packages/features/orders packages/features/floor packages/features/service-requests apps/operations` | ✅ Nueva: la cocina filtra la cola por estado con su contador sin perder las demás líneas. Ajustadas dos comprobaciones de cocina y entregas: la espera y la hora (o la estación) ya no van en una sola línea, sino la espera grande en el ticket («12 min», y completa para el lector de pantalla) y la hora o la estación junto al estado |
+| **Tanda completa con emuladores** | `npx playwright test --config playwright.emulators.config.ts` | ✅ **5 navegadores**: 79 superadas, 4 omitidas (Tab en Safari) y 2 fallidas en Safari de iPhone, las dos por esperar al backend con el emulador frío (ver hallazgos). Repetidas con el backend caliente: ✅ las 2 pasan. La cabecera oscura no rompe ninguna pantalla de `operations` a 320 px ni con el texto al 200 % |
+| Conjunto | `npm run check` | ✅ 710 pruebas unitarias, tipos, ESLint y Prettier |
+| Capturas de antes y después | `npm run capturas -- personal --output=capturas/<etiqueta>` | ✅ Cocina, «Listos para recoger», salón y pedidos de una mesa, en móvil y escritorio, con un salón de demostración (`e2e/support/demo-floor.ts`: M1 con pedidos y llamada al mesero, M2 con platos listos y uno recogido, M3 libre, y una terraza con una mesa abierta y otra libre) |
+
+Hallazgos en la revisión de capturas, corregidos:
+- el icono de «Atendida» tomaba el color del aviso y casi no se veía sobre el botón rojo;
+- en la cocina, el resumen de la cola quedaba pegado al aviso del sonido;
+- en escritorio, las mesas eran tan estrechas que los botones partían el texto y una mesa libre se estiraba hasta la altura de su vecina; desde 1024 px son más anchas y cada una tiene su altura;
+- la captura de los pedidos de una mesa se tomaba mientras cargaban: ahora espera a que aparezcan.
+
+Hallazgos de la tanda completa (de las pruebas, no de la app):
+- **Backend frío en el emulador:** tras un rato sin uso (el equipo se suspendió unos 50 minutos a mitad de la tanda), la primera llamada desde el navegador tarda mucho más. `accessibility-fase-2` esperaba solo 5 s el resumen del pedido; ahora espera `FUNCTION_WAIT` (60 s), como las demás llamadas al backend. `accessibility-fase-3` encadena varias llamadas y pasó de su límite de 3 minutos; ahora tiene 5. Medido sin navegador, el backend responde en unos 0,8 s.

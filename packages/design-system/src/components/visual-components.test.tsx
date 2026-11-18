@@ -71,16 +71,23 @@ describe('FilterPills', () => {
 });
 
 describe('TableTile', () => {
-  it('dice la mesa y su estado en texto, con sus acciones', () => {
+  it('dice la mesa y su estado en texto, con sus acciones y el panel desplegado', () => {
     render(
-      <TableTile code="S6" status="Lista para entregar" tone="ready" detail="1 lista para recoger">
-        <TavelyoButton>Ver pedidos</TavelyoButton>
+      <TableTile
+        code="S6"
+        status="Lista para entregar"
+        tone="ready"
+        detail="1 lista para recoger"
+        actions={<TavelyoButton>Ver pedidos</TavelyoButton>}
+      >
+        <p>Pedidos de la mesa</p>
       </TableTile>,
     );
     expect(screen.getByText('Mesa S6')).toBeTruthy();
     expect(screen.getByText('Lista para entregar')).toBeTruthy();
     expect(screen.getByText('1 lista para recoger')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Ver pedidos' })).toBeTruthy();
+    expect(screen.getByText('Pedidos de la mesa').closest('.tv-table-tile__panel')).toBeTruthy();
     expect(screen.queryByRole('img')).toBeNull();
   });
 });
