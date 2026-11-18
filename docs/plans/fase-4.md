@@ -89,6 +89,13 @@ Al cerrar, toda retención sin capturar se libera.
 - **`PaymentOperation` reúne el intento y la idempotencia:** una fila por llamada a la pasarela, guardada antes de llamar, con la clave que recibe la pasarela.
 - **Los totales de la cuenta no se guardan mientras está abierta:** se calculan en el servidor desde las líneas, para que nunca difieran; al saldarla se guarda el total.
 
+### Tomadas en el bloque 2 (2026-11-18, dentro del alcance aprobado)
+
+- **Redondeo al peso:** la división en partes iguales y la propina sugerida se redondean a la unidad entera de la moneda (en COP, el peso), porque en efectivo no circulan centavos. En la división, los pesos que sobran van a las primeras partes; la suma es siempre el total exacto.
+- **Tope de la propina:** como máximo el consumo de la cuenta, para evitar errores al escribir (un cero de más). Una propina mayor se puede dar en efectivo fuera de la cuenta.
+- **Lo que no cubre una preautorización** (por ejemplo, si la pasarela no admite capturar más de lo autorizado) queda como faltante y se paga con otro medio; nunca se captura de más.
+- **Reembolsos en curso cuentan** como ya usados al calcular lo reembolsable, para no pasarse si terminan confirmándose.
+
 ## 3. Diseño propuesto
 
 ### La cuenta de la mesa

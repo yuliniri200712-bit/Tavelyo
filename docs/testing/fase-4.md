@@ -11,3 +11,13 @@ Plan: [`plans/fase-4.md`](../plans/fase-4.md). Las pruebas unitarias se lanzan d
 | Regresión de SQL Connect | `npx vitest run --config vitest.integration.config.ts dataconnect` | ✅ 115 pruebas en 7 archivos |
 | SDK generado | `firebase-tools@15.30.2 dataconnect:sdk:generate` en el contenedor | ✅ Solo añade las interfaces `*_Key` de las tablas nuevas; el repositorio queda igual que la salida del generador |
 | Conjunto | `npm run check` | ✅ 713 pruebas unitarias, tipos, ESLint y Prettier |
+
+## 2026-11-18 — Bloque 2: dinero de la cuenta
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Cuenta (`bill.ts`) | `npx vitest run packages/core` | ✅ La cuenta suma las líneas que se cobran (sin las canceladas) con su impuesto contenido y lo de cada persona (D-06); rechaza cobrar una línea más de su importe, asignar a una línea cancelada o ajena, importes negativos y monedas mezcladas. Un pago se reparte por las líneas elegidas sin pasar de lo que falta; probado con 43 importes distintos: lo asignado suma siempre el importe exacto. La división en partes iguales va en pesos enteros y suma siempre el total exacto (35 combinaciones de total y partes), con diferencias de a lo sumo un peso. La mesa no se cierra con saldo o con líneas sin entregar (D-30) |
+| Propina (`tip.ts`) | ídem | ✅ Sugerida en 10 % y redondeada al peso con mitades hacia arriba (D-05); acepta cero; rechaza negativas, centavos o más que el consumo |
+| Cobro de preautorizaciones y reembolsos (`payment-settlement.ts`) | ídem | ✅ Captura lo consumido y libera el resto (captura menor, caso 6); nunca captura más de lo autorizado y deja el faltante para otro pago; sin consumo solo libera; vencida, ya usada o en otra moneda no se captura; sin captura parcial en la pasarela no la intenta. En 25 importes, captura más liberación da lo autorizado y captura más faltante da lo debido. Reembolsos: descuentan los confirmados y los que siguen en curso, no los rechazados; uno mayor que lo disponible, vacío, repetido o sobre el tope del rol se rechaza (caso 10) |
+| Caja (`cash.ts`) | ídem | ✅ Cambio y faltante en efectivo; efectivo esperado del turno; cierre con diferencia exige motivo |
+| Paquete `core` | `npx vitest run packages/core`, `tsc` y ESLint | ✅ 140 pruebas (30 nuevas) |
