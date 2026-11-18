@@ -123,4 +123,6 @@ Hallazgos:
 - **Del equipo local, no del código:** lanzado desde `c:\…` (unidad en minúscula), Vitest carga dos veces su propio módulo y los 58 archivos fallan con «Vitest failed to find the current suite». Desde `C:\…` pasan todos. Hay que lanzar las pruebas desde la ruta con la unidad en mayúscula.
 - Ayudas compartidas nuevas en `e2e/support`: `a11y.ts` (`tabTo`, `expectReflow`, antes dentro de `accessibility-fase-2.spec.ts`) y, en `orders.ts`, `openStaffPage`, `orderFromMenu` y `named`.
 
+CI: la #44 falló en «Auditoría de dependencias» por GHSA-fc5q-39xc-vjpf (`picomatch` 4.0.7, solo herramientas de desarrollo, sin versión corregida); con la regla nueva de ADR-0010, la **#46 quedó en verde** en los tres trabajos (calidad 2,5 min; integración 6,5 min; Playwright 32,3 min: PWA 81 superadas y 4 omitidas, emuladores 81 y 4). La #45 la canceló GitHub al relanzarse la #44.
+
 No verificado en el bloque 7: TalkBack en las pantallas nuevas (se revisó en la Fase 1; en esta fase los cambios se anuncian en texto y lo comprueban las pruebas de componentes) y VoiceOver en iPhone (pendiente desde la Fase 1).

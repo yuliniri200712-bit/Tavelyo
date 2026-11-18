@@ -1,6 +1,6 @@
 # Plan de Fase 3B — Diseño visual
 
-Estado: **propuesto, pendiente de aprobar**. El propietario autorizó el 2026-11-17 hacer una fase de diseño visual antes de la Fase 4, en su propia rama (`fase-3b-diseno-visual`, desde `main` tras cerrar la Fase 3), y tomó las decisiones D-27 y D-28 (sección 2). Empieza cuando apruebe este plan.
+Estado: **aprobado por el propietario el 2026-11-17**, con las decisiones D-27 y D-28 (sección 2) y la instalación de `lucide-react` 1.66.0. Rama de trabajo: `fase-3b-diseno-visual`, desde `main` tras cerrar la Fase 3.
 
 ## 1. Objetivo
 
@@ -106,8 +106,8 @@ Al final de los bloques 2, 3 y 4 te envío capturas para que apruebes el aspecto
 
 ## 8. Aprobaciones que pide este plan
 
-- El plan y su alcance (secciones 3 y 4).
-- La instalación de `lucide-react` 1.66.0 (D-27).
+- ✅ El plan y su alcance (secciones 3 y 4), aprobados el 2026-11-17.
+- ✅ La instalación de `lucide-react` 1.66.0 (D-27), aprobada el 2026-11-17.
 
 ## 9. Riesgos
 
