@@ -228,6 +228,17 @@ describe('carta y pedido del cliente', () => {
     expect(screen.getByText(/no garantizan que un plato no tenga trazas/)).toBeTruthy();
   });
 
+  it('el buscador filtra la carta en pantalla y explica cuando no hay resultados', async () => {
+    renderFlow();
+    const search = await screen.findByRole('searchbox', { name: 'Buscar en la carta' });
+    fireEvent.change(search, { target: { value: 'pizza' } });
+    expect(screen.getByText('No encontramos platos con esa búsqueda')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Agregar Hamburguesa' })).toBeNull();
+    fireEvent.change(search, { target: { value: 'HAMBÚRGUESA' } });
+    expect(screen.getByRole('button', { name: 'Agregar Hamburguesa' })).toBeTruthy();
+    expect(screen.queryByText('No encontramos platos con esa búsqueda')).toBeNull();
+  });
+
   it('un QR que no es de ninguna mesa activa lo explica', async () => {
     renderFlow(fakeGateway({ menu: vi.fn(async () => ok(null)) }));
     expect(
@@ -432,12 +443,19 @@ describe('carta y pedido del cliente', () => {
       screen.getByRole('heading', { name: 'Pedido de las 19:50 · Recibido en cocina' }),
     ).toBeTruthy();
     expect(screen.getByText('En vivo')).toBeTruthy();
+    const progress = screen.getByRole('list', { name: 'Seguimiento del pedido de las 19:50' });
+    const current = () =>
+      within(progress)
+        .getAllByRole('listitem')
+        .find((step) => step.getAttribute('aria-current') === 'step')?.textContent;
+    expect(current()).toContain('Recibido en cocina (en curso)');
     // Tras recargar el teléfono, la mesa se recupera sin crear otra sesión anónima.
     expect(gateway.resume).toHaveBeenCalledWith('qr-1');
     expect(gateway.join).not.toHaveBeenCalled();
 
     act(() => ordersObserver?.onData([myOrder('PICKED_UP')]));
     expect(within(line).getByText('En camino a tu mesa')).toBeTruthy();
+    expect(current()).toContain('Listo para servir (en curso)');
     expect(screen.getByText('Hamburguesa: en camino a tu mesa.')).toBeTruthy();
   });
 

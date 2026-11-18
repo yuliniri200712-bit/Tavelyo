@@ -1,5 +1,5 @@
 import { Link, Outlet, useParams, type RouteObject } from 'react-router';
-import { EmptyState } from '@tavelyo/design-system';
+import { EmptyState, Icon } from '@tavelyo/design-system';
 import {
   MyOrdersPage,
   OrderReviewPage,
@@ -28,12 +28,14 @@ function MenuRoute() {
   return (
     <TableMenuPage
       orderLink={(label) => (
-        <Link className="tv-link-button" to="pedido">
+        <Link className="tv-link-button tv-link-button--primary" to="pedido">
+          <Icon name="cart" />
           {label}
         </Link>
       )}
       myOrdersLink={
         <Link className="tv-link-button" to="mis-pedidos">
+          <Icon name="callWaiter" />
           Mis pedidos y llamar al mesero
         </Link>
       }
@@ -46,6 +48,7 @@ function MyOrdersRoute() {
     <MyOrdersPage
       menuLink={
         <Link className="tv-link-button" to="..">
+          <Icon name="back" />
           Volver a la carta
         </Link>
       }
@@ -59,12 +62,13 @@ function OrderRoute() {
     <OrderReviewPage
       offerSimulatedOutcomes={services.usesEmulators}
       myOrdersLink={(label) => (
-        <Link className="tv-link-button" to="../mis-pedidos">
+        <Link className="tv-link-button tv-link-button--primary" to="../mis-pedidos">
           {label}
         </Link>
       )}
       menuLink={
         <Link className="tv-link-button" to="..">
+          <Icon name="back" />
           Volver a la carta
         </Link>
       }

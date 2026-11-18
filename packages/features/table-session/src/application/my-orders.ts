@@ -79,3 +79,42 @@ export function describeStatusChanges(
     .map((item) => `${item.productName}: ${MY_ITEM_STATUS[item.status].label.toLowerCase()}.`)
     .join(' ');
 }
+
+export type ProgressState = 'done' | 'current' | 'pending';
+
+export interface ProgressStep {
+  readonly label: string;
+  readonly state: ProgressState;
+  readonly detail?: string;
+}
+
+const PROGRESS_LABELS = ['Recibido en cocina', 'En preparación', 'Listo para servir', 'Entregado'];
+
+/** Paso en curso de cada estado del pedido y su explicación breve. */
+const PROGRESS: Readonly<
+  Record<Exclude<OrderStatus, 'CANCELLED'>, { readonly step: number; readonly detail?: string }>
+> = {
+  RECEIVED: { step: 0, detail: 'La cocina ya tiene tu pedido.' },
+  IN_PREPARATION: { step: 1, detail: 'Estamos preparando tus platos.' },
+  PARTIALLY_READY: { step: 2, detail: 'Una parte ya está lista.' },
+  READY: { step: 2, detail: 'Pronto llega a tu mesa.' },
+  DELIVERED: { step: 4 },
+};
+
+/**
+ * Seguimiento del pedido (recibido → en preparación → listo → entregado), derivado de sus líneas.
+ * null si todo se canceló: entonces no hay nada que seguir. El estado de cada plato se sigue
+ * mostrando aparte, porque un pedido puede tener platos en pasos distintos.
+ */
+export function orderProgress(order: MyOrder): readonly ProgressStep[] | null {
+  const status = deriveOrderStatus(order.items.map((item) => item.status));
+  if (status === 'CANCELLED') return null;
+  const { step, detail } = PROGRESS[status];
+  return PROGRESS_LABELS.map((label, index) => {
+    if (index < step) return { label, state: 'done' as const };
+    if (index > step) return { label, state: 'pending' as const };
+    return detail
+      ? { label, state: 'current' as const, detail }
+      : { label, state: 'current' as const };
+  });
+}

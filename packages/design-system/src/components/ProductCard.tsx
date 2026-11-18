@@ -3,15 +3,17 @@ import type { ReactNode } from 'react';
 export interface ProductCardProps {
   readonly name: string;
   readonly headingLevel?: 2 | 3;
-  readonly description?: string;
+  readonly description?: string | undefined;
   /** Precio ya formateado (`formatMoney` de `core`). */
   readonly price: string;
   /** Texto completo de alérgenos, p. ej. «Alérgenos declarados: huevo». */
-  readonly allergens?: string;
+  readonly allergens?: string | undefined;
   /** Motivo por el que no se puede pedir ahora, p. ej. «Disponible desde las 12:00». */
-  readonly unavailable?: string;
+  readonly unavailable?: string | undefined;
   /** Acción principal (p. ej. el botón «Agregar»). */
   readonly action?: ReactNode;
+  /** Contenido que se abre dentro de la tarjeta, p. ej. las opciones antes de agregar. */
+  readonly children?: ReactNode;
 }
 
 /**
@@ -26,6 +28,7 @@ export function ProductCard({
   allergens,
   unavailable,
   action,
+  children,
 }: ProductCardProps) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return (
@@ -36,6 +39,7 @@ export function ProductCard({
         {allergens ? <p className="tv-product__allergens">{allergens}</p> : null}
         {unavailable ? <p className="tv-product__unavailable">{unavailable}</p> : null}
       </div>
+      {children}
       <div className="tv-product__footer">
         <span className="tv-product__price tv-tabular">{price}</span>
         {action}

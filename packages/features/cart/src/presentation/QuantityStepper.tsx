@@ -1,5 +1,5 @@
 import { ORDER_LIMITS } from '@tavelyo/contracts';
-import { TavelyoButton } from '@tavelyo/design-system';
+import { Icon, TavelyoButton } from '@tavelyo/design-system';
 
 export interface QuantityStepperProps {
   readonly value: number;
@@ -18,7 +18,7 @@ export function QuantityStepper({ value, onChange, itemName }: QuantityStepperPr
         disabled={value <= 1}
         onClick={() => onChange(value - 1)}
       >
-        −
+        <Icon name="remove" />
       </TavelyoButton>
       <output className="tv-list__title" aria-live="polite">
         {value}
@@ -29,7 +29,7 @@ export function QuantityStepper({ value, onChange, itemName }: QuantityStepperPr
         disabled={value >= ORDER_LIMITS.maxQuantity}
         onClick={() => onChange(value + 1)}
       >
-        +
+        <Icon name="add" />
       </TavelyoButton>
     </div>
   );

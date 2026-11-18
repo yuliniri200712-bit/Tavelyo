@@ -1,5 +1,5 @@
 import { formatMoney } from '@tavelyo/core';
-import { TavelyoButton } from '@tavelyo/design-system';
+import { Icon, TavelyoButton } from '@tavelyo/design-system';
 import { lineTotal } from '../application/cart.ts';
 import type { CartLine } from '../domain/index.ts';
 import { QuantityStepper } from './QuantityStepper.tsx';
@@ -39,6 +39,7 @@ export function CartLines({ lines, onQuantity, onRemove }: CartLinesProps) {
               aria-label={`Quitar ${line.productName} del pedido`}
               onClick={() => onRemove(line.key)}
             >
+              <Icon name="delete" />
               Quitar
             </TavelyoButton>
           </div>

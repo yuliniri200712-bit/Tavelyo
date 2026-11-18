@@ -6,6 +6,7 @@ import {
   LiveStatus,
   LoadingState,
   StatusChip,
+  StatusTimeline,
   useLiveData,
   type LiveSubscriber,
 } from '@tavelyo/design-system';
@@ -15,6 +16,7 @@ import {
   describeStatusChanges,
   itemStatuses,
   MY_ITEM_STATUS,
+  orderProgress,
 } from '../application/my-orders.ts';
 import { formatMinor } from '../application/review-text.ts';
 import type { MyOrder, PublicMenu, TableSeat } from '../domain/index.ts';
@@ -121,7 +123,7 @@ function LiveOrders({ seat, menu }: { readonly seat: TableSeat; readonly menu: P
   const formatTime = (date: Date) => formatLocalTime(date, menu.timezone);
 
   return (
-    <section aria-label="Estado de tus pedidos">
+    <section className="tv-page" aria-label="Estado de tus pedidos">
       {orders ? (
         <LiveStatus
           state={state}
@@ -145,40 +147,55 @@ function LiveOrders({ seat, menu }: { readonly seat: TableSeat; readonly menu: P
         />
       ) : null}
       {orders ? <p className="tv-list__meta">{describeMyOrders(orders)}</p> : null}
-      {orders?.map((order) => (
-        <article
-          key={order.id}
-          className="tv-card"
-          aria-label={`Pedido de las ${formatTime(order.sentAt)}`}
-        >
-          <h2>
-            Pedido de las {formatTime(order.sentAt)} · {describeMyOrder(order)}
-          </h2>
-          <ul className="tv-list">
-            {order.items.map((item) => {
-              const status = MY_ITEM_STATUS[item.status];
-              return (
-                <li key={item.id} className="tv-list__item">
-                  <div className="tv-list__summary">
-                    <span className="tv-list__title">
-                      {item.quantity} × {item.productName}
-                    </span>
-                    <StatusChip tone={status.tone} label={status.label} />
-                  </div>
-                  {item.modifiers.length > 0 ? (
-                    <p className="tv-list__meta">{item.modifiers.join(', ')}</p>
-                  ) : null}
-                  {item.note ? <p className="tv-list__meta">Nota: {item.note}</p> : null}
-                  <p className="tv-list__meta">
-                    {formatMinor(item.lineTotalMinor, order.currency)}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="tv-list__title">Total: {formatMinor(order.totalMinor, order.currency)}</p>
-        </article>
-      ))}
+      {orders?.map((order) => {
+        const sentAt = formatTime(order.sentAt);
+        const progress = orderProgress(order);
+        return (
+          <article
+            key={order.id}
+            className="tv-card tv-order"
+            aria-label={`Pedido de las ${sentAt}`}
+          >
+            <h2>
+              Pedido de las {sentAt} · {describeMyOrder(order)}
+            </h2>
+            {progress ? (
+              <StatusTimeline
+                label={`Seguimiento del pedido de las ${sentAt}`}
+                steps={progress.map((step, index) =>
+                  index === 0 ? { ...step, time: sentAt } : step,
+                )}
+              />
+            ) : null}
+            <ul className="tv-list" aria-label={`Platos del pedido de las ${sentAt}`}>
+              {order.items.map((item) => {
+                const status = MY_ITEM_STATUS[item.status];
+                return (
+                  <li key={item.id} className="tv-list__item">
+                    <div className="tv-list__summary">
+                      <span className="tv-list__title">
+                        {item.quantity} × {item.productName}
+                      </span>
+                      <StatusChip tone={status.tone} label={status.label} />
+                    </div>
+                    {item.modifiers.length > 0 ? (
+                      <p className="tv-list__meta">{item.modifiers.join(', ')}</p>
+                    ) : null}
+                    {item.note ? <p className="tv-list__meta">Nota: {item.note}</p> : null}
+                    <p className="tv-list__meta">
+                      {formatMinor(item.lineTotalMinor, order.currency)}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="tv-order__total">
+              <span>Total</span>
+              <span className="tv-tabular">{formatMinor(order.totalMinor, order.currency)}</span>
+            </p>
+          </article>
+        );
+      })}
     </section>
   );
 }

@@ -52,3 +52,43 @@ export function describeOffering(schedule: WeeklySchedule): string {
   const when = days.length === DAY_NAMES.length ? 'todos los días' : days.join(', ');
   return `Se ofrece ${when} de ${clock(schedule.startMinute)} a ${clock(schedule.endMinute)}`;
 }
+
+/** Texto sin tildes ni mayúsculas: «Ajíaco», «AJIACO» y «ajiaco» se buscan igual. */
+export function normalizeSearch(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim();
+}
+
+export interface MenuFilter {
+  /** Categoría elegida, o null para ver todas. */
+  readonly categoryId: string | null;
+  /** Lo que la persona escribió en el buscador: nombre, descripción o alérgenos. */
+  readonly query: string;
+}
+
+/**
+ * Secciones de la carta que cumplen el filtro, sin las que quedan vacías. Solo filtra lo que ya está
+ * en pantalla: no llama al servidor ni cambia qué se puede pedir.
+ */
+export function filterMenuSections(
+  sections: readonly MenuSection[],
+  filter: MenuFilter,
+): MenuSection[] {
+  const words = normalizeSearch(filter.query).split(/\s+/).filter(Boolean);
+  const matches = (product: MenuProduct) => {
+    const text = normalizeSearch(
+      [product.name, product.description ?? '', ...product.allergens].join(' '),
+    );
+    return words.every((word) => text.includes(word));
+  };
+  return sections
+    .filter((section) => filter.categoryId === null || section.id === filter.categoryId)
+    .map((section) => ({
+      ...section,
+      products: section.products.filter(({ product }) => matches(product)),
+    }))
+    .filter((section) => section.products.length > 0);
+}
