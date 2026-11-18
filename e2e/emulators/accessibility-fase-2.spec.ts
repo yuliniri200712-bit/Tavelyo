@@ -83,7 +83,9 @@ test('el cliente pide y paga en simulado usando solo el teclado', async ({
   await expect(pay).toBeVisible({ timeout: 30_000 });
   await tabTo(page, pay);
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible({
+    timeout: FUNCTION_WAIT,
+  });
 });
 
 test('las pantallas de la Fase 2 se leen a 320 px y con el texto al 200 %', async ({
