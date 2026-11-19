@@ -2,6 +2,27 @@
 
 Estado: **plan y recomendaciones aprobados por el propietario el 2026-11-18** (D-05, D-06, D-29, D-30 y D-31, sección 2). **Fase autorizada** el mismo día, junto con volver a crear el contenedor de Docker de los emuladores. Rama de trabajo: `fase-4-caja-pagos`.
 
+## 0. Cambio de alcance del 2026-11-18 (ADR-0012): la pasarela solo cobra las suscripciones
+
+**Esta sección prevalece sobre el resto del plan.** El propietario decidió que la pasarela de pago solo se use para que los restaurantes le paguen su plan a Tavelyo. Los comensales pagan en el restaurante y Tavelyo solo registra el pago. Decisiones: D-32 a D-35, con D-04 cambiada y D-29 y D-31 anuladas (`requirements.md`).
+
+| Bloque | Antes | Ahora |
+|---|---|---|
+| 1. Esquema | ✅ | Se conserva. Las tablas de la preautorización quedan sin uso |
+| 2. Dinero de la cuenta | ✅ | Igual. `planSettlement` queda para las suscripciones |
+| 3. Pagos en el backend | ✅ | **Se conserva desconectado** para la fase de suscripciones (D-35): no se exporta ni se usa en el restaurante |
+| **3A. Ajuste (nuevo)** | — | Quitar la preautorización del pedido del comensal: «Enviar pedido» en lugar de «Autorizar pago». Modo de envío por sucursal (D-32): ajuste en administración, bandeja «Pedidos por aprobar» del mesero, estado «esperando al mesero» y retiro del pedido por el comensal. Permisos nuevos `order.approve` y `branch.settings`. El backend ya no crea el adaptador simulado al arrancar |
+| 4. Cuenta y cierre | Captura y liberación | El cajero **registra** efectivo, datáfono o transferencia con su comprobante (D-33); división; cierre (D-30, sin retenciones que liberar); reembolsos registrados con permiso, motivo y tope (D-34); concurrencia de dos cajeros |
+| 5. Caja | — | Igual |
+| 6. Operaciones | Caja, QR de pago y traslado | Caja y comprobante; el mesero toma pedidos que van directo a cocina (sin QR, D-29 anulada); traslado de mesa |
+| 7. Cliente | Pagar su parte | «Mi cuenta»: lo pedido, lo pagado, la propina sugerida y cómo pagar con el mesero o en caja |
+| 8. Pasarela real | Entorno de pruebas | **Sale de la fase** (fase «Suscripciones a Tavelyo») |
+| 9. Cierre | — | Igual, sin pruebas de pasarela |
+
+**Condición para terminar (nueva):** cuenta, cobro registrado, división, reembolso registrado, caja y cierre de mesa, con pruebas de duplicados, concurrencia y aislamiento. Los criterios de pasarela de PM §11 se cumplen en la fase de suscripciones.
+
+Las secciones siguientes se escribieron antes del cambio: donde hablan de preautorización, captura, liberación, QR de pago o pasarela real, aplica esta sección.
+
 ## 1. Objetivo
 
 Según PM §11: pasarela en entorno de pruebas, autorización, captura, división de la cuenta, reembolso y cierre.

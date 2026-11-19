@@ -2,6 +2,8 @@
 
 **Estado:** Aceptada en cuanto al contrato (PM §8); **proveedor pendiente (D-02)** · **Fecha:** 2026-11-13
 
+> **Desde el 2026-11-18 (ADR-0012), este contrato solo se usa para cobrar las suscripciones de los restaurantes a Tavelyo.** Los pedidos de los comensales ya no pasan por la pasarela.
+
 ## Contexto
 
 La pasarela depende del país, la moneda y el titular de la cuenta comercial. El flujo de preautorización y captura debe ser independiente del proveedor y resistente a fallos entre dos sistemas sin transacción común.

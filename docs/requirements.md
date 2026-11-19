@@ -68,6 +68,8 @@ Plataforma SaaS de gestión gastronómica **multiempresa y multisucursal**. El a
 
 ### 2.6 Caja y pagos
 
+> **ADR-0012 (2026-11-18):** RF-PA-01, RF-PA-02 y RF-PA-06 pasan a la fase «Suscripciones a Tavelyo». En el restaurante, RF-PA-03 se cumple con «otro medio registrado y autorizado» (efectivo, datáfono propio o transferencia, D-33).
+
 - **RF-PA-01** Contrato `PaymentGateway` con autorizar, consultar, capturar, cancelar autorización y reembolsar como operaciones separadas.
 - **RF-PA-02** Preautorización con monto, moneda, propósito y consentimiento explícito; se registra la versión del texto aceptado.
 - **RF-PA-03** Una cuenta solo se cierra como pagada con captura confirmada (webhook verificado o consulta autenticada) u otro medio registrado y autorizado.
@@ -118,7 +120,7 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | SUP-01 | Idioma de la interfaz: español, con localización preparada para importes, fechas y plurales | Se decida otro idioma |
 | SUP-02 | ~~Plataformas iniciales~~ → resuelto por D-03 | — |
 | SUP-03 | Una sola moneda por empresa en el alcance inicial: COP (D-01) | Se opere en otro país |
-| SUP-04 | Tavelyo no custodia ni distribuye fondos: cada restaurante cobra con su propia cuenta comercial | Se resuelva D-02 |
+| SUP-04 | Tavelyo no custodia ni distribuye fondos: cada restaurante cobra con su propia cuenta comercial | Cumplido por ADR-0012: el restaurante cobra por su cuenta (efectivo, datáfono propio o transferencia) y Tavelyo solo lo registra |
 | SUP-05 | Tema claro únicamente en Fase 1; el oscuro se diseña y revisa aparte | Se decida incluirlo |
 
 ---
@@ -146,7 +148,7 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-21 | Quién abre la mesa | **El mesero** (2026-11-14). El QR muestra siempre la carta; para pedir, la mesa debe estar abierta | Sesión de mesa (ADR-0011, propuesta) |
 | D-22 | Fotos de los platos | **Más adelante** (2026-11-14; confirmado el 2026-11-17 para la Fase 3B). Requieren aprobar Cloud Storage | Fuera de las fases 2, 3 y 3B |
 | D-06 (carrito) | Carrito en mesa compartida | **Un carrito por persona**, privado (2026-11-14). Quién ve y paga qué en la cuenta sigue pendiente | `plans/fase-2.md` |
-| D-04 | Garantía antes de cocina | **Preautorización obligatoria y sin excepciones** (2026-11-16): ningún pedido llega a cocina sin un pago autorizado verificado por el servidor; tampoco los tomados por el mesero. Aclaración del propietario (2026-11-16): un cliente sin teléfono pide por medio de otra persona de la mesa que sí lo tenga, y quien paga en efectivo puede pedir (la preautorización es la garantía; el pago final puede ser en efectivo y la retención se libera en la Fase 4). Mientras no haya pasarela real (D-02), solo con el adaptador simulado y en emuladores | `plans/fase-3.md`; ADR-0006; PM §8 paso 4 |
+| D-04 | Garantía antes de cocina | **Cambiada el 2026-11-18 (ADR-0012, D-32):** ya no hay preautorización. Cada sucursal elige si los pedidos del teléfono del comensal van **directo a cocina** (por defecto) o **los aprueba el mesero**. Los que toma el mesero van siempre directo. *Versión anterior (2026-11-16): preautorización obligatoria y sin excepciones, reemplazada.* | ADR-0012; `plans/fase-4.md` (bloque 3A) |
 | D-23 | Pedidos tomados por el mesero | **No en la Fase 3** (2026-11-16): los pedidos salen del teléfono del cliente; la toma de comandas (RF-ME-02) pasa a la Fase 4, con datáfono o enlace de pago | `plans/fase-3.md` |
 | D-24 | Estaciones de cocina | **Cada persona de cocina elige la estación en pantalla** entre las de su sucursal (2026-11-16); la asignación por persona, cuando haga falta | `plans/fase-3.md` |
 | D-25 | Inactividad en la pantalla de cocina | Implementado en el bloque 4 de la Fase 3 (`InactivityHoldProvider` y `useInactivityHold` en `identity`). **La pantalla de cocina no se cierra por inactividad mientras está visible** (2026-11-16); el resto de la app sigue con D-19 | `plans/fase-3.md`; `features/identity` |
@@ -155,16 +157,20 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-28 | Letra serif en títulos | **No** (2026-11-17): solo Plus Jakarta Sans en toda la interfaz (IV §5) | `plans/fase-3b-diseno-visual.md` |
 | D-05 | Propinas | **Voluntaria, sugerida en 10 % al pagar la cuenta** (2026-11-18): la persona la cambia o la quita y nunca se incluye sin que la elija. No forma parte de la preautorización: se paga en el pago final (efectivo o un cobro aparte con tarjeta). El reparto al personal queda fuera de la Fase 4 | `plans/fase-4.md` |
 | D-06 (cuenta) | Quién ve y quién paga qué en la mesa compartida | **Cada persona paga lo que pidió y en su teléfono ve solo su parte** (2026-11-18); la caja y el mesero ven la cuenta de toda la mesa. Pagar por otros o dividir en partes iguales lo hace la caja a petición de la mesa, con reparto exacto | `plans/fase-4.md` |
-| D-29 | Pedidos tomados por el mesero (D-23) | **El mesero arma el pedido y muestra un QR de pago; el cliente lo autoriza en su teléfono** y solo entonces va a cocina (2026-11-18). Datáfono según la pasarela; sin excepción para efectivo | `plans/fase-4.md` |
+| D-29 | Pedidos tomados por el mesero (D-23) | **Anulada el 2026-11-18 (ADR-0012):** sin pasarela para el restaurante ya no hay QR de pago. El mesero envía el pedido directamente a cocina | ADR-0012 |
 | D-30 | Cerrar la mesa | **Solo con saldo cero y sin líneas en cocina o por entregar** (2026-11-18); al cerrar, toda retención sin capturar se libera | `plans/fase-4.md` |
-| D-31 | Fase 4 sin pasarela | **Si al terminar el bloque 7 no hay pasarela, la Fase 4 se cierra sin el bloque 8** y la pasarela real pasa a la «Fase 4B — Pasarela real» (2026-11-18). Aparta, por decisión del propietario, la condición de PM §11 sobre la pasarela en pruebas; nada sale a producción con el adaptador simulado | `plans/fase-4.md` |
+| D-31 | Fase 4 sin pasarela | **Reemplazada el 2026-11-18 por ADR-0012:** la Fase 4 no usa pasarela. La pasarela real pasa a la fase nueva «Suscripciones a Tavelyo» (D-35) | ADR-0012 |
+| D-32 | Cómo llegan a cocina los pedidos del comensal | **Lo elige cada sucursal** (2026-11-18): directo a cocina (por defecto) o el mesero aprueba cada pedido. La cambian el propietario y el administrador de sucursal, con auditoría. Pendiente de aprobación, el pedido espera hasta que el mesero lo aprueba o lo rechaza con motivo; el comensal puede retirarlo y el mesero ve cuánto lleva esperando | ADR-0012; `plans/fase-4.md` (bloque 3A) |
+| D-33 | Medios de pago del comensal | **Efectivo, datáfono propio del restaurante y transferencia** (2026-11-18), registrados por el cajero. Del datáfono y de la transferencia solo se guarda el número de comprobante, nunca datos de la tarjeta | ADR-0012; bloque 4 |
+| D-34 | Topes de reembolso | **Cajero hasta $ 50.000, administrador de sucursal hasta $ 300.000 y propietario sin tope, siempre con motivo** (2026-11-18). Nunca más de lo pagado | Bloque 4; `architecture/permissions.md` |
+| D-35 | Pasarela de pago | **Solo para cobrar los planes de los restaurantes a Tavelyo** (2026-11-18, ADR-0012). Fase nueva «Suscripciones a Tavelyo» después de la Fase 4. El bloque 3 se conserva desconectado para reutilizarlo allí | ADR-0012 |
 | D-16 | Bibliotecas y herramientas del stack web, y Firebase Hosting | **Aceptadas** según ADR-0010; formateador **Prettier** (2026-11-13); validación de formularios se decide en Fase 1 | ADR-0010 aceptado |
 
 ### Pendientes
 
 | ID | Decisión | Bloquea |
 |---|---|---|
-| D-02 | Pasarela de pago (debe admitir autorización y captura separadas en Colombia). **El propietario está buscando proveedor** (2026-11-14). Comparación y preguntas para los proveedores en `plans/fase-4.md` (2026-11-18) | Bloque 8 de la Fase 4 o Fase 4B (D-31); ADR-0006 |
+| D-02 | Pasarela de pago. **Desde el 2026-11-18 (ADR-0012) solo para las suscripciones de los restaurantes a Tavelyo:** el criterio pasa a ser el cobro recurrente en Colombia; la comparación de preautorización de `plans/fase-4.md` ya no aplica | Fase «Suscripciones a Tavelyo» (D-35) |
 | D-09 | Carga objetivo por sucursal, latencia aceptable y presupuesto mensual | RNF-12, dimensionamiento de Cloud SQL |
 | D-10 | Jurisdicción de datos personales (Colombia, por D-01), retención y anonimización | Modelo de datos personales |
 | D-11 | RPO/RTO para copias y restauración | Fase 6 |
