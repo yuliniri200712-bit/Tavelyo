@@ -7,6 +7,11 @@ import { setGlobalOptions } from 'firebase-functions/options';
 import { createOperatorDirectory, createSessionRevoker, createStaffAccounts } from './data/auth.ts';
 import { createPaymentQuoteStore, createQuoteStore } from './data/order-quotes.ts';
 import { createKitchenOrderStore } from './data/orders.ts';
+import {
+  createPaymentLedger,
+  createProviderEventStore,
+  createReconciliationStore,
+} from './data/payments.ts';
 import { createServiceRequestStore } from './data/service-requests.ts';
 import {
   createAuditLog,
@@ -19,11 +24,15 @@ import { createRevokeMember } from './members/revoke-member.ts';
 import { createQuoteOrder } from './orders/quote-order.ts';
 import { createKitchenDispatcher } from './orders/send-to-kitchen.ts';
 import { createAuthorizeQuote } from './payments/authorize-quote.ts';
+import { createPaymentProcessor } from './payments/payment-processor.ts';
+import { createReceiveProviderNotice } from './payments/receive-provider-notice.ts';
+import { createReconcilePayments } from './payments/reconcile-payments.ts';
 import {
   configuredProjectId,
   createSimulatedPaymentGateway,
 } from './payments/simulated-gateway.ts';
 import { createCallables } from './presentation/callables.ts';
+import { createPaymentEndpoints } from './presentation/payment-endpoints.ts';
 import { createProvisionTenant } from './provisioning/provision-tenant.ts';
 import { createRequestService } from './service-requests/request-service.ts';
 import { systemClock } from './shared/clock.ts';
@@ -35,7 +44,7 @@ const LOCATION = 'us-central1';
 // Límite de instancias para acotar el coste ante un uso abusivo.
 setGlobalOptions({ region: LOCATION, maxInstances: 10 });
 
-// Fases 2 y 3: solo hay pago SIMULADO. Lanza al cargar el backend con un proyecto que no sea demo-*,
+// Fases 2 a 4: solo hay pago SIMULADO. Lanza al cargar el backend con un proyecto que no sea demo-*,
 // así que en un proyecto real ninguna función llega a servir hasta configurar la pasarela (D-02).
 const payments = createSimulatedPaymentGateway(configuredProjectId());
 logger.warn(
@@ -49,6 +58,27 @@ const dataConnect = getDataConnect(
   app,
 );
 const limiter = createRateLimiter(dataConnect, () => systemClock.now());
+const now = () => systemClock.now();
+const ledger = createPaymentLedger(dataConnect);
+const processor = createPaymentProcessor({ gateway: payments, ledger, now });
+
+export const { paymentWebhook, reconcilePayments } = createPaymentEndpoints({
+  receiveNotice: createReceiveProviderNotice({
+    gateway: payments,
+    events: createProviderEventStore(dataConnect),
+    processor,
+    now,
+  }),
+  reconcile: createReconcilePayments({
+    store: createReconciliationStore(dataConnect),
+    ledger,
+    processor,
+    gateway: payments,
+    now,
+    log: logger,
+  }),
+  log: logger,
+});
 
 export const {
   revokeMember,
@@ -82,6 +112,7 @@ export const {
   authorizeQuote: createAuthorizeQuote({
     quotes: createPaymentQuoteStore(dataConnect),
     payments,
+    ledger,
     dispatch: createKitchenDispatcher({ orders: createKitchenOrderStore(dataConnect) }),
     limiter,
     clock: systemClock,

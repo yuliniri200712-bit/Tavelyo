@@ -1,0 +1,634 @@
+# Libro de operaciones de pago (Fase 4, bloque 3). Solo el backend, con el Admin SDK (NO_ACCESS):
+# el navegador nunca escribe ni confirma dinero (PM §8).
+#
+# Cada llamada a la pasarela tiene antes una fila PaymentOperation con su clave de idempotencia
+# (ServerBeginPaymentOperation). Las mutaciones que la cierran (SUCCEEDED o FAILED) solo avanzan
+# desde CREATED, PROCESSING o UNKNOWN: un _updateMany condicionado y un @check con su resultado
+# hacen que un aviso repetido, tardío o desordenado no retroceda un estado ya cerrado (caso 8) y que
+# los efectos sobre la autorización, el pago o el reembolso se apliquen una sola vez.
+
+query ServerPaymentOperationByKey($idempotencyKey: String!) @auth(level: NO_ACCESS) {
+  paymentOperations(where: { idempotencyKey: { eq: $idempotencyKey } }, limit: 1) {
+    id
+    tenantId
+    branchId
+    kind
+    status
+    idempotencyKey
+    authorizationId
+    paymentId
+    refundId
+    quoteId
+    currency
+    amountMinor
+    providerRef
+    failureCode
+    attempts
+    updatedAt
+  }
+}
+
+# Operaciones sin cerrar que llevan un rato sin cambios: la conciliación consulta su resultado con
+# la misma clave o repite la misma operación (caso 7).
+query ServerStalePaymentOperations($before: Timestamp!, $limit: Int!) @auth(level: NO_ACCESS) {
+  paymentOperations(
+    where: { status: { in: [CREATED, PROCESSING, UNKNOWN] }, updatedAt: { lt: $before } }
+    orderBy: [{ updatedAt: ASC }]
+    limit: $limit
+  ) {
+    id
+    tenantId
+    branchId
+    kind
+    status
+    idempotencyKey
+    authorizationId
+    paymentId
+    refundId
+    quoteId
+    currency
+    amountMinor
+    providerRef
+    failureCode
+    attempts
+    updatedAt
+    quote {
+      sessionId
+      participantId
+      status
+      expiresAt
+    }
+  }
+}
+
+query ServerAuthorizationById($authorizationId: UUID!) @auth(level: NO_ACCESS) {
+  paymentAuthorization(id: $authorizationId) {
+    id
+    tenantId
+    branchId
+    provider
+    providerRef
+    currency
+    authorizedMinor
+    capturedMinor
+    status
+    expiresAt
+  }
+}
+
+# Retenciones de resúmenes autorizados que no llegaron a cocina (RELEASE_PENDING): se liberan.
+query ServerAuthorizationsToRelease($limit: Int!) @auth(level: NO_ACCESS) {
+  paymentAuthorizations(
+    where: { status: { eq: AUTHORIZED }, quote: { status: { eq: RELEASE_PENDING } } }
+    orderBy: [{ createdAt: ASC }]
+    limit: $limit
+  ) {
+    id
+    tenantId
+    branchId
+    provider
+    providerRef
+    currency
+    authorizedMinor
+    capturedMinor
+    status
+    expiresAt
+  }
+}
+
+# Autorizaciones sin capturar que vencen antes de $before: la conciliación avisa (PM §8, paso 9).
+query ServerExpiringAuthorizations($before: Timestamp!, $limit: Int!) @auth(level: NO_ACCESS) {
+  paymentAuthorizations(
+    where: { status: { eq: AUTHORIZED }, expiresAt: { lt: $before } }
+    orderBy: [{ expiresAt: ASC }]
+    limit: $limit
+  ) {
+    id
+    tenantId
+    branchId
+    expiresAt
+  }
+}
+
+query ServerProviderEvent($provider: String!, $externalEventId: String!) @auth(level: NO_ACCESS) {
+  providerEvents(
+    where: { provider: { eq: $provider }, externalEventId: { eq: $externalEventId } }
+    limit: 1
+  ) {
+    id
+    payloadHash
+    processedAt
+  }
+}
+
+query ServerDueOutboxEvents($now: Timestamp!, $limit: Int!) @auth(level: NO_ACCESS) {
+  outboxEvents(
+    where: { status: { eq: PENDING }, nextAttemptAt: { le: $now } }
+    orderBy: [{ nextAttemptAt: ASC }]
+    limit: $limit
+  ) {
+    id
+    kind
+    payload
+    attempts
+  }
+}
+
+# Intento guardado ANTES de llamar a la pasarela, con la clave que recibe la pasarela. La clave es
+# única: un segundo intento con la misma clave falla aquí y el backend reutiliza la fila.
+mutation ServerBeginPaymentOperation(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $kind: PaymentOperationKind!
+  $idempotencyKey: String!
+  $currency: String!
+  $amountMinor: Int64!
+  $providerRef: String
+  $authorizationId: UUID
+  $paymentId: UUID
+  $refundId: UUID
+  $quoteId: UUID
+) @auth(level: NO_ACCESS) {
+  paymentOperation_insert(
+    data: {
+      tenantId: $tenantId
+      branchId: $branchId
+      kind: $kind
+      status: PROCESSING
+      idempotencyKey: $idempotencyKey
+      currency: $currency
+      amountMinor: $amountMinor
+      providerRef: $providerRef
+      authorizationId: $authorizationId
+      paymentId: $paymentId
+      refundId: $refundId
+      quoteId: $quoteId
+      attempts: 1
+    }
+  )
+}
+
+# Se repite la misma operación (misma clave): cuenta el intento.
+mutation ServerRetryPaymentOperation($operationId: UUID!) @auth(level: NO_ACCESS) {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: PROCESSING, attempts_update: { inc: 1 }, updatedAt_expr: "request.time" }
+  )
+}
+
+# Sin respuesta de la pasarela: la conciliación lo resuelve; nunca se crea otra operación (caso 7).
+mutation ServerMarkPaymentOperationUnknown($operationId: UUID!) @auth(level: NO_ACCESS) {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: UNKNOWN, updatedAt_expr: "request.time" }
+  )
+}
+
+# Rechazo de una operación sin otros efectos (por ejemplo, una liberación que la pasarela no hizo).
+mutation ServerFailPaymentOperation($operationId: UUID!, $failureCode: String!)
+@auth(level: NO_ACCESS)
+@transaction {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: FAILED, failureCode: $failureCode, updatedAt_expr: "request.time" }
+  )
+  query @redact {
+    paymentOperation(id: $operationId)
+      @check(expr: "response.paymentOperation_updateMany == 1", message: "OPERACION_CERRADA") {
+      id
+    }
+  }
+}
+
+# Autorización confirmada al cliente en la mesa: el resumen queda AUTHORIZED con el texto que aceptó
+# (RF-PA-02) y nace su PaymentAuthorization (una por resumen), en la misma transacción.
+mutation ServerSettleAuthorize(
+  $operationId: UUID!
+  $quoteId: UUID!
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sessionId: UUID!
+  $participantId: UUID!
+  $authUid: String!
+  $provider: String!
+  $paymentRef: String!
+  $currency: String!
+  $amountMinor: Int64!
+  $expiresAt: Timestamp
+  $consentTextVersion: String!
+) @auth(level: NO_ACCESS) @transaction {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: SUCCEEDED, providerRef: $paymentRef, updatedAt_expr: "request.time" }
+  )
+  query @redact {
+    paymentOperation(id: $operationId)
+      @check(expr: "response.paymentOperation_updateMany == 1", message: "OPERACION_CERRADA") {
+      id
+    }
+    orderQuote(id: $quoteId) @check(expr: "this != null", message: "Resumen inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El resumen no es de la empresa")
+      status @check(expr: "this == 'QUOTED'", message: "El resumen ya cambió")
+    }
+  }
+  orderQuote_update(
+    id: $quoteId
+    data: {
+      status: AUTHORIZED
+      paymentRef: $paymentRef
+      consentTextVersion: $consentTextVersion
+      consentedAt_expr: "request.time"
+      authorizedAt_expr: "request.time"
+    }
+  )
+  paymentAuthorization_insert(
+    data: {
+      tenantId: $tenantId
+      branchId: $branchId
+      sessionId: $sessionId
+      participantId: $participantId
+      quoteId: $quoteId
+      provider: $provider
+      providerRef: $paymentRef
+      currency: $currency
+      authorizedMinor: $amountMinor
+      capturedMinor: 0
+      status: AUTHORIZED
+      expiresAt: $expiresAt
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "order_quote.payment"
+      resourceType: "order_quote"
+      resourceId_expr: "vars.quoteId"
+    }
+  )
+}
+
+# Autorización rechazada: el resumen queda DECLINED, con el texto aceptado, y la operación FAILED.
+mutation ServerDeclineAuthorize(
+  $operationId: UUID!
+  $quoteId: UUID!
+  $tenantId: UUID!
+  $authUid: String!
+  $paymentRef: String!
+  $consentTextVersion: String!
+) @auth(level: NO_ACCESS) @transaction {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: FAILED, failureCode: "declined", updatedAt_expr: "request.time" }
+  )
+  query @redact {
+    paymentOperation(id: $operationId)
+      @check(expr: "response.paymentOperation_updateMany == 1", message: "OPERACION_CERRADA") {
+      id
+    }
+    orderQuote(id: $quoteId) @check(expr: "this != null", message: "Resumen inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El resumen no es de la empresa")
+      status @check(expr: "this == 'QUOTED'", message: "El resumen ya cambió")
+    }
+  }
+  orderQuote_update(
+    id: $quoteId
+    data: {
+      status: DECLINED
+      paymentRef: $paymentRef
+      consentTextVersion: $consentTextVersion
+      consentedAt_expr: "request.time"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "order_quote.payment"
+      resourceType: "order_quote"
+      resourceId_expr: "vars.quoteId"
+    }
+  )
+}
+
+# La conciliación encontró autorizada en la pasarela una operación cuya respuesta se perdió y cuyo
+# resumen ya venció: nadie la confirmó al cliente, así que no va a cocina. Se registra la retención
+# y el resumen pasa a RELEASE_PENDING para liberarla.
+mutation ServerAdoptOrphanAuthorization(
+  $operationId: UUID!
+  $quoteId: UUID!
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sessionId: UUID!
+  $participantId: UUID!
+  $provider: String!
+  $paymentRef: String!
+  $currency: String!
+  $amountMinor: Int64!
+  $expiresAt: Timestamp
+) @auth(level: NO_ACCESS) @transaction {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: SUCCEEDED, providerRef: $paymentRef, updatedAt_expr: "request.time" }
+  )
+  query @redact {
+    paymentOperation(id: $operationId)
+      @check(expr: "response.paymentOperation_updateMany == 1", message: "OPERACION_CERRADA") {
+      id
+    }
+    orderQuote(id: $quoteId) @check(expr: "this != null", message: "Resumen inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El resumen no es de la empresa")
+      status @check(expr: "this == 'QUOTED' || this == 'EXPIRED'", message: "El resumen ya cambió")
+    }
+  }
+  orderQuote_update(id: $quoteId, data: { status: RELEASE_PENDING, paymentRef: $paymentRef })
+  paymentAuthorization_insert(
+    data: {
+      tenantId: $tenantId
+      branchId: $branchId
+      sessionId: $sessionId
+      participantId: $participantId
+      quoteId: $quoteId
+      provider: $provider
+      providerRef: $paymentRef
+      currency: $currency
+      authorizedMinor: $amountMinor
+      capturedMinor: 0
+      status: AUTHORIZED
+      expiresAt: $expiresAt
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: "system:reconciliation"
+      operation: "payment_authorization.adopt"
+      resourceType: "order_quote"
+      resourceId_expr: "vars.quoteId"
+    }
+  )
+}
+
+# Captura confirmada: el pago queda CONFIRMED y la autorización CAPTURED con lo capturado (lo demás
+# lo liberó la pasarela en la misma operación).
+mutation ServerSettleCapture(
+  $operationId: UUID!
+  $tenantId: UUID!
+  $authorizationId: UUID!
+  $paymentId: UUID!
+  $capturedMinor: Int64!
+  $providerRef: String!
+  $actorId: String!
+) @auth(level: NO_ACCESS) @transaction {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: SUCCEEDED, updatedAt_expr: "request.time" }
+  )
+  query @redact {
+    paymentOperation(id: $operationId)
+      @check(expr: "response.paymentOperation_updateMany == 1", message: "OPERACION_CERRADA") {
+      id
+    }
+  }
+  paymentAuthorization_update(
+    id: $authorizationId
+    data: {
+      status: CAPTURED
+      capturedMinor: $capturedMinor
+      version_update: { inc: 1 }
+      updatedAt_expr: "request.time"
+    }
+  )
+  billPayment_update(
+    id: $paymentId
+    data: { status: CONFIRMED, providerRef: $providerRef, confirmedAt_expr: "request.time" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $actorId
+      operation: "payment.capture"
+      resourceType: "bill_payment"
+      resourceId_expr: "vars.paymentId"
+    }
+  )
+}
+
+# Captura rechazada (o autorización vencida): el pago queda FAILED y no se cobra nada.
+mutation ServerFailCapture(
+  $operationId: UUID!
+  $tenantId: UUID!
+  $paymentId: UUID!
+  $failureCode: String!
+  $actorId: String!
+) @auth(level: NO_ACCESS) @transaction {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: FAILED, failureCode: $failureCode, updatedAt_expr: "request.time" }
+  )
+  query @redact {
+    paymentOperation(id: $operationId)
+      @check(expr: "response.paymentOperation_updateMany == 1", message: "OPERACION_CERRADA") {
+      id
+    }
+  }
+  billPayment_update(id: $paymentId, data: { status: FAILED })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $actorId
+      operation: "payment.capture_failed"
+      resourceType: "bill_payment"
+      resourceId_expr: "vars.paymentId"
+    }
+  )
+}
+
+# Liberación confirmada: la autorización sin capturar queda VOIDED (o EXPIRED si ya había vencido).
+mutation ServerSettleVoid(
+  $operationId: UUID!
+  $tenantId: UUID!
+  $authorizationId: UUID!
+  $status: AuthorizationStatus!
+  $actorId: String!
+) @auth(level: NO_ACCESS) @transaction {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: SUCCEEDED, updatedAt_expr: "request.time" }
+  )
+  query @redact {
+    paymentOperation(id: $operationId)
+      @check(expr: "response.paymentOperation_updateMany == 1", message: "OPERACION_CERRADA") {
+      id
+    }
+  }
+  paymentAuthorization_updateMany(
+    where: { id: { eq: $authorizationId }, status: { eq: AUTHORIZED } }
+    data: { status: $status, version_update: { inc: 1 }, updatedAt_expr: "request.time" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $actorId
+      operation: "payment_authorization.release"
+      resourceType: "payment_authorization"
+      resourceId_expr: "vars.authorizationId"
+    }
+  )
+}
+
+# La autorización venció (aviso de la pasarela o al intentar capturarla): ya no se captura.
+mutation ServerExpireAuthorization($authorizationId: UUID!) @auth(level: NO_ACCESS) {
+  paymentAuthorization_updateMany(
+    where: { id: { eq: $authorizationId }, status: { eq: AUTHORIZED } }
+    data: { status: EXPIRED, version_update: { inc: 1 }, updatedAt_expr: "request.time" }
+  )
+}
+
+mutation ServerExpireAuthorizationByRef($provider: String!, $providerRef: String!)
+@auth(level: NO_ACCESS) {
+  paymentAuthorization_updateMany(
+    where: {
+      provider: { eq: $provider }
+      providerRef: { eq: $providerRef }
+      status: { eq: AUTHORIZED }
+    }
+    data: { status: EXPIRED, version_update: { inc: 1 }, updatedAt_expr: "request.time" }
+  )
+}
+
+# Las que pasaron su vencimiento sin capturar quedan EXPIRED (no se pueden capturar).
+mutation ServerExpireLapsedAuthorizations($now: Timestamp!) @auth(level: NO_ACCESS) {
+  paymentAuthorization_updateMany(
+    where: { status: { eq: AUTHORIZED }, expiresAt: { le: $now } }
+    data: { status: EXPIRED, version_update: { inc: 1 }, updatedAt_expr: "request.time" }
+  )
+}
+
+# Reembolso confirmado por la pasarela: solo entonces se muestra como hecho.
+mutation ServerSettleRefund(
+  $operationId: UUID!
+  $tenantId: UUID!
+  $refundId: UUID!
+  $refundRef: String!
+  $actorId: String!
+) @auth(level: NO_ACCESS) @transaction {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: SUCCEEDED, updatedAt_expr: "request.time" }
+  )
+  query @redact {
+    paymentOperation(id: $operationId)
+      @check(expr: "response.paymentOperation_updateMany == 1", message: "OPERACION_CERRADA") {
+      id
+    }
+  }
+  refund_update(
+    id: $refundId
+    data: { status: CONFIRMED, providerRef: $refundRef, confirmedAt_expr: "request.time" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $actorId
+      operation: "payment.refund_confirmed"
+      resourceType: "refund"
+      resourceId_expr: "vars.refundId"
+    }
+  )
+}
+
+# Reembolso aceptado pero en curso: la operación sigue abierta hasta el aviso o la consulta.
+mutation ServerMarkRefundPending($operationId: UUID!, $refundId: UUID!, $refundRef: String!)
+@auth(level: NO_ACCESS)
+@transaction {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: PROCESSING, updatedAt_expr: "request.time" }
+  )
+  query @redact {
+    paymentOperation(id: $operationId)
+      @check(expr: "response.paymentOperation_updateMany == 1", message: "OPERACION_CERRADA") {
+      id
+    }
+  }
+  refund_updateMany(
+    where: { id: { eq: $refundId }, status: { in: [REQUESTED, PROCESSING, UNKNOWN] } }
+    data: { status: PROCESSING, providerRef: $refundRef }
+  )
+}
+
+mutation ServerRejectRefund(
+  $operationId: UUID!
+  $tenantId: UUID!
+  $refundId: UUID!
+  $failureCode: String!
+  $actorId: String!
+) @auth(level: NO_ACCESS) @transaction {
+  paymentOperation_updateMany(
+    where: { id: { eq: $operationId }, status: { in: [CREATED, PROCESSING, UNKNOWN] } }
+    data: { status: FAILED, failureCode: $failureCode, updatedAt_expr: "request.time" }
+  )
+  query @redact {
+    paymentOperation(id: $operationId)
+      @check(expr: "response.paymentOperation_updateMany == 1", message: "OPERACION_CERRADA") {
+      id
+    }
+  }
+  refund_update(id: $refundId, data: { status: REJECTED })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $actorId
+      operation: "payment.refund_rejected"
+      resourceType: "refund"
+      resourceId_expr: "vars.refundId"
+    }
+  )
+}
+
+# Aviso de la pasarela ya verificado. (provider, externalEventId) es único: un repetido falla aquí.
+mutation ServerRecordProviderEvent(
+  $provider: String!
+  $externalEventId: String!
+  $type: String!
+  $payloadHash: String!
+  $providerRef: String!
+) @auth(level: NO_ACCESS) {
+  providerEvent_insert(
+    data: {
+      provider: $provider
+      externalEventId: $externalEventId
+      type: $type
+      payloadHash: $payloadHash
+      providerRef: $providerRef
+    }
+  )
+}
+
+mutation ServerFinishProviderEvent($eventId: UUID!, $outcome: String!, $tenantId: UUID)
+@auth(level: NO_ACCESS) {
+  providerEvent_update(
+    id: $eventId
+    data: { outcome: $outcome, tenantId: $tenantId, processedAt_expr: "request.time" }
+  )
+}
+
+mutation ServerCompleteOutboxEvent($outboxId: UUID!) @auth(level: NO_ACCESS) {
+  outboxEvent_update(id: $outboxId, data: { status: DONE, attempts_update: { inc: 1 } })
+}
+
+mutation ServerRetryOutboxEvent($outboxId: UUID!, $nextAttemptAt: Timestamp!, $lastError: String!)
+@auth(level: NO_ACCESS) {
+  outboxEvent_update(
+    id: $outboxId
+    data: { attempts_update: { inc: 1 }, nextAttemptAt: $nextAttemptAt, lastError: $lastError }
+  )
+}
+
+mutation ServerFailOutboxEvent($outboxId: UUID!, $lastError: String!) @auth(level: NO_ACCESS) {
+  outboxEvent_update(
+    id: $outboxId
+    data: { status: FAILED, attempts_update: { inc: 1 }, lastError: $lastError }
+  )
+}

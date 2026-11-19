@@ -96,6 +96,43 @@ Al cerrar, toda retención sin capturar se libera.
 - **Lo que no cubre una preautorización** (por ejemplo, si la pasarela no admite capturar más de lo autorizado) queda como faltante y se paga con otro medio; nunca se captura de más.
 - **Reembolsos en curso cuentan** como ya usados al calcular lo reembolsable, para no pasarse si terminan confirmándose.
 
+### Tomadas en el bloque 3 (2026-11-18, dentro del alcance aprobado)
+
+- **Toda llamada a la pasarela tiene antes su operación guardada**, también la autorización del cliente: `authorizeQuote` guarda la operación AUTHORIZE y, al confirmarse, registra en una sola transacción el resumen autorizado, su `PaymentAuthorization` y el cierre de la operación. Sustituye a `ServerSetQuotePayment`.
+- **Claves deterministas:**
+  - autorización, `quote_<resumen>`;
+  - captura, `capture_<pago>`;
+  - reembolso, `refund_<reembolso>`;
+  - liberación, `void_<autorización>`.
+
+  La misma intención usa siempre la misma clave. Solo la liberación, que no mueve dinero, pasa a `void_<autorización>_2` (hasta 5) **después de un rechazo definitivo**. Sin respuesta, se repite la misma clave.
+- **Cada captura pertenece a un pago** `CARD_CAPTURE` que el cobro (bloque 4) crea en PENDING; la captura lo confirma o lo deja FAILED.
+- **Autorización perdida:** si la respuesta no llegó y la consulta no la encuentra, el cliente puede reintentar mientras el resumen está vigente (15 minutos). Después, la conciliación pregunta a la pasarela:
+  - si la autorizó, registra la retención y la libera, porque nadie se la confirmó al cliente y el pedido no fue a cocina;
+  - si no la conoce, la operación falla.
+
+  Para esto, `PaymentOperation` guarda el resumen (`quoteId`, única columna nueva del esquema).
+- **Avisos de la pasarela:**
+  - **Punto de entrada:** `paymentWebhook`, una función HTTP pública porque la llama la pasarela. La autenticación es la firma.
+  - **Verificación:** con el cuerpo tal como llegó, la firma HMAC-SHA256 y como máximo 5 minutos de antigüedad. Se rechazan los cuerpos de más de 64 KB.
+  - **Qué se guarda:** solo la huella del cuerpo. Un aviso se procesa una sola vez por proveedor e id; el mismo id con otro cuerpo se rechaza.
+  - **Qué se aplica:** solo sobre una operación propia con el mismo importe, moneda y referencia. Nunca crea cobros.
+- **Conciliación cada 5 minutos** (`reconcilePayments`, con Cloud Scheduler al desplegar):
+  - revisa las operaciones abiertas sin cambios en 2 minutos;
+  - informa para revisión manual las que llegan a 10 intentos;
+  - marca vencidas las autorizaciones que pasaron su plazo y avisa 24 horas antes;
+  - libera las retenciones RELEASE_PENDING;
+  - reintenta las tareas del outbox con espera de 1 minuto a 1 hora, hasta 10 veces.
+- **Adaptador simulado:**
+  - autorización de 7 días, como la más corta de las pasarelas estudiadas;
+  - declara captura parcial y reembolso parcial, y no autorización incremental;
+  - firma sus avisos con un secreto aleatorio por instancia: nadie de fuera puede firmar avisos, y en el repositorio no hay ningún secreto;
+  - las pruebas le inyectan rechazos, tiempos agotados, vencimientos, reembolsos en curso y avisos repetidos o desordenados.
+- **Capacidades del contrato (ADR-0006):**
+  - se declaran `partialCapture`, `incrementalAuthorization` y `partialRefund` (esta última es nueva);
+  - el plazo de la autorización llega en cada una como `expiresAt`;
+  - `multipleCaptures` no se usa, porque hay una captura por preautorización (D-06).
+
 ## 3. Diseño propuesto
 
 ### La cuenta de la mesa

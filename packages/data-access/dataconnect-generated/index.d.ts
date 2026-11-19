@@ -8,6 +8,13 @@ export type Int64String = string;
 export type DateString = string;
 
 
+export enum AuthorizationStatus {
+  AUTHORIZED = "AUTHORIZED",
+  CAPTURED = "CAPTURED",
+  VOIDED = "VOIDED",
+  EXPIRED = "EXPIRED",
+};
+
 export enum BranchStatus {
   ACTIVE = "ACTIVE",
   ARCHIVED = "ARCHIVED",
@@ -33,6 +40,22 @@ export enum OrderQuoteStatus {
   DECLINED = "DECLINED",
   EXPIRED = "EXPIRED",
   RELEASE_PENDING = "RELEASE_PENDING",
+};
+
+export enum PaymentOperationKind {
+  AUTHORIZE = "AUTHORIZE",
+  CAPTURE = "CAPTURE",
+  VOID = "VOID",
+  REFUND = "REFUND",
+  CHARGE = "CHARGE",
+};
+
+export enum PaymentOperationStatus {
+  CREATED = "CREATED",
+  PROCESSING = "PROCESSING",
+  SUCCEEDED = "SUCCEEDED",
+  FAILED = "FAILED",
+  UNKNOWN = "UNKNOWN",
 };
 
 export enum ServiceRequestKind {
@@ -866,6 +889,91 @@ export interface Sector_Key {
   __typename?: 'Sector_Key';
 }
 
+export interface ServerAdoptOrphanAuthorizationData {
+  paymentOperation_updateMany: number;
+  orderQuote_update?: OrderQuote_Key | null;
+  paymentAuthorization_insert: PaymentAuthorization_Key;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerAdoptOrphanAuthorizationVariables {
+  operationId: UUIDString;
+  quoteId: UUIDString;
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  participantId: UUIDString;
+  provider: string;
+  paymentRef: string;
+  currency: string;
+  amountMinor: Int64String;
+  expiresAt?: TimestampString | null;
+}
+
+export interface ServerAuthorizationByIdData {
+  paymentAuthorization?: {
+    id: UUIDString;
+    tenantId: UUIDString;
+    branchId: UUIDString;
+    provider: string;
+    providerRef: string;
+    currency: string;
+    authorizedMinor: Int64String;
+    capturedMinor: Int64String;
+    status: AuthorizationStatus;
+    expiresAt?: TimestampString | null;
+  } & PaymentAuthorization_Key;
+}
+
+export interface ServerAuthorizationByIdVariables {
+  authorizationId: UUIDString;
+}
+
+export interface ServerAuthorizationsToReleaseData {
+  paymentAuthorizations: ({
+    id: UUIDString;
+    tenantId: UUIDString;
+    branchId: UUIDString;
+    provider: string;
+    providerRef: string;
+    currency: string;
+    authorizedMinor: Int64String;
+    capturedMinor: Int64String;
+    status: AuthorizationStatus;
+    expiresAt?: TimestampString | null;
+  } & PaymentAuthorization_Key)[];
+}
+
+export interface ServerAuthorizationsToReleaseVariables {
+  limit: number;
+}
+
+export interface ServerBeginPaymentOperationData {
+  paymentOperation_insert: PaymentOperation_Key;
+}
+
+export interface ServerBeginPaymentOperationVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  kind: PaymentOperationKind;
+  idempotencyKey: string;
+  currency: string;
+  amountMinor: Int64String;
+  providerRef?: string | null;
+  authorizationId?: UUIDString | null;
+  paymentId?: UUIDString | null;
+  refundId?: UUIDString | null;
+  quoteId?: UUIDString | null;
+}
+
+export interface ServerCompleteOutboxEventData {
+  outboxEvent_update?: OutboxEvent_Key | null;
+}
+
+export interface ServerCompleteOutboxEventVariables {
+  outboxId: UUIDString;
+}
+
 export interface ServerCreateDefaultStationData {
   station_insert: Station_Key;
 }
@@ -887,6 +995,116 @@ export interface ServerCreateServiceRequestVariables {
   participantId: UUIDString;
   authUid: string;
   kind: ServiceRequestKind;
+}
+
+export interface ServerDeclineAuthorizeData {
+  paymentOperation_updateMany: number;
+  orderQuote_update?: OrderQuote_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerDeclineAuthorizeVariables {
+  operationId: UUIDString;
+  quoteId: UUIDString;
+  tenantId: UUIDString;
+  authUid: string;
+  paymentRef: string;
+  consentTextVersion: string;
+}
+
+export interface ServerDueOutboxEventsData {
+  outboxEvents: ({
+    id: UUIDString;
+    kind: string;
+    payload: string;
+    attempts: number;
+  } & OutboxEvent_Key)[];
+}
+
+export interface ServerDueOutboxEventsVariables {
+  now: TimestampString;
+  limit: number;
+}
+
+export interface ServerExpireAuthorizationByRefData {
+  paymentAuthorization_updateMany: number;
+}
+
+export interface ServerExpireAuthorizationByRefVariables {
+  provider: string;
+  providerRef: string;
+}
+
+export interface ServerExpireAuthorizationData {
+  paymentAuthorization_updateMany: number;
+}
+
+export interface ServerExpireAuthorizationVariables {
+  authorizationId: UUIDString;
+}
+
+export interface ServerExpireLapsedAuthorizationsData {
+  paymentAuthorization_updateMany: number;
+}
+
+export interface ServerExpireLapsedAuthorizationsVariables {
+  now: TimestampString;
+}
+
+export interface ServerExpiringAuthorizationsData {
+  paymentAuthorizations: ({
+    id: UUIDString;
+    tenantId: UUIDString;
+    branchId: UUIDString;
+    expiresAt?: TimestampString | null;
+  } & PaymentAuthorization_Key)[];
+}
+
+export interface ServerExpiringAuthorizationsVariables {
+  before: TimestampString;
+  limit: number;
+}
+
+export interface ServerFailCaptureData {
+  paymentOperation_updateMany: number;
+  billPayment_update?: BillPayment_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerFailCaptureVariables {
+  operationId: UUIDString;
+  tenantId: UUIDString;
+  paymentId: UUIDString;
+  failureCode: string;
+  actorId: string;
+}
+
+export interface ServerFailOutboxEventData {
+  outboxEvent_update?: OutboxEvent_Key | null;
+}
+
+export interface ServerFailOutboxEventVariables {
+  outboxId: UUIDString;
+  lastError: string;
+}
+
+export interface ServerFailPaymentOperationData {
+  paymentOperation_updateMany: number;
+}
+
+export interface ServerFailPaymentOperationVariables {
+  operationId: UUIDString;
+  failureCode: string;
+}
+
+export interface ServerFinishProviderEventData {
+  providerEvent_update?: ProviderEvent_Key | null;
+}
+
+export interface ServerFinishProviderEventVariables {
+  eventId: UUIDString;
+  outcome: string;
+  tenantId?: UUIDString | null;
 }
 
 export interface ServerHitRateLimitData {
@@ -918,6 +1136,14 @@ export interface ServerInsertParticipantVariables {
   expiresAt: TimestampString;
 }
 
+export interface ServerMarkPaymentOperationUnknownData {
+  paymentOperation_updateMany: number;
+}
+
+export interface ServerMarkPaymentOperationUnknownVariables {
+  operationId: UUIDString;
+}
+
 export interface ServerMarkQuoteReleasePendingData {
   orderQuote_update?: OrderQuote_Key | null;
   auditEvent_insert: AuditEvent_Key;
@@ -927,6 +1153,17 @@ export interface ServerMarkQuoteReleasePendingVariables {
   quoteId: UUIDString;
   tenantId: UUIDString;
   authUid: string;
+}
+
+export interface ServerMarkRefundPendingData {
+  paymentOperation_updateMany: number;
+  refund_updateMany: number;
+}
+
+export interface ServerMarkRefundPendingVariables {
+  operationId: UUIDString;
+  refundId: UUIDString;
+  refundRef: string;
 }
 
 export interface ServerOpenSessionByQrData {
@@ -963,6 +1200,31 @@ export interface ServerOrderByQuoteData {
 
 export interface ServerOrderByQuoteVariables {
   quoteId: UUIDString;
+}
+
+export interface ServerPaymentOperationByKeyData {
+  paymentOperations: ({
+    id: UUIDString;
+    tenantId: UUIDString;
+    branchId: UUIDString;
+    kind: PaymentOperationKind;
+    status: PaymentOperationStatus;
+    idempotencyKey: string;
+    authorizationId?: UUIDString | null;
+    paymentId?: UUIDString | null;
+    refundId?: UUIDString | null;
+    quoteId?: UUIDString | null;
+    currency: string;
+    amountMinor: Int64String;
+    providerRef?: string | null;
+    failureCode?: string | null;
+    attempts: number;
+    updatedAt: TimestampString;
+  } & PaymentOperation_Key)[];
+}
+
+export interface ServerPaymentOperationByKeyVariables {
+  idempotencyKey: string;
 }
 
 export interface ServerProductsForOrderData {
@@ -1026,6 +1288,19 @@ export interface ServerProductsForQuoteData {
 export interface ServerProductsForQuoteVariables {
   branchId: UUIDString;
   productIds: UUIDString[];
+}
+
+export interface ServerProviderEventData {
+  providerEvents: ({
+    id: UUIDString;
+    payloadHash: string;
+    processedAt?: TimestampString | null;
+  } & ProviderEvent_Key)[];
+}
+
+export interface ServerProviderEventVariables {
+  provider: string;
+  externalEventId: string;
 }
 
 export interface ServerQuoteByKeyData {
@@ -1126,6 +1401,32 @@ export interface ServerQuoteForPaymentVariables {
   authUid: string;
 }
 
+export interface ServerRecordProviderEventData {
+  providerEvent_insert: ProviderEvent_Key;
+}
+
+export interface ServerRecordProviderEventVariables {
+  provider: string;
+  externalEventId: string;
+  type: string;
+  payloadHash: string;
+  providerRef: string;
+}
+
+export interface ServerRejectRefundData {
+  paymentOperation_updateMany: number;
+  refund_update?: Refund_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerRejectRefundVariables {
+  operationId: UUIDString;
+  tenantId: UUIDString;
+  refundId: UUIDString;
+  failureCode: string;
+  actorId: string;
+}
+
 export interface ServerRenewParticipantData {
   sessionParticipant_update?: SessionParticipant_Key | null;
 }
@@ -1133,6 +1434,24 @@ export interface ServerRenewParticipantData {
 export interface ServerRenewParticipantVariables {
   participantId: UUIDString;
   expiresAt: TimestampString;
+}
+
+export interface ServerRetryOutboxEventData {
+  outboxEvent_update?: OutboxEvent_Key | null;
+}
+
+export interface ServerRetryOutboxEventVariables {
+  outboxId: UUIDString;
+  nextAttemptAt: TimestampString;
+  lastError: string;
+}
+
+export interface ServerRetryPaymentOperationData {
+  paymentOperation_updateMany: number;
+}
+
+export interface ServerRetryPaymentOperationVariables {
+  operationId: UUIDString;
 }
 
 export interface ServerSendOrderToKitchenData {
@@ -1148,18 +1467,104 @@ export interface ServerSendOrderToKitchenVariables {
   authUid: string;
 }
 
-export interface ServerSetQuotePaymentData {
+export interface ServerSettleAuthorizeData {
+  paymentOperation_updateMany: number;
   orderQuote_update?: OrderQuote_Key | null;
+  paymentAuthorization_insert: PaymentAuthorization_Key;
   auditEvent_insert: AuditEvent_Key;
 }
 
-export interface ServerSetQuotePaymentVariables {
+export interface ServerSettleAuthorizeVariables {
+  operationId: UUIDString;
   quoteId: UUIDString;
   tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  participantId: UUIDString;
   authUid: string;
-  status: OrderQuoteStatus;
+  provider: string;
   paymentRef: string;
+  currency: string;
+  amountMinor: Int64String;
+  expiresAt?: TimestampString | null;
   consentTextVersion: string;
+}
+
+export interface ServerSettleCaptureData {
+  paymentOperation_updateMany: number;
+  paymentAuthorization_update?: PaymentAuthorization_Key | null;
+  billPayment_update?: BillPayment_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerSettleCaptureVariables {
+  operationId: UUIDString;
+  tenantId: UUIDString;
+  authorizationId: UUIDString;
+  paymentId: UUIDString;
+  capturedMinor: Int64String;
+  providerRef: string;
+  actorId: string;
+}
+
+export interface ServerSettleRefundData {
+  paymentOperation_updateMany: number;
+  refund_update?: Refund_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerSettleRefundVariables {
+  operationId: UUIDString;
+  tenantId: UUIDString;
+  refundId: UUIDString;
+  refundRef: string;
+  actorId: string;
+}
+
+export interface ServerSettleVoidData {
+  paymentOperation_updateMany: number;
+  paymentAuthorization_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerSettleVoidVariables {
+  operationId: UUIDString;
+  tenantId: UUIDString;
+  authorizationId: UUIDString;
+  status: AuthorizationStatus;
+  actorId: string;
+}
+
+export interface ServerStalePaymentOperationsData {
+  paymentOperations: ({
+    id: UUIDString;
+    tenantId: UUIDString;
+    branchId: UUIDString;
+    kind: PaymentOperationKind;
+    status: PaymentOperationStatus;
+    idempotencyKey: string;
+    authorizationId?: UUIDString | null;
+    paymentId?: UUIDString | null;
+    refundId?: UUIDString | null;
+    quoteId?: UUIDString | null;
+    currency: string;
+    amountMinor: Int64String;
+    providerRef?: string | null;
+    failureCode?: string | null;
+    attempts: number;
+    updatedAt: TimestampString;
+    quote?: {
+      sessionId: UUIDString;
+      participantId: UUIDString;
+      status: OrderQuoteStatus;
+      expiresAt: TimestampString;
+    };
+  } & PaymentOperation_Key)[];
+}
+
+export interface ServerStalePaymentOperationsVariables {
+  before: TimestampString;
+  limit: number;
 }
 
 export interface ServiceRequest_Key {
@@ -1923,6 +2328,342 @@ export const unassignMemberBranchRef: UnassignMemberBranchRef;
 export function unassignMemberBranch(vars: UnassignMemberBranchVariables): MutationPromise<UnassignMemberBranchData, UnassignMemberBranchVariables>;
 export function unassignMemberBranch(dc: DataConnect, vars: UnassignMemberBranchVariables): MutationPromise<UnassignMemberBranchData, UnassignMemberBranchVariables>;
 
+interface ServerPaymentOperationByKeyRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerPaymentOperationByKeyVariables): QueryRef<ServerPaymentOperationByKeyData, ServerPaymentOperationByKeyVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerPaymentOperationByKeyVariables): QueryRef<ServerPaymentOperationByKeyData, ServerPaymentOperationByKeyVariables>;
+  operationName: string;
+}
+export const serverPaymentOperationByKeyRef: ServerPaymentOperationByKeyRef;
+
+export function serverPaymentOperationByKey(vars: ServerPaymentOperationByKeyVariables, options?: ExecuteQueryOptions): QueryPromise<ServerPaymentOperationByKeyData, ServerPaymentOperationByKeyVariables>;
+export function serverPaymentOperationByKey(dc: DataConnect, vars: ServerPaymentOperationByKeyVariables, options?: ExecuteQueryOptions): QueryPromise<ServerPaymentOperationByKeyData, ServerPaymentOperationByKeyVariables>;
+
+interface ServerStalePaymentOperationsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerStalePaymentOperationsVariables): QueryRef<ServerStalePaymentOperationsData, ServerStalePaymentOperationsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerStalePaymentOperationsVariables): QueryRef<ServerStalePaymentOperationsData, ServerStalePaymentOperationsVariables>;
+  operationName: string;
+}
+export const serverStalePaymentOperationsRef: ServerStalePaymentOperationsRef;
+
+export function serverStalePaymentOperations(vars: ServerStalePaymentOperationsVariables, options?: ExecuteQueryOptions): QueryPromise<ServerStalePaymentOperationsData, ServerStalePaymentOperationsVariables>;
+export function serverStalePaymentOperations(dc: DataConnect, vars: ServerStalePaymentOperationsVariables, options?: ExecuteQueryOptions): QueryPromise<ServerStalePaymentOperationsData, ServerStalePaymentOperationsVariables>;
+
+interface ServerAuthorizationByIdRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerAuthorizationByIdVariables): QueryRef<ServerAuthorizationByIdData, ServerAuthorizationByIdVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerAuthorizationByIdVariables): QueryRef<ServerAuthorizationByIdData, ServerAuthorizationByIdVariables>;
+  operationName: string;
+}
+export const serverAuthorizationByIdRef: ServerAuthorizationByIdRef;
+
+export function serverAuthorizationById(vars: ServerAuthorizationByIdVariables, options?: ExecuteQueryOptions): QueryPromise<ServerAuthorizationByIdData, ServerAuthorizationByIdVariables>;
+export function serverAuthorizationById(dc: DataConnect, vars: ServerAuthorizationByIdVariables, options?: ExecuteQueryOptions): QueryPromise<ServerAuthorizationByIdData, ServerAuthorizationByIdVariables>;
+
+interface ServerAuthorizationsToReleaseRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerAuthorizationsToReleaseVariables): QueryRef<ServerAuthorizationsToReleaseData, ServerAuthorizationsToReleaseVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerAuthorizationsToReleaseVariables): QueryRef<ServerAuthorizationsToReleaseData, ServerAuthorizationsToReleaseVariables>;
+  operationName: string;
+}
+export const serverAuthorizationsToReleaseRef: ServerAuthorizationsToReleaseRef;
+
+export function serverAuthorizationsToRelease(vars: ServerAuthorizationsToReleaseVariables, options?: ExecuteQueryOptions): QueryPromise<ServerAuthorizationsToReleaseData, ServerAuthorizationsToReleaseVariables>;
+export function serverAuthorizationsToRelease(dc: DataConnect, vars: ServerAuthorizationsToReleaseVariables, options?: ExecuteQueryOptions): QueryPromise<ServerAuthorizationsToReleaseData, ServerAuthorizationsToReleaseVariables>;
+
+interface ServerExpiringAuthorizationsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerExpiringAuthorizationsVariables): QueryRef<ServerExpiringAuthorizationsData, ServerExpiringAuthorizationsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerExpiringAuthorizationsVariables): QueryRef<ServerExpiringAuthorizationsData, ServerExpiringAuthorizationsVariables>;
+  operationName: string;
+}
+export const serverExpiringAuthorizationsRef: ServerExpiringAuthorizationsRef;
+
+export function serverExpiringAuthorizations(vars: ServerExpiringAuthorizationsVariables, options?: ExecuteQueryOptions): QueryPromise<ServerExpiringAuthorizationsData, ServerExpiringAuthorizationsVariables>;
+export function serverExpiringAuthorizations(dc: DataConnect, vars: ServerExpiringAuthorizationsVariables, options?: ExecuteQueryOptions): QueryPromise<ServerExpiringAuthorizationsData, ServerExpiringAuthorizationsVariables>;
+
+interface ServerProviderEventRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerProviderEventVariables): QueryRef<ServerProviderEventData, ServerProviderEventVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerProviderEventVariables): QueryRef<ServerProviderEventData, ServerProviderEventVariables>;
+  operationName: string;
+}
+export const serverProviderEventRef: ServerProviderEventRef;
+
+export function serverProviderEvent(vars: ServerProviderEventVariables, options?: ExecuteQueryOptions): QueryPromise<ServerProviderEventData, ServerProviderEventVariables>;
+export function serverProviderEvent(dc: DataConnect, vars: ServerProviderEventVariables, options?: ExecuteQueryOptions): QueryPromise<ServerProviderEventData, ServerProviderEventVariables>;
+
+interface ServerDueOutboxEventsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerDueOutboxEventsVariables): QueryRef<ServerDueOutboxEventsData, ServerDueOutboxEventsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerDueOutboxEventsVariables): QueryRef<ServerDueOutboxEventsData, ServerDueOutboxEventsVariables>;
+  operationName: string;
+}
+export const serverDueOutboxEventsRef: ServerDueOutboxEventsRef;
+
+export function serverDueOutboxEvents(vars: ServerDueOutboxEventsVariables, options?: ExecuteQueryOptions): QueryPromise<ServerDueOutboxEventsData, ServerDueOutboxEventsVariables>;
+export function serverDueOutboxEvents(dc: DataConnect, vars: ServerDueOutboxEventsVariables, options?: ExecuteQueryOptions): QueryPromise<ServerDueOutboxEventsData, ServerDueOutboxEventsVariables>;
+
+interface ServerBeginPaymentOperationRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerBeginPaymentOperationVariables): MutationRef<ServerBeginPaymentOperationData, ServerBeginPaymentOperationVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerBeginPaymentOperationVariables): MutationRef<ServerBeginPaymentOperationData, ServerBeginPaymentOperationVariables>;
+  operationName: string;
+}
+export const serverBeginPaymentOperationRef: ServerBeginPaymentOperationRef;
+
+export function serverBeginPaymentOperation(vars: ServerBeginPaymentOperationVariables): MutationPromise<ServerBeginPaymentOperationData, ServerBeginPaymentOperationVariables>;
+export function serverBeginPaymentOperation(dc: DataConnect, vars: ServerBeginPaymentOperationVariables): MutationPromise<ServerBeginPaymentOperationData, ServerBeginPaymentOperationVariables>;
+
+interface ServerRetryPaymentOperationRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerRetryPaymentOperationVariables): MutationRef<ServerRetryPaymentOperationData, ServerRetryPaymentOperationVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerRetryPaymentOperationVariables): MutationRef<ServerRetryPaymentOperationData, ServerRetryPaymentOperationVariables>;
+  operationName: string;
+}
+export const serverRetryPaymentOperationRef: ServerRetryPaymentOperationRef;
+
+export function serverRetryPaymentOperation(vars: ServerRetryPaymentOperationVariables): MutationPromise<ServerRetryPaymentOperationData, ServerRetryPaymentOperationVariables>;
+export function serverRetryPaymentOperation(dc: DataConnect, vars: ServerRetryPaymentOperationVariables): MutationPromise<ServerRetryPaymentOperationData, ServerRetryPaymentOperationVariables>;
+
+interface ServerMarkPaymentOperationUnknownRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerMarkPaymentOperationUnknownVariables): MutationRef<ServerMarkPaymentOperationUnknownData, ServerMarkPaymentOperationUnknownVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerMarkPaymentOperationUnknownVariables): MutationRef<ServerMarkPaymentOperationUnknownData, ServerMarkPaymentOperationUnknownVariables>;
+  operationName: string;
+}
+export const serverMarkPaymentOperationUnknownRef: ServerMarkPaymentOperationUnknownRef;
+
+export function serverMarkPaymentOperationUnknown(vars: ServerMarkPaymentOperationUnknownVariables): MutationPromise<ServerMarkPaymentOperationUnknownData, ServerMarkPaymentOperationUnknownVariables>;
+export function serverMarkPaymentOperationUnknown(dc: DataConnect, vars: ServerMarkPaymentOperationUnknownVariables): MutationPromise<ServerMarkPaymentOperationUnknownData, ServerMarkPaymentOperationUnknownVariables>;
+
+interface ServerFailPaymentOperationRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerFailPaymentOperationVariables): MutationRef<ServerFailPaymentOperationData, ServerFailPaymentOperationVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerFailPaymentOperationVariables): MutationRef<ServerFailPaymentOperationData, ServerFailPaymentOperationVariables>;
+  operationName: string;
+}
+export const serverFailPaymentOperationRef: ServerFailPaymentOperationRef;
+
+export function serverFailPaymentOperation(vars: ServerFailPaymentOperationVariables): MutationPromise<ServerFailPaymentOperationData, ServerFailPaymentOperationVariables>;
+export function serverFailPaymentOperation(dc: DataConnect, vars: ServerFailPaymentOperationVariables): MutationPromise<ServerFailPaymentOperationData, ServerFailPaymentOperationVariables>;
+
+interface ServerSettleAuthorizeRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerSettleAuthorizeVariables): MutationRef<ServerSettleAuthorizeData, ServerSettleAuthorizeVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerSettleAuthorizeVariables): MutationRef<ServerSettleAuthorizeData, ServerSettleAuthorizeVariables>;
+  operationName: string;
+}
+export const serverSettleAuthorizeRef: ServerSettleAuthorizeRef;
+
+export function serverSettleAuthorize(vars: ServerSettleAuthorizeVariables): MutationPromise<ServerSettleAuthorizeData, ServerSettleAuthorizeVariables>;
+export function serverSettleAuthorize(dc: DataConnect, vars: ServerSettleAuthorizeVariables): MutationPromise<ServerSettleAuthorizeData, ServerSettleAuthorizeVariables>;
+
+interface ServerDeclineAuthorizeRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerDeclineAuthorizeVariables): MutationRef<ServerDeclineAuthorizeData, ServerDeclineAuthorizeVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerDeclineAuthorizeVariables): MutationRef<ServerDeclineAuthorizeData, ServerDeclineAuthorizeVariables>;
+  operationName: string;
+}
+export const serverDeclineAuthorizeRef: ServerDeclineAuthorizeRef;
+
+export function serverDeclineAuthorize(vars: ServerDeclineAuthorizeVariables): MutationPromise<ServerDeclineAuthorizeData, ServerDeclineAuthorizeVariables>;
+export function serverDeclineAuthorize(dc: DataConnect, vars: ServerDeclineAuthorizeVariables): MutationPromise<ServerDeclineAuthorizeData, ServerDeclineAuthorizeVariables>;
+
+interface ServerAdoptOrphanAuthorizationRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerAdoptOrphanAuthorizationVariables): MutationRef<ServerAdoptOrphanAuthorizationData, ServerAdoptOrphanAuthorizationVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerAdoptOrphanAuthorizationVariables): MutationRef<ServerAdoptOrphanAuthorizationData, ServerAdoptOrphanAuthorizationVariables>;
+  operationName: string;
+}
+export const serverAdoptOrphanAuthorizationRef: ServerAdoptOrphanAuthorizationRef;
+
+export function serverAdoptOrphanAuthorization(vars: ServerAdoptOrphanAuthorizationVariables): MutationPromise<ServerAdoptOrphanAuthorizationData, ServerAdoptOrphanAuthorizationVariables>;
+export function serverAdoptOrphanAuthorization(dc: DataConnect, vars: ServerAdoptOrphanAuthorizationVariables): MutationPromise<ServerAdoptOrphanAuthorizationData, ServerAdoptOrphanAuthorizationVariables>;
+
+interface ServerSettleCaptureRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerSettleCaptureVariables): MutationRef<ServerSettleCaptureData, ServerSettleCaptureVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerSettleCaptureVariables): MutationRef<ServerSettleCaptureData, ServerSettleCaptureVariables>;
+  operationName: string;
+}
+export const serverSettleCaptureRef: ServerSettleCaptureRef;
+
+export function serverSettleCapture(vars: ServerSettleCaptureVariables): MutationPromise<ServerSettleCaptureData, ServerSettleCaptureVariables>;
+export function serverSettleCapture(dc: DataConnect, vars: ServerSettleCaptureVariables): MutationPromise<ServerSettleCaptureData, ServerSettleCaptureVariables>;
+
+interface ServerFailCaptureRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerFailCaptureVariables): MutationRef<ServerFailCaptureData, ServerFailCaptureVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerFailCaptureVariables): MutationRef<ServerFailCaptureData, ServerFailCaptureVariables>;
+  operationName: string;
+}
+export const serverFailCaptureRef: ServerFailCaptureRef;
+
+export function serverFailCapture(vars: ServerFailCaptureVariables): MutationPromise<ServerFailCaptureData, ServerFailCaptureVariables>;
+export function serverFailCapture(dc: DataConnect, vars: ServerFailCaptureVariables): MutationPromise<ServerFailCaptureData, ServerFailCaptureVariables>;
+
+interface ServerSettleVoidRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerSettleVoidVariables): MutationRef<ServerSettleVoidData, ServerSettleVoidVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerSettleVoidVariables): MutationRef<ServerSettleVoidData, ServerSettleVoidVariables>;
+  operationName: string;
+}
+export const serverSettleVoidRef: ServerSettleVoidRef;
+
+export function serverSettleVoid(vars: ServerSettleVoidVariables): MutationPromise<ServerSettleVoidData, ServerSettleVoidVariables>;
+export function serverSettleVoid(dc: DataConnect, vars: ServerSettleVoidVariables): MutationPromise<ServerSettleVoidData, ServerSettleVoidVariables>;
+
+interface ServerExpireAuthorizationRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerExpireAuthorizationVariables): MutationRef<ServerExpireAuthorizationData, ServerExpireAuthorizationVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerExpireAuthorizationVariables): MutationRef<ServerExpireAuthorizationData, ServerExpireAuthorizationVariables>;
+  operationName: string;
+}
+export const serverExpireAuthorizationRef: ServerExpireAuthorizationRef;
+
+export function serverExpireAuthorization(vars: ServerExpireAuthorizationVariables): MutationPromise<ServerExpireAuthorizationData, ServerExpireAuthorizationVariables>;
+export function serverExpireAuthorization(dc: DataConnect, vars: ServerExpireAuthorizationVariables): MutationPromise<ServerExpireAuthorizationData, ServerExpireAuthorizationVariables>;
+
+interface ServerExpireAuthorizationByRefRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerExpireAuthorizationByRefVariables): MutationRef<ServerExpireAuthorizationByRefData, ServerExpireAuthorizationByRefVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerExpireAuthorizationByRefVariables): MutationRef<ServerExpireAuthorizationByRefData, ServerExpireAuthorizationByRefVariables>;
+  operationName: string;
+}
+export const serverExpireAuthorizationByRefRef: ServerExpireAuthorizationByRefRef;
+
+export function serverExpireAuthorizationByRef(vars: ServerExpireAuthorizationByRefVariables): MutationPromise<ServerExpireAuthorizationByRefData, ServerExpireAuthorizationByRefVariables>;
+export function serverExpireAuthorizationByRef(dc: DataConnect, vars: ServerExpireAuthorizationByRefVariables): MutationPromise<ServerExpireAuthorizationByRefData, ServerExpireAuthorizationByRefVariables>;
+
+interface ServerExpireLapsedAuthorizationsRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerExpireLapsedAuthorizationsVariables): MutationRef<ServerExpireLapsedAuthorizationsData, ServerExpireLapsedAuthorizationsVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerExpireLapsedAuthorizationsVariables): MutationRef<ServerExpireLapsedAuthorizationsData, ServerExpireLapsedAuthorizationsVariables>;
+  operationName: string;
+}
+export const serverExpireLapsedAuthorizationsRef: ServerExpireLapsedAuthorizationsRef;
+
+export function serverExpireLapsedAuthorizations(vars: ServerExpireLapsedAuthorizationsVariables): MutationPromise<ServerExpireLapsedAuthorizationsData, ServerExpireLapsedAuthorizationsVariables>;
+export function serverExpireLapsedAuthorizations(dc: DataConnect, vars: ServerExpireLapsedAuthorizationsVariables): MutationPromise<ServerExpireLapsedAuthorizationsData, ServerExpireLapsedAuthorizationsVariables>;
+
+interface ServerSettleRefundRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerSettleRefundVariables): MutationRef<ServerSettleRefundData, ServerSettleRefundVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerSettleRefundVariables): MutationRef<ServerSettleRefundData, ServerSettleRefundVariables>;
+  operationName: string;
+}
+export const serverSettleRefundRef: ServerSettleRefundRef;
+
+export function serverSettleRefund(vars: ServerSettleRefundVariables): MutationPromise<ServerSettleRefundData, ServerSettleRefundVariables>;
+export function serverSettleRefund(dc: DataConnect, vars: ServerSettleRefundVariables): MutationPromise<ServerSettleRefundData, ServerSettleRefundVariables>;
+
+interface ServerMarkRefundPendingRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerMarkRefundPendingVariables): MutationRef<ServerMarkRefundPendingData, ServerMarkRefundPendingVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerMarkRefundPendingVariables): MutationRef<ServerMarkRefundPendingData, ServerMarkRefundPendingVariables>;
+  operationName: string;
+}
+export const serverMarkRefundPendingRef: ServerMarkRefundPendingRef;
+
+export function serverMarkRefundPending(vars: ServerMarkRefundPendingVariables): MutationPromise<ServerMarkRefundPendingData, ServerMarkRefundPendingVariables>;
+export function serverMarkRefundPending(dc: DataConnect, vars: ServerMarkRefundPendingVariables): MutationPromise<ServerMarkRefundPendingData, ServerMarkRefundPendingVariables>;
+
+interface ServerRejectRefundRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerRejectRefundVariables): MutationRef<ServerRejectRefundData, ServerRejectRefundVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerRejectRefundVariables): MutationRef<ServerRejectRefundData, ServerRejectRefundVariables>;
+  operationName: string;
+}
+export const serverRejectRefundRef: ServerRejectRefundRef;
+
+export function serverRejectRefund(vars: ServerRejectRefundVariables): MutationPromise<ServerRejectRefundData, ServerRejectRefundVariables>;
+export function serverRejectRefund(dc: DataConnect, vars: ServerRejectRefundVariables): MutationPromise<ServerRejectRefundData, ServerRejectRefundVariables>;
+
+interface ServerRecordProviderEventRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerRecordProviderEventVariables): MutationRef<ServerRecordProviderEventData, ServerRecordProviderEventVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerRecordProviderEventVariables): MutationRef<ServerRecordProviderEventData, ServerRecordProviderEventVariables>;
+  operationName: string;
+}
+export const serverRecordProviderEventRef: ServerRecordProviderEventRef;
+
+export function serverRecordProviderEvent(vars: ServerRecordProviderEventVariables): MutationPromise<ServerRecordProviderEventData, ServerRecordProviderEventVariables>;
+export function serverRecordProviderEvent(dc: DataConnect, vars: ServerRecordProviderEventVariables): MutationPromise<ServerRecordProviderEventData, ServerRecordProviderEventVariables>;
+
+interface ServerFinishProviderEventRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerFinishProviderEventVariables): MutationRef<ServerFinishProviderEventData, ServerFinishProviderEventVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerFinishProviderEventVariables): MutationRef<ServerFinishProviderEventData, ServerFinishProviderEventVariables>;
+  operationName: string;
+}
+export const serverFinishProviderEventRef: ServerFinishProviderEventRef;
+
+export function serverFinishProviderEvent(vars: ServerFinishProviderEventVariables): MutationPromise<ServerFinishProviderEventData, ServerFinishProviderEventVariables>;
+export function serverFinishProviderEvent(dc: DataConnect, vars: ServerFinishProviderEventVariables): MutationPromise<ServerFinishProviderEventData, ServerFinishProviderEventVariables>;
+
+interface ServerCompleteOutboxEventRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerCompleteOutboxEventVariables): MutationRef<ServerCompleteOutboxEventData, ServerCompleteOutboxEventVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerCompleteOutboxEventVariables): MutationRef<ServerCompleteOutboxEventData, ServerCompleteOutboxEventVariables>;
+  operationName: string;
+}
+export const serverCompleteOutboxEventRef: ServerCompleteOutboxEventRef;
+
+export function serverCompleteOutboxEvent(vars: ServerCompleteOutboxEventVariables): MutationPromise<ServerCompleteOutboxEventData, ServerCompleteOutboxEventVariables>;
+export function serverCompleteOutboxEvent(dc: DataConnect, vars: ServerCompleteOutboxEventVariables): MutationPromise<ServerCompleteOutboxEventData, ServerCompleteOutboxEventVariables>;
+
+interface ServerRetryOutboxEventRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerRetryOutboxEventVariables): MutationRef<ServerRetryOutboxEventData, ServerRetryOutboxEventVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerRetryOutboxEventVariables): MutationRef<ServerRetryOutboxEventData, ServerRetryOutboxEventVariables>;
+  operationName: string;
+}
+export const serverRetryOutboxEventRef: ServerRetryOutboxEventRef;
+
+export function serverRetryOutboxEvent(vars: ServerRetryOutboxEventVariables): MutationPromise<ServerRetryOutboxEventData, ServerRetryOutboxEventVariables>;
+export function serverRetryOutboxEvent(dc: DataConnect, vars: ServerRetryOutboxEventVariables): MutationPromise<ServerRetryOutboxEventData, ServerRetryOutboxEventVariables>;
+
+interface ServerFailOutboxEventRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerFailOutboxEventVariables): MutationRef<ServerFailOutboxEventData, ServerFailOutboxEventVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerFailOutboxEventVariables): MutationRef<ServerFailOutboxEventData, ServerFailOutboxEventVariables>;
+  operationName: string;
+}
+export const serverFailOutboxEventRef: ServerFailOutboxEventRef;
+
+export function serverFailOutboxEvent(vars: ServerFailOutboxEventVariables): MutationPromise<ServerFailOutboxEventData, ServerFailOutboxEventVariables>;
+export function serverFailOutboxEvent(dc: DataConnect, vars: ServerFailOutboxEventVariables): MutationPromise<ServerFailOutboxEventData, ServerFailOutboxEventVariables>;
+
 interface PickupQueueRef {
   /* Allow users to create refs without passing in DataConnect */
   (vars: PickupQueueVariables): QueryRef<PickupQueueData, PickupQueueVariables>;
@@ -2222,18 +2963,6 @@ export const serverQuoteForPaymentRef: ServerQuoteForPaymentRef;
 
 export function serverQuoteForPayment(vars: ServerQuoteForPaymentVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
 export function serverQuoteForPayment(dc: DataConnect, vars: ServerQuoteForPaymentVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
-
-interface ServerSetQuotePaymentRef {
-  /* Allow users to create refs without passing in DataConnect */
-  (vars: ServerSetQuotePaymentVariables): MutationRef<ServerSetQuotePaymentData, ServerSetQuotePaymentVariables>;
-  /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect, vars: ServerSetQuotePaymentVariables): MutationRef<ServerSetQuotePaymentData, ServerSetQuotePaymentVariables>;
-  operationName: string;
-}
-export const serverSetQuotePaymentRef: ServerSetQuotePaymentRef;
-
-export function serverSetQuotePayment(vars: ServerSetQuotePaymentVariables): MutationPromise<ServerSetQuotePaymentData, ServerSetQuotePaymentVariables>;
-export function serverSetQuotePayment(dc: DataConnect, vars: ServerSetQuotePaymentVariables): MutationPromise<ServerSetQuotePaymentData, ServerSetQuotePaymentVariables>;
 
 interface ServerHitRateLimitRef {
   /* Allow users to create refs without passing in DataConnect */

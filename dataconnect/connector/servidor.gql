@@ -217,37 +217,6 @@ query ServerQuoteForPayment($quoteId: UUID!, $authUid: String!) @auth(level: NO_
   }
 }
 
-# Resultado de la autorización (simulada mientras no haya pasarela, D-02), con la versión del texto
-# de preautorización que aceptó el cliente (RF-PA-02), auditado.
-mutation ServerSetQuotePayment(
-  $quoteId: UUID!
-  $tenantId: UUID!
-  $authUid: String!
-  $status: OrderQuoteStatus!
-  $paymentRef: String!
-  $consentTextVersion: String!
-) @auth(level: NO_ACCESS) @transaction {
-  orderQuote_update(
-    id: $quoteId
-    data: {
-      status: $status
-      paymentRef: $paymentRef
-      consentTextVersion: $consentTextVersion
-      consentedAt_expr: "request.time"
-      authorizedAt_expr: "vars.status == 'AUTHORIZED' ? request.time : null"
-    }
-  )
-  auditEvent_insert(
-    data: {
-      tenantId: $tenantId
-      actorId: $authUid
-      operation: "order_quote.payment"
-      resourceType: "order_quote"
-      resourceId_expr: "vars.quoteId"
-    }
-  )
-}
-
 # Admite una solicitud si en la ventana hay menos de $limit admitidas; si no, la rechaza y la
 # transacción se revierte (la rechazada no cuenta). El paso query no ve la fila que se inserta.
 mutation ServerHitRateLimit($scope: String!, $subject: String!, $since: Timestamp!, $limit: Int!)

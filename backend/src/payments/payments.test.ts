@@ -15,6 +15,7 @@ import {
   createSimulatedPaymentGateway,
   SimulatedPaymentsNotAllowedError,
 } from './simulated-gateway.ts';
+import { createMemoryLedger } from './memory-ledger.test-support.ts';
 
 const actor: Actor = {
   uid: 'cliente-anonimo',
@@ -81,12 +82,23 @@ describe('adaptador de pago simulado', () => {
     const gateway = createSimulatedPaymentGateway('demo-tavelyo');
     const amount = { amountMinor: '100', currency: 'COP' };
     const auth = await gateway.authorize({ amount, idempotencyKey: 'k2', reference: 'q2' });
-    await expect(gateway.refund(auth.paymentRef, amount)).rejects.toThrow();
-    expect((await gateway.capture(auth.paymentRef, amount)).status).toBe('captured');
+    const paymentRef = auth.paymentRef;
+    expect(await gateway.refund({ paymentRef, amount, idempotencyKey: 'r0' })).toMatchObject({
+      status: 'failed',
+      failureCode: 'invalid_state',
+    });
+    expect((await gateway.capture({ paymentRef, amount, idempotencyKey: 'c1' })).status).toBe(
+      'captured',
+    );
     expect((await gateway.status('k2'))?.status).toBe('captured');
-    expect((await gateway.refund(auth.paymentRef, amount)).status).toBe('refunded');
+    expect((await gateway.refund({ paymentRef, amount, idempotencyKey: 'r1' })).status).toBe(
+      'refunded',
+    );
     const other = await gateway.authorize({ amount, idempotencyKey: 'k3', reference: 'q3' });
-    expect((await gateway.voidAuthorization(other.paymentRef)).status).toBe('voided');
+    expect(
+      (await gateway.voidAuthorization({ paymentRef: other.paymentRef, idempotencyKey: 'v1' }))
+        .status,
+    ).toBe('voided');
   });
 
   it('tiempo agotado: la respuesta se pierde, pero la consulta encuentra la autorización', async () => {
@@ -108,19 +120,22 @@ function setup(
 ) {
   const quotes = {
     forPayment: vi.fn(async () => found),
-    setPayment: vi.fn(async () => undefined),
+    setAuthorized: vi.fn(async () => true),
+    setDeclined: vi.fn(async () => true),
     markReleasePending: vi.fn(async () => undefined),
   } satisfies PaymentQuoteStore;
-  const payments = createSimulatedPaymentGateway('demo-tavelyo');
+  const payments = createSimulatedPaymentGateway('demo-tavelyo', { now: () => NOW });
+  const memory = createMemoryLedger(() => NOW);
   const dispatch = vi.fn(async () => dispatched);
   const authorize = createAuthorizeQuote({
     quotes,
     payments,
+    ledger: memory.ledger,
     dispatch,
     limiter: { admit: async () => true },
     clock: { now: () => NOW },
   });
-  return { quotes, payments, dispatch, authorize };
+  return { quotes, payments, memory, dispatch, authorize };
 }
 
 const request = (extra: Record<string, unknown> = {}) => ({
@@ -155,7 +170,7 @@ describe('authorizeQuote', () => {
   });
 
   it('autoriza el importe del resumen, guarda el consentimiento y envía el pedido a cocina', async () => {
-    const { authorize, quotes, payments, dispatch } = setup(quote);
+    const { authorize, quotes, payments, memory, dispatch } = setup(quote);
     const spy = vi.spyOn(payments, 'authorize');
     expect(await authorize(actor, request())).toEqual({
       ok: true,
@@ -164,14 +179,70 @@ describe('authorizeQuote', () => {
     expect(spy).toHaveBeenCalledWith(
       expect.objectContaining({ amount: { amountMinor: '6480000', currency: 'COP' } }),
     );
-    expect(quotes.setPayment).toHaveBeenCalledWith(
+    // La operación se guardó ANTES de llamar a la pasarela, con la misma clave (PM §8).
+    const [operation] = [...memory.operations.values()];
+    expect(operation).toMatchObject({
+      kind: 'AUTHORIZE',
+      idempotencyKey: `quote_${QUOTE}`,
+      amountMinor: '6480000',
+      quoteId: QUOTE,
+    });
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: `quote_${QUOTE}` }));
+    expect(quotes.setAuthorized).toHaveBeenCalledWith(
       quote,
+      operation?.id,
       actor.uid,
-      'AUTHORIZED',
-      expect.stringMatching(/^sim_/),
+      {
+        provider: 'simulated',
+        paymentRef: expect.stringMatching(/^sim_/),
+        // Vigencia de la autorización simulada: 7 días desde ahora.
+        expiresAt: new Date('2026-11-20T18:00:00Z'),
+      },
       PREAUTHORIZATION_CONSENT_VERSION,
     );
     expect(dispatch).toHaveBeenCalledWith(quote, actor.uid);
+  });
+
+  it('sin respuesta ni rastro en la pasarela: la operación queda UNKNOWN y no se cobra dos veces', async () => {
+    const lost = setup(quote);
+    vi.spyOn(lost.payments, 'authorize').mockRejectedValueOnce(
+      new PaymentTimeoutError(`quote_${QUOTE}`),
+    );
+    expect(await lost.authorize(actor, request())).toMatchObject({
+      ok: false,
+      error: { code: 'unavailable', message: expect.stringMatching(/no se cobrará dos veces/) },
+    });
+    expect([...lost.memory.operations.values()][0]?.status).toBe('UNKNOWN');
+    expect(lost.quotes.setAuthorized).not.toHaveBeenCalled();
+
+    // El reintento del cliente usa la misma operación y la misma clave.
+    expect(await lost.authorize(actor, request())).toMatchObject({
+      ok: true,
+      value: { status: 'authorized' },
+    });
+    expect(lost.memory.operations.size).toBe(1);
+    expect([...lost.memory.operations.values()][0]?.attempts).toBe(1);
+  });
+
+  it('si la conciliación ya cerró la operación (resumen vencido), no vuelve a autorizar', async () => {
+    const closed = setup(quote);
+    const { operation } = await closed.memory.ledger.begin({
+      tenantId: quote.tenantId,
+      branchId: quote.branchId,
+      kind: 'AUTHORIZE',
+      idempotencyKey: `quote_${QUOTE}`,
+      currency: 'COP',
+      amountMinor: quote.totalMinor,
+      providerRef: null,
+      quoteId: QUOTE,
+    });
+    await closed.memory.ledger.fail(operation, 'not_found');
+    const spy = vi.spyOn(closed.payments, 'authorize');
+    expect(await closed.authorize(actor, request())).toMatchObject({
+      ok: false,
+      error: { code: 'failed-precondition' },
+    });
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it('rechazado o con acción pendiente no llega a cocina (D-04)', async () => {
@@ -179,10 +250,10 @@ describe('authorizeQuote', () => {
     expect(
       await declined.authorize(actor, request({ simulatedOutcome: 'declined' })),
     ).toMatchObject({ ok: true, value: { status: 'declined' } });
-    expect(declined.quotes.setPayment).toHaveBeenCalledWith(
+    expect(declined.quotes.setDeclined).toHaveBeenCalledWith(
       quote,
+      expect.any(String),
       actor.uid,
-      'DECLINED',
       expect.any(String),
       PREAUTHORIZATION_CONSENT_VERSION,
     );
@@ -192,7 +263,8 @@ describe('authorizeQuote', () => {
     expect(
       await action.authorize(actor, request({ simulatedOutcome: 'requires_action' })),
     ).toMatchObject({ ok: true, value: { status: 'requires_action' } });
-    expect(action.quotes.setPayment).not.toHaveBeenCalled();
+    expect(action.quotes.setAuthorized).not.toHaveBeenCalled();
+    expect(action.quotes.setDeclined).not.toHaveBeenCalled();
     expect(action.dispatch).not.toHaveBeenCalled();
 
     // La respuesta se pierde, pero la consulta posterior encuentra la autorización: sin cobro doble.

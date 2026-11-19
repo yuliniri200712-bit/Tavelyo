@@ -10,7 +10,7 @@
 |---|---|
 | 1. Decisiones y esquema | ✅ D-05, D-06, D-29, D-30 y D-31 registradas. Esquema nuevo en `cuenta.gql` (cuenta, preautorización, pago, asignación, reembolso, operación ante la pasarela, avisos y tareas pendientes) y `caja.gql` (caja, turno, movimientos y conteo), con FK compuestas y unicidades; 17 pruebas de capacidades en el emulador (`testing/fase-4.md`, `architecture/data-model.md`). Los permisos de caja y pagos ya estaban en el catálogo desde la Fase 1 |
 | 2. Dinero de la cuenta | ✅ Lógica pura en `packages/core` con 30 pruebas nuevas: la cuenta y lo de cada persona (`bill.ts`), reparto de un pago por líneas, división exacta en pesos enteros y bloqueos para cerrar la mesa (D-30); propina sugerida en 10 % (`tip.ts`, D-05); cuánto capturar y liberar de cada preautorización y cuánto se puede reembolsar (`payment-settlement.ts`); cambio, efectivo esperado y conteo de cierre (`cash.ts`) |
-| 3. Pagos en el backend (simulado) | Pendiente |
+| 3. Pagos en el backend (simulado) | ✅ Captura, liberación, reembolso y consulta con idempotencia de punta a punta (operación guardada antes de llamar a la pasarela); `authorizeQuote` registra su operación y la `PaymentAuthorization`; avisos firmados (`paymentWebhook`) deduplicados y contrastados; conciliación cada 5 minutos (operaciones sin respuesta, autorizaciones perdidas, retenciones por liberar, outbox y vencimientos); adaptador simulado con fallos inyectables y capacidades declaradas. 58 pruebas unitarias y 14 de integración nuevas |
 | 4. Cuenta y cierre | Pendiente |
 | 5. Caja | Pendiente |
 | 6. Operaciones (caja y mesero) | Pendiente |

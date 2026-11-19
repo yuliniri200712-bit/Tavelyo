@@ -3,6 +3,7 @@ import type { DataConnect } from 'firebase-admin/data-connect';
 import type { CatalogEntry } from '../orders/pricing.ts';
 import type { QuoteStatus, QuoteStore, StoredQuote } from '../orders/quote-order.ts';
 import type { PayableQuote, PaymentQuoteStore } from '../payments/authorize-quote.ts';
+import { isAlreadyClosed } from './payments.ts';
 import { isUniqueViolation } from './table-sessions.ts';
 
 // Resúmenes de pedido con el Admin SDK: lecturas con operaciones NO_ACCESS del conector y el
@@ -264,15 +265,45 @@ export function createPaymentQuoteStore(dataConnect: DataConnect): PaymentQuoteS
       return row ? toPayableQuote(row) : null;
     },
 
-    async setPayment(quote, authUid, status, paymentRef, consentTextVersion) {
-      await dataConnect.executeMutation('ServerSetQuotePayment', {
-        quoteId: quote.id,
-        tenantId: quote.tenantId,
-        authUid,
-        status,
-        paymentRef,
-        consentTextVersion,
-      });
+    async setAuthorized(quote, operationId, authUid, hold, consentTextVersion) {
+      try {
+        await dataConnect.executeMutation('ServerSettleAuthorize', {
+          operationId,
+          quoteId: quote.id,
+          tenantId: quote.tenantId,
+          branchId: quote.branchId,
+          sessionId: quote.sessionId,
+          participantId: quote.participantId,
+          authUid,
+          provider: hold.provider,
+          paymentRef: hold.paymentRef,
+          currency: quote.currency,
+          amountMinor: quote.totalMinor,
+          expiresAt: hold.expiresAt?.toISOString() ?? null,
+          consentTextVersion,
+        });
+        return true;
+      } catch (error) {
+        if (isAlreadyClosed(error)) return false;
+        throw error;
+      }
+    },
+
+    async setDeclined(quote, operationId, authUid, paymentRef, consentTextVersion) {
+      try {
+        await dataConnect.executeMutation('ServerDeclineAuthorize', {
+          operationId,
+          quoteId: quote.id,
+          tenantId: quote.tenantId,
+          authUid,
+          paymentRef,
+          consentTextVersion,
+        });
+        return true;
+      } catch (error) {
+        if (isAlreadyClosed(error)) return false;
+        throw error;
+      }
     },
 
     async markReleasePending(quote, authUid) {

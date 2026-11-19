@@ -32,6 +32,15 @@ Datos de cada empresa y sucursal · cuentas y operaciones de pago · datos perso
 | T13 | Modificación del registro de auditoría por roles de negocio | R | Medio | Solo inserción; sin permisos de actualización o borrado | Fase 1 |
 | T14 | Dos cajeros capturan o cierran la misma cuenta a la vez | T | Alto | Versionado optimista / bloqueo de cuenta al cerrar | Caso 9 |
 
+**Implementado en la Fase 4, bloque 3 (con el adaptador simulado):**
+- **T4:** firma HMAC verificada sobre el cuerpo exacto, como máximo 5 minutos de antigüedad y cuerpos de hasta 64 KB. Además:
+  - deduplicación por proveedor e id;
+  - el mismo id con otro cuerpo se rechaza;
+  - importe, moneda y referencia se contrastan con la operación propia;
+  - los estados cerrados no retroceden.
+- **T5:** la operación se guarda antes de llamar a la pasarela y la clave de idempotencia se repite al consultar o reintentar. La conciliación cada 5 minutos resuelve las operaciones sin respuesta y libera las autorizaciones que nadie confirmó al cliente.
+- **T3** (cobros): las claves de idempotencia son únicas en la base, y la misma clave con otro importe se rechaza.
+
 ## 4. Riesgos técnicos abiertos (no son amenazas, pero afectan la seguridad)
 
 - **R1** Capacidad real de `@auth` y expresiones de SQL Connect para filtrar por membresía. Se verifica en el spike (D-13).

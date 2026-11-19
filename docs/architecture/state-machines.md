@@ -79,6 +79,7 @@ stateDiagram-v2
 - Los estados confirmados no retroceden ante webhooks tardíos.
 - El mapeo a los estados de la pasarela se documenta tras D-02.
 - **Implementación (Fase 4, bloque 1):** el diagrama se reparte en dos tablas. `PaymentOperation` guarda cada llamada a la pasarela (`CREATED` → `PROCESSING` → `SUCCEEDED` | `FAILED` | `UNKNOWN`); `UNKNOWN` es `resultado_desconocido` y la conciliación lo resuelve con la misma clave. `PaymentAuthorization` guarda el estado de la preautorización (`AUTHORIZED` → `CAPTURED` | `VOIDED` | `EXPIRED`); `requiere_accion` (3DS) llega con la pasarela real.
+- **Implementación (Fase 4, bloque 3):** las mutaciones que cierran una operación (`pagos.gql`) solo avanzan desde `CREATED`, `PROCESSING` o `UNKNOWN` y aplican sus efectos (pago, autorización, reembolso) en la misma transacción y una sola vez: un aviso tardío o repetido no retrocede nada. Un reembolso en curso deja la operación en `PROCESSING` hasta el aviso o la consulta. La conciliación (`backend/src/payments/reconcile-payments.ts`) resuelve `UNKNOWN` consultando con la misma clave o repitiendo la misma operación.
 
 ## 4. Reembolso (Refund)
 

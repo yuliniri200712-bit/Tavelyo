@@ -1,5 +1,13 @@
 const { queryRef, executeQuery, validateArgsWithOptions, mutationRef, executeMutation, validateArgs } = require('firebase/data-connect');
 
+const AuthorizationStatus = {
+  AUTHORIZED: "AUTHORIZED",
+  CAPTURED: "CAPTURED",
+  VOIDED: "VOIDED",
+  EXPIRED: "EXPIRED",
+}
+exports.AuthorizationStatus = AuthorizationStatus;
+
 const BranchStatus = {
   ACTIVE: "ACTIVE",
   ARCHIVED: "ARCHIVED",
@@ -30,6 +38,24 @@ const OrderQuoteStatus = {
   RELEASE_PENDING: "RELEASE_PENDING",
 }
 exports.OrderQuoteStatus = OrderQuoteStatus;
+
+const PaymentOperationKind = {
+  AUTHORIZE: "AUTHORIZE",
+  CAPTURE: "CAPTURE",
+  VOID: "VOID",
+  REFUND: "REFUND",
+  CHARGE: "CHARGE",
+}
+exports.PaymentOperationKind = PaymentOperationKind;
+
+const PaymentOperationStatus = {
+  CREATED: "CREATED",
+  PROCESSING: "PROCESSING",
+  SUCCEEDED: "SUCCEEDED",
+  FAILED: "FAILED",
+  UNKNOWN: "UNKNOWN",
+}
+exports.PaymentOperationStatus = PaymentOperationStatus;
 
 const ServiceRequestKind = {
   CALL_WAITER: "CALL_WAITER",
@@ -571,6 +597,405 @@ exports.unassignMemberBranch = function unassignMemberBranch(dcOrVars, vars) {
 }
 ;
 
+const serverPaymentOperationByKeyRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerPaymentOperationByKey', inputVars);
+}
+serverPaymentOperationByKeyRef.operationName = 'ServerPaymentOperationByKey';
+exports.serverPaymentOperationByKeyRef = serverPaymentOperationByKeyRef;
+
+exports.serverPaymentOperationByKey = function serverPaymentOperationByKey(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverPaymentOperationByKeyRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverStalePaymentOperationsRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerStalePaymentOperations', inputVars);
+}
+serverStalePaymentOperationsRef.operationName = 'ServerStalePaymentOperations';
+exports.serverStalePaymentOperationsRef = serverStalePaymentOperationsRef;
+
+exports.serverStalePaymentOperations = function serverStalePaymentOperations(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverStalePaymentOperationsRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverAuthorizationByIdRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerAuthorizationById', inputVars);
+}
+serverAuthorizationByIdRef.operationName = 'ServerAuthorizationById';
+exports.serverAuthorizationByIdRef = serverAuthorizationByIdRef;
+
+exports.serverAuthorizationById = function serverAuthorizationById(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverAuthorizationByIdRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverAuthorizationsToReleaseRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerAuthorizationsToRelease', inputVars);
+}
+serverAuthorizationsToReleaseRef.operationName = 'ServerAuthorizationsToRelease';
+exports.serverAuthorizationsToReleaseRef = serverAuthorizationsToReleaseRef;
+
+exports.serverAuthorizationsToRelease = function serverAuthorizationsToRelease(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverAuthorizationsToReleaseRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverExpiringAuthorizationsRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerExpiringAuthorizations', inputVars);
+}
+serverExpiringAuthorizationsRef.operationName = 'ServerExpiringAuthorizations';
+exports.serverExpiringAuthorizationsRef = serverExpiringAuthorizationsRef;
+
+exports.serverExpiringAuthorizations = function serverExpiringAuthorizations(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverExpiringAuthorizationsRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverProviderEventRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerProviderEvent', inputVars);
+}
+serverProviderEventRef.operationName = 'ServerProviderEvent';
+exports.serverProviderEventRef = serverProviderEventRef;
+
+exports.serverProviderEvent = function serverProviderEvent(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverProviderEventRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverDueOutboxEventsRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'ServerDueOutboxEvents', inputVars);
+}
+serverDueOutboxEventsRef.operationName = 'ServerDueOutboxEvents';
+exports.serverDueOutboxEventsRef = serverDueOutboxEventsRef;
+
+exports.serverDueOutboxEvents = function serverDueOutboxEvents(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(serverDueOutboxEventsRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const serverBeginPaymentOperationRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerBeginPaymentOperation', inputVars);
+}
+serverBeginPaymentOperationRef.operationName = 'ServerBeginPaymentOperation';
+exports.serverBeginPaymentOperationRef = serverBeginPaymentOperationRef;
+
+exports.serverBeginPaymentOperation = function serverBeginPaymentOperation(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverBeginPaymentOperationRef(dcInstance, inputVars));
+}
+;
+
+const serverRetryPaymentOperationRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerRetryPaymentOperation', inputVars);
+}
+serverRetryPaymentOperationRef.operationName = 'ServerRetryPaymentOperation';
+exports.serverRetryPaymentOperationRef = serverRetryPaymentOperationRef;
+
+exports.serverRetryPaymentOperation = function serverRetryPaymentOperation(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverRetryPaymentOperationRef(dcInstance, inputVars));
+}
+;
+
+const serverMarkPaymentOperationUnknownRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerMarkPaymentOperationUnknown', inputVars);
+}
+serverMarkPaymentOperationUnknownRef.operationName = 'ServerMarkPaymentOperationUnknown';
+exports.serverMarkPaymentOperationUnknownRef = serverMarkPaymentOperationUnknownRef;
+
+exports.serverMarkPaymentOperationUnknown = function serverMarkPaymentOperationUnknown(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverMarkPaymentOperationUnknownRef(dcInstance, inputVars));
+}
+;
+
+const serverFailPaymentOperationRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerFailPaymentOperation', inputVars);
+}
+serverFailPaymentOperationRef.operationName = 'ServerFailPaymentOperation';
+exports.serverFailPaymentOperationRef = serverFailPaymentOperationRef;
+
+exports.serverFailPaymentOperation = function serverFailPaymentOperation(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverFailPaymentOperationRef(dcInstance, inputVars));
+}
+;
+
+const serverSettleAuthorizeRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerSettleAuthorize', inputVars);
+}
+serverSettleAuthorizeRef.operationName = 'ServerSettleAuthorize';
+exports.serverSettleAuthorizeRef = serverSettleAuthorizeRef;
+
+exports.serverSettleAuthorize = function serverSettleAuthorize(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverSettleAuthorizeRef(dcInstance, inputVars));
+}
+;
+
+const serverDeclineAuthorizeRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerDeclineAuthorize', inputVars);
+}
+serverDeclineAuthorizeRef.operationName = 'ServerDeclineAuthorize';
+exports.serverDeclineAuthorizeRef = serverDeclineAuthorizeRef;
+
+exports.serverDeclineAuthorize = function serverDeclineAuthorize(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverDeclineAuthorizeRef(dcInstance, inputVars));
+}
+;
+
+const serverAdoptOrphanAuthorizationRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerAdoptOrphanAuthorization', inputVars);
+}
+serverAdoptOrphanAuthorizationRef.operationName = 'ServerAdoptOrphanAuthorization';
+exports.serverAdoptOrphanAuthorizationRef = serverAdoptOrphanAuthorizationRef;
+
+exports.serverAdoptOrphanAuthorization = function serverAdoptOrphanAuthorization(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverAdoptOrphanAuthorizationRef(dcInstance, inputVars));
+}
+;
+
+const serverSettleCaptureRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerSettleCapture', inputVars);
+}
+serverSettleCaptureRef.operationName = 'ServerSettleCapture';
+exports.serverSettleCaptureRef = serverSettleCaptureRef;
+
+exports.serverSettleCapture = function serverSettleCapture(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverSettleCaptureRef(dcInstance, inputVars));
+}
+;
+
+const serverFailCaptureRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerFailCapture', inputVars);
+}
+serverFailCaptureRef.operationName = 'ServerFailCapture';
+exports.serverFailCaptureRef = serverFailCaptureRef;
+
+exports.serverFailCapture = function serverFailCapture(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverFailCaptureRef(dcInstance, inputVars));
+}
+;
+
+const serverSettleVoidRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerSettleVoid', inputVars);
+}
+serverSettleVoidRef.operationName = 'ServerSettleVoid';
+exports.serverSettleVoidRef = serverSettleVoidRef;
+
+exports.serverSettleVoid = function serverSettleVoid(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverSettleVoidRef(dcInstance, inputVars));
+}
+;
+
+const serverExpireAuthorizationRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerExpireAuthorization', inputVars);
+}
+serverExpireAuthorizationRef.operationName = 'ServerExpireAuthorization';
+exports.serverExpireAuthorizationRef = serverExpireAuthorizationRef;
+
+exports.serverExpireAuthorization = function serverExpireAuthorization(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverExpireAuthorizationRef(dcInstance, inputVars));
+}
+;
+
+const serverExpireAuthorizationByRefRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerExpireAuthorizationByRef', inputVars);
+}
+serverExpireAuthorizationByRefRef.operationName = 'ServerExpireAuthorizationByRef';
+exports.serverExpireAuthorizationByRefRef = serverExpireAuthorizationByRefRef;
+
+exports.serverExpireAuthorizationByRef = function serverExpireAuthorizationByRef(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverExpireAuthorizationByRefRef(dcInstance, inputVars));
+}
+;
+
+const serverExpireLapsedAuthorizationsRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerExpireLapsedAuthorizations', inputVars);
+}
+serverExpireLapsedAuthorizationsRef.operationName = 'ServerExpireLapsedAuthorizations';
+exports.serverExpireLapsedAuthorizationsRef = serverExpireLapsedAuthorizationsRef;
+
+exports.serverExpireLapsedAuthorizations = function serverExpireLapsedAuthorizations(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverExpireLapsedAuthorizationsRef(dcInstance, inputVars));
+}
+;
+
+const serverSettleRefundRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerSettleRefund', inputVars);
+}
+serverSettleRefundRef.operationName = 'ServerSettleRefund';
+exports.serverSettleRefundRef = serverSettleRefundRef;
+
+exports.serverSettleRefund = function serverSettleRefund(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverSettleRefundRef(dcInstance, inputVars));
+}
+;
+
+const serverMarkRefundPendingRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerMarkRefundPending', inputVars);
+}
+serverMarkRefundPendingRef.operationName = 'ServerMarkRefundPending';
+exports.serverMarkRefundPendingRef = serverMarkRefundPendingRef;
+
+exports.serverMarkRefundPending = function serverMarkRefundPending(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverMarkRefundPendingRef(dcInstance, inputVars));
+}
+;
+
+const serverRejectRefundRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerRejectRefund', inputVars);
+}
+serverRejectRefundRef.operationName = 'ServerRejectRefund';
+exports.serverRejectRefundRef = serverRejectRefundRef;
+
+exports.serverRejectRefund = function serverRejectRefund(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverRejectRefundRef(dcInstance, inputVars));
+}
+;
+
+const serverRecordProviderEventRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerRecordProviderEvent', inputVars);
+}
+serverRecordProviderEventRef.operationName = 'ServerRecordProviderEvent';
+exports.serverRecordProviderEventRef = serverRecordProviderEventRef;
+
+exports.serverRecordProviderEvent = function serverRecordProviderEvent(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverRecordProviderEventRef(dcInstance, inputVars));
+}
+;
+
+const serverFinishProviderEventRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerFinishProviderEvent', inputVars);
+}
+serverFinishProviderEventRef.operationName = 'ServerFinishProviderEvent';
+exports.serverFinishProviderEventRef = serverFinishProviderEventRef;
+
+exports.serverFinishProviderEvent = function serverFinishProviderEvent(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverFinishProviderEventRef(dcInstance, inputVars));
+}
+;
+
+const serverCompleteOutboxEventRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerCompleteOutboxEvent', inputVars);
+}
+serverCompleteOutboxEventRef.operationName = 'ServerCompleteOutboxEvent';
+exports.serverCompleteOutboxEventRef = serverCompleteOutboxEventRef;
+
+exports.serverCompleteOutboxEvent = function serverCompleteOutboxEvent(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverCompleteOutboxEventRef(dcInstance, inputVars));
+}
+;
+
+const serverRetryOutboxEventRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerRetryOutboxEvent', inputVars);
+}
+serverRetryOutboxEventRef.operationName = 'ServerRetryOutboxEvent';
+exports.serverRetryOutboxEventRef = serverRetryOutboxEventRef;
+
+exports.serverRetryOutboxEvent = function serverRetryOutboxEvent(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverRetryOutboxEventRef(dcInstance, inputVars));
+}
+;
+
+const serverFailOutboxEventRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerFailOutboxEvent', inputVars);
+}
+serverFailOutboxEventRef.operationName = 'ServerFailOutboxEvent';
+exports.serverFailOutboxEventRef = serverFailOutboxEventRef;
+
+exports.serverFailOutboxEvent = function serverFailOutboxEvent(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverFailOutboxEventRef(dcInstance, inputVars));
+}
+;
+
 const pickupQueueRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();
@@ -933,20 +1358,6 @@ exports.serverQuoteForPayment = function serverQuoteForPayment(dcOrVars, varsOrO
   
   const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
   return executeQuery(serverQuoteForPaymentRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
-}
-;
-
-const serverSetQuotePaymentRef = (dcOrVars, vars) => {
-  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
-  dcInstance._useGeneratedSdk();
-  return mutationRef(dcInstance, 'ServerSetQuotePayment', inputVars);
-}
-serverSetQuotePaymentRef.operationName = 'ServerSetQuotePayment';
-exports.serverSetQuotePaymentRef = serverSetQuotePaymentRef;
-
-exports.serverSetQuotePayment = function serverSetQuotePayment(dcOrVars, vars) {
-  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
-  return executeMutation(serverSetQuotePaymentRef(dcInstance, inputVars));
 }
 ;
 

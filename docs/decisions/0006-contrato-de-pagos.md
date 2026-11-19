@@ -27,6 +27,8 @@ Mecanismos obligatorios: intento persistente antes de llamar al proveedor, `Idem
 - `FakePaymentGateway`: **explícitamente simulado**, solo para pruebas y Fase 2–3; nunca habilitado en producción.
 - Adaptador real: tras D-02, en entorno de pruebas del proveedor (Fase 4). La habilitación real requiere autorización separada.
 
+**Implementación (Fase 4, bloque 3, 2026-11-18):** `packages/contracts/src/payments.ts` declara las capacidades `partialCapture`, `incrementalAuthorization` y `partialRefund`. El plazo de la autorización (`authorizationTtl`) llega en cada autorización como `expiresAt`, y `multipleCaptures` no se usa (una captura por preautorización). Captura, anulación y reembolso reciben su clave de idempotencia. `verifyWebhook` verifica cada aviso con el cuerpo exacto. Mecanismos: `PaymentOperation` (intento e idempotencia), `ProviderEvent`, `OutboxEvent` y la conciliación programada (`plans/fase-4.md`, decisiones del bloque 3).
+
 ## Consecuencias
 
 - Tavelyo nunca recibe PAN ni CVV: se usan componentes de tokenización del proveedor.

@@ -251,8 +251,13 @@ type PaymentOperation
   refundId: UUID
   refund: Refund
     @ref(fields: ["refundId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
+  "Resumen que se autoriza (solo en AUTHORIZE): la conciliación lo usa si la respuesta se perdió."
+  quoteId: UUID
+  quote: OrderQuote
+    @ref(fields: ["quoteId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
   currency: String! @col(dataType: "char(3)")
   amountMinor: Int64!
+  "Referencia sobre la que actúa: la autorización (captura y liberación) o el pago (reembolso)."
   providerRef: String
   "Código del error de la pasarela, sin datos de la tarjeta ni del cliente (PM §10)."
   failureCode: String

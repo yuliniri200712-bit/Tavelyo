@@ -30,10 +30,18 @@ export {
   preauthorizationConsentText,
 } from './customer-api.ts';
 export {
+  PaymentKeyConflictError,
   PaymentTimeoutError,
   type AuthorizeRequest,
+  type CaptureRequest,
+  type GatewayCapabilities,
   type PaymentAmount,
   type PaymentGateway,
   type PaymentResult,
   type PaymentStatus,
+  type ProviderNotice,
+  type RefundRequest,
+  type VoidRequest,
+  type WebhookRejection,
+  type WebhookVerification,
 } from './payments.ts';

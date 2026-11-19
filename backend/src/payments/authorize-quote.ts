@@ -13,6 +13,7 @@ import { canonicalUuid, type Clock } from '../shared/clock.ts';
 import { isUuid, readFields } from '../shared/input.ts';
 import { failure, type Actor, type Outcome } from '../shared/outcome.ts';
 import { RATE_LIMITED_MESSAGE, RATE_LIMITS, type RateLimiter } from '../shared/rate-limit.ts';
+import { isClosed, operationKeys, type ConfirmedHold, type PaymentLedger } from './ledger.ts';
 
 export type PayableQuoteStatus =
   'QUOTED' | 'AUTHORIZED' | 'DECLINED' | 'EXPIRED' | 'RELEASE_PENDING';
@@ -31,13 +32,25 @@ export interface PayableQuote extends AuthorizedQuote {
 export interface PaymentQuoteStore {
   /** El resumen solo si es de quien llama (aunque la mesa ya se haya cerrado). */
   forPayment(quoteId: string, authUid: string): Promise<PayableQuote | null>;
-  setPayment(
+  /**
+   * Autorización confirmada: el resumen queda AUTHORIZED, nace su PaymentAuthorization y la
+   * operación se cierra, todo en una transacción. false si otra llamada ya la registró.
+   */
+  setAuthorized(
     quote: PayableQuote,
+    operationId: string,
     authUid: string,
-    status: 'AUTHORIZED' | 'DECLINED',
+    hold: ConfirmedHold,
+    consentTextVersion: string,
+  ): Promise<boolean>;
+  /** Autorización rechazada: el resumen queda DECLINED y la operación FAILED. */
+  setDeclined(
+    quote: PayableQuote,
+    operationId: string,
+    authUid: string,
     paymentRef: string,
     consentTextVersion: string,
-  ): Promise<void>;
+  ): Promise<boolean>;
   /** Autorizado pero no enviado a cocina: la retención queda para liberar (Fase 4). */
   markReleasePending(quote: PayableQuote, authUid: string): Promise<void>;
 }
@@ -45,6 +58,7 @@ export interface PaymentQuoteStore {
 export interface AuthorizeQuoteDeps {
   readonly quotes: PaymentQuoteStore;
   readonly payments: PaymentGateway;
+  readonly ledger: Pick<PaymentLedger, 'begin' | 'markUnknown'>;
   readonly dispatch: KitchenDispatcher;
   readonly limiter: RateLimiter;
   readonly clock: Clock;
@@ -95,6 +109,8 @@ export const NOT_SENT =
  * Autoriza el importe de un resumen verificable y, solo si la autorización se confirma, crea el
  * pedido y lo envía a cocina (D-04). El importe sale del resumen guardado, nunca del cliente, y
  * la clave de idempotencia es el resumen: reintentar no autoriza dos veces ni crea dos pedidos.
+ * Antes de llamar a la pasarela se guarda la operación AUTHORIZE (PM §8): si la respuesta se pierde
+ * y la consulta no la encuentra, queda UNKNOWN y la conciliación la resuelve (caso 7).
  * Si una caída dejó el resumen autorizado sin pedido, repetir la llamada termina el envío. Si la
  * mesa o la persona ya no están vigentes, no se envía nada y la retención queda para liberar.
  */
@@ -140,7 +156,20 @@ export function createAuthorizeQuote(deps: AuthorizeQuoteDeps) {
     if (!isSeated(quote, deps.clock.now())) return err(failure('not-found', NOT_FOUND));
     if (quote.expiresAt <= deps.clock.now()) return err(failure('failed-precondition', EXPIRED));
 
-    const idempotencyKey = `quote_${quote.id}`;
+    const idempotencyKey = operationKeys.authorizeQuote(quote.id);
+    const { operation } = await deps.ledger.begin({
+      tenantId: quote.tenantId,
+      branchId: quote.branchId,
+      kind: 'AUTHORIZE',
+      idempotencyKey,
+      currency: quote.currency,
+      amountMinor: quote.totalMinor,
+      providerRef: null,
+      quoteId: quote.id,
+    });
+    // Cerrada con el resumen aún sin autorizar: la resolvió la conciliación tras vencer el resumen.
+    if (isClosed(operation.status)) return err(failure('failed-precondition', EXPIRED));
+
     let result: PaymentResult | null;
     try {
       result = await deps.payments.authorize({
@@ -153,15 +182,25 @@ export function createAuthorizeQuote(deps: AuthorizeQuoteDeps) {
       if (!(error instanceof PaymentTimeoutError)) throw error;
       result = await deps.payments.status(idempotencyKey);
     }
-    if (!result) return err(failure('unavailable', NO_ANSWER));
+    if (!result) {
+      await deps.ledger.markUnknown(operation);
+      return err(failure('unavailable', NO_ANSWER));
+    }
 
     const consent = input.value.consentTextVersion;
     switch (result.status) {
-      case 'authorized':
-        await deps.quotes.setPayment(quote, actor.uid, 'AUTHORIZED', result.paymentRef, consent);
+      case 'authorized': {
+        const hold = {
+          provider: deps.payments.provider,
+          paymentRef: result.paymentRef,
+          expiresAt: result.expiresAt ? new Date(result.expiresAt) : null,
+        };
+        // Si otra llamada simultánea ya la registró, el envío a cocina sigue siendo uno solo.
+        await deps.quotes.setAuthorized(quote, operation.id, actor.uid, hold, consent);
         return sendToKitchen();
+      }
       case 'declined':
-        await deps.quotes.setPayment(quote, actor.uid, 'DECLINED', result.paymentRef, consent);
+        await deps.quotes.setDeclined(quote, operation.id, actor.uid, result.paymentRef, consent);
         return ok({ quoteId: quote.id, status: 'declined', simulated });
       case 'requires_action':
         return ok({ quoteId: quote.id, status: 'requires_action', simulated });
