@@ -152,3 +152,47 @@ Mantener actualizada la documentación del proyecto en `docs/`:
 | Progreso | `docs/progress.md` |
 
 La documentación debe actualizarse junto con los cambios que la afectan, dentro de la misma fase. Distinguir siempre lo implementado, lo propuesto, los supuestos y lo pendiente.
+
+---
+
+## 11. Forma de trabajo, entorno y patrones del código
+
+Lo aprendido en las fases 1 a 4. Completa las secciones anteriores; no las reemplaza.
+
+### Idioma y autorizaciones
+
+- Responder siempre en español: mensajes, documentación, comentarios del código, textos de la interfaz y mensajes de commit.
+- Dentro de una fase, **terminar un bloque no autoriza el siguiente**: al cerrar cada bloque, presentar resumen y pruebas, y esperar respuesta.
+- Sin autorización expresa: no integrar en `main`, no `push --force`, no `reset --hard` y **no borrar ramas** (el propietario quiere conservarlas todas); no desplegar ni activar recursos facturables (antes de algo con coste, mostrar el coste); no añadir dependencias ni servicios; no tocar la seguridad de Windows (Control inteligente de aplicaciones) ni contenedores de Docker de otros proyectos.
+- «Nada se borra» en el esquema: no borrar tablas, columnas ni datos; los errores se corrigen con operaciones nuevas y auditadas.
+- No poner el correo del propietario en peticiones externas ni en la documentación.
+
+### Entorno de este equipo (Windows)
+
+- Pruebas, compilaciones y Playwright, siempre desde PowerShell con la unidad en mayúscula: `Set-Location 'C:\Users\Usuario\OneDrive\Desktop\Tavelyo\Tavelyo'`. Con `c:` en minúscula, Vitest falla en todos los archivos y las apps salen en blanco.
+- No editar archivos con `Get-Content`/`Set-Content` de PowerShell: estropean el UTF-8 (tildes, «», ñ).
+- En Git Bash, los heredocs con comillas invertidas o apóstrofos fallan: escribir el script en un archivo y ejecutarlo con `node`.
+- Emuladores de Firebase: solo en el contenedor de Docker `tavelyo-emu` ([`tools/emuladores-docker/README.md`](tools/emuladores-docker/README.md)). Tras cambiar el esquema, los conectores o el backend: `npm run build -w backend`, `docker restart tavelyo-emu`, generar el SDK y copiarlo a `packages/data-access/dataconnect-generated` (la CI comprueba que coincide).
+
+### Comprobaciones (PowerShell, desde `C:\…`)
+
+| Qué | Comando |
+|---|---|
+| Formato, lint, tipos y unitarias | `npm run check` |
+| Secretos | `npm run check:secrets` |
+| Integración de SQL Connect (sin variables de entorno) | `npx vitest run --config vitest.integration.config.ts dataconnect` |
+| Integración del backend (en otra ejecución: estas variables rompen `gateways.int.test.ts`) | `$env:FIREBASE_AUTH_EMULATOR_HOST='127.0.0.1:9099'; $env:DATA_CONNECT_EMULATOR_HOST='127.0.0.1:9399'; $env:GCLOUD_PROJECT='demo-tavelyo'; npx vitest run --config vitest.integration.config.ts backend/tests` |
+| Recorridos en navegador (liberar antes los puertos 6173 y 6174) | `$env:FIREBASE_AUTH_EMULATOR_HOST='127.0.0.1:9099'; npx playwright test --config playwright.emulators.config.ts --project=chrome <archivos>` |
+
+La CI corre los recorridos en los cinco navegadores de D-15. Para ver la CI sin agotar el límite de la API de GitHub, consultar `https://github.com/yuliniri200712-bit/Tavelyo/actions?query=branch%3A<rama>`.
+
+### Patrones del código
+
+- **Por funcionalidad:** `packages/features/<módulo>/src/` con `domain` (tipos y contrato de datos), `application` (lógica y textos) y `presentation` (React); la implementación de datos en `packages/data-access`; las apps (`apps/menu-web`, `apps/operations`) solo componen.
+- **Backend** (`backend/src`): casos de uso con dependencias inyectadas; almacenes de SQL Connect en `data/`; funciones declaradas en `presentation/` y compuestas en `index.ts`.
+- **Conectores** (`dataconnect/connector/*.gql`, reglas verificadas por `dataconnect/tests/connector-rules.test.ts`): las operaciones solo de servidor se llaman `Server*` y son `NO_ACCESS`; las del personal llevan `@auth(level: USER)` y comprueban membresía, permiso y sucursal; si escriben, además `@transaction`, `@redact` y `AuditEvent`.
+- **Concurrencia:** `_updateMany` condicionado (versión o estado) seguido de `@check(expr: "response.X_updateMany == 1")`.
+- **Dinero:** `Money` de `packages/core`, unidades menores con `bigint` y moneda explícita.
+- **Permisos:** en `packages/contracts/src/authorization.ts`; la matriz de `docs/architecture/permissions.md` debe coincidir (lo comprueba una prueba).
+- **Interfaz:** componentes y tokens de `packages/design-system`; todo estado también en texto; avisos en `role="status"`; revisión axe en los recorridos.
+- **Pasarela de pagos (bloque 3 de la Fase 4):** desconectada a propósito desde ADR-0012 y conservada para «Suscripciones a Tavelyo». No borrarla ni volver a conectarla sin autorización.
