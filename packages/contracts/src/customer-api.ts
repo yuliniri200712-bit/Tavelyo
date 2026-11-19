@@ -105,48 +105,20 @@ export type QuoteOrderResponse =
     }
   | { readonly outcome: 'rejected'; readonly problems: readonly QuoteProblem[] };
 
-/** Resultados que se pueden forzar en el adaptador simulado (solo con el proyecto demo). */
-export type SimulatedPaymentOutcome = 'approved' | 'declined' | 'requires_action' | 'timeout';
-
 /**
- * Versión vigente del texto de preautorización (RF-PA-02). El servidor solo autoriza si el cliente
- * aceptó esta versión y la guarda con el resumen. Cambiar el texto exige una versión nueva.
+ * «Enviar pedido» (ADR-0012): el comensal confirma su resumen vigente. No hay preautorización: el
+ * pedido se suma a la cuenta de la mesa y se paga al final en el restaurante. El resumen es la
+ * clave de idempotencia: reintentar no crea dos pedidos.
  */
-export const PREAUTHORIZATION_CONSENT_VERSION = '2026-11-16';
-
-/**
- * Texto de la preautorización en la versión vigente: importe, moneda y para qué es. `amount` es el
- * importe ya formateado con su moneda (p. ej. «$ 32.000»).
- */
-export function preauthorizationConsentText(amount: string): string {
-  return (
-    `Autorizas una reserva de ${amount} en tu medio de pago para garantizar este pedido antes ` +
-    'de que llegue a cocina. No es un cobro: al pagar la cuenta se cobra solo lo consumido y se ' +
-    'libera el resto, también si pagas en efectivo.'
-  );
-}
-
-export interface AuthorizeQuoteRequest {
+export interface SubmitOrderRequest {
   readonly quoteId: string;
-  /** Versión del texto de preautorización que la persona leyó y aceptó. */
-  readonly consentTextVersion: string;
-  readonly simulatedOutcome?: SimulatedPaymentOutcome;
 }
 
-export type AuthorizeQuoteResponse =
-  /** Autorizado y enviado a cocina (D-04): orderId es el pedido creado para el resumen. */
-  | {
-      readonly quoteId: string;
-      readonly status: 'authorized';
-      readonly orderId: string;
-      /** true mientras solo exista el adaptador simulado: la interfaz lo rotula como tal. */
-      readonly simulated: boolean;
-    }
-  | {
-      readonly quoteId: string;
-      readonly status: 'declined' | 'requires_action';
-      readonly simulated: boolean;
-    };
+export type SubmitOrderResponse =
+  /** Llegó a cocina (la sucursal envía directo, D-32). */
+  | { readonly quoteId: string; readonly status: 'sent'; readonly orderId: string }
+  /** Espera a que un mesero lo apruebe (la sucursal lo exige, D-32); se puede retirar mientras. */
+  | { readonly quoteId: string; readonly status: 'pending_approval'; readonly orderId: string };
 
 /** Solicitudes al personal desde la mesa (Fase 3). Pedir la cuenta solo avisa al mesero. */
 export type ServiceRequestKind = 'call_waiter' | 'request_bill';

@@ -7,8 +7,6 @@ export {
   type RoleDefinition,
 } from './authorization.ts';
 export type {
-  AuthorizeQuoteRequest,
-  AuthorizeQuoteResponse,
   JoinTableSessionRequest,
   JoinTableSessionResponse,
   QuoteChange,
@@ -22,13 +20,10 @@ export type {
   RequestServiceRequest,
   RequestServiceResponse,
   ServiceRequestKind,
-  SimulatedPaymentOutcome,
+  SubmitOrderRequest,
+  SubmitOrderResponse,
 } from './customer-api.ts';
-export {
-  ORDER_LIMITS,
-  PREAUTHORIZATION_CONSENT_VERSION,
-  preauthorizationConsentText,
-} from './customer-api.ts';
+export { ORDER_LIMITS } from './customer-api.ts';
 export {
   PaymentKeyConflictError,
   PaymentTimeoutError,
@@ -41,6 +36,7 @@ export {
   type PaymentStatus,
   type ProviderNotice,
   type RefundRequest,
+  type SimulatedPaymentOutcome,
   type VoidRequest,
   type WebhookRejection,
   type WebhookVerification,

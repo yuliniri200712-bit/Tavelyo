@@ -28,6 +28,12 @@ query FloorView($tenantId: UUID!, $branchId: UUID!)
 )
 @refresh(
   onMutationExecuted: {
+    operation: "ApproveOrder"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
     operation: "FinishOrderItem"
     condition: "request.variables.branchId == mutation.variables.branchId"
   }

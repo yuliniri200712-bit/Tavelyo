@@ -16,8 +16,8 @@ export const RATE_LIMITS = {
   joinPerTable: { scope: 'join.table', limit: 120, windowSeconds: 600 },
   /** «Revisar pedido», por persona. */
   quotePerUser: { scope: 'quote.uid', limit: 30, windowSeconds: 60 },
-  /** Autorizaciones de pago, por persona. */
-  paymentPerUser: { scope: 'payment.uid', limit: 10, windowSeconds: 60 },
+  /** «Enviar pedido», por persona. */
+  submitPerUser: { scope: 'submit.uid', limit: 10, windowSeconds: 60 },
   /** «Llamar al mesero» y «Pedir la cuenta», por persona. */
   servicePerUser: { scope: 'service.uid', limit: 6, windowSeconds: 600 },
   /** Solicitudes de una misma mesa: frena a quien crea muchas cuentas anónimas. */

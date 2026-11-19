@@ -32,6 +32,14 @@ type Tenant @table {
   createdAt: Timestamp! @default(expr: "request.time")
 }
 
+"Cómo llegan a cocina los pedidos que el comensal hace desde su teléfono (D-32, ADR-0012)."
+enum OrderApprovalMode {
+  "Directo a cocina al enviarlos."
+  DIRECT
+  "Un mesero aprueba o rechaza cada pedido antes de cocina."
+  WAITER_APPROVAL
+}
+
 "Sucursal. (id, tenant) es único para servir de destino a FK compuestas."
 type Branch @table @unique(fields: ["id", "tenant"]) {
   id: UUID! @default(expr: "uuidV4()")
@@ -40,6 +48,8 @@ type Branch @table @unique(fields: ["id", "tenant"]) {
   currency: String! @col(dataType: "char(3)")
   timezone: String!
   status: BranchStatus!
+  "La cambian el propietario y el administrador de sucursal (branch.settings), con auditoría."
+  orderApproval: OrderApprovalMode! @default(value: DIRECT)
   createdAt: Timestamp! @default(expr: "request.time")
 }
 

@@ -37,6 +37,7 @@ Leyenda: ✅ permitido · 🔸 permitido con tope, motivo o autenticación refor
 | `session.transfer` / `session.merge` | ✅ | ✅ | 🔸 | — | — | — |
 | `order.create` | ✅ | ✅ | ✅ | — | — | ✅ propia sesión |
 | `order.amend` (tras envío) | ✅ | ✅ | 🔸 | — | — | — |
+| `order.approve` (pedidos del cliente, D-32) | ✅ | ✅ | ✅ | — | — | — |
 | `order_item.cancel` | ✅ | 🔸 | 🔸 | 🔸 | — | — |
 | `kitchen.advance` (→ `en_preparacion`, `listo`) | — | — | — | ✅ | — | — |
 | `delivery.pickup` / `delivery.deliver` | — | — | ✅ | — | — | — |
@@ -46,10 +47,10 @@ Leyenda: ✅ permitido · 🔸 permitido con tope, motivo o autenticación refor
 | `bill.read` | ✅ | ✅ | ✅ sin datos de pago | — | ✅ | ✅ propia cuenta |
 | `bill.split` | ✅ | ✅ | — | — | ✅ | — |
 | `bill.discount` | ✅ | 🔸 | — | — | 🔸 tope | — |
-| `payment.authorize` (iniciar) | — | — | — | — | ✅ | ✅ propia cuenta |
+| `payment.authorize` (iniciar; sin uso en el restaurante desde ADR-0012) | — | — | — | — | ✅ | ✅ propia cuenta |
 | `payment.capture` | ✅ | ✅ | — | — | ✅ | — |
 | `payment.void_authorization` | ✅ | ✅ | — | — | 🔸 | — |
-| `payment.refund` | 🔸 | 🔸 tope | — | — | 🔸 tope | — |
+| `payment.refund` (registrado, D-34; siempre con motivo) | 🔸 sin tope | 🔸 hasta $ 300.000 | — | — | 🔸 hasta $ 50.000 | — |
 | `cash_session.open` / `close` | ✅ | ✅ | — | — | ✅ su caja | — |
 | `inventory.manage` | ✅ | ✅ | — | — | — | — |
 | `staff.invite` | ✅ | 🔸 rango inferior | — | — | — | — |
@@ -57,6 +58,7 @@ Leyenda: ✅ permitido · 🔸 permitido con tope, motivo o autenticación refor
 | `report.read` | ✅ | ✅ su sucursal | — | — | 🔸 su turno | — |
 | `report.export` | 🔸 | 🔸 | — | — | — | — |
 | `tenant.settings` | 🔸 | — | — | — | — | — |
+| `branch.settings` (modo de envío a cocina, D-32) | ✅ | ✅ su sucursal | — | — | — | — |
 
 El operador de plataforma no aparece en la matriz operativa: solo tiene permisos de aprovisionamiento y un mecanismo de acceso excepcional (pendiente de diseño en Fase 1).
 
@@ -100,6 +102,14 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - El mesero no ve el `qrPublicId` (solo quien gestiona las mesas, para imprimirlo) ni el uid de Firebase Auth de los clientes que se unen a la mesa.
 - El cliente (`customer`) no tiene operaciones de personal: solo la carta pública por QR y su propia participación (ADR-0011).
 - Pendiente: tope o motivo en `price.change` (🔸 de la matriz), y si un administrador de sucursal puede tener productos propios de su sucursal.
+
+### Aprobación de pedidos (Fase 4, bloque 3A, 2026-11-18; D-32, ADR-0012)
+
+| Operaciones | Permiso | Ámbito |
+|---|---|---|
+| Ver y cambiar el modo de la sucursal (`BranchOrderApproval`, `SetBranchOrderApproval`), auditado | `branch.settings` | Sucursal asignada (propietario: todas) |
+| Bandeja «Pedidos por aprobar», aprobar (llega a cocina) o rechazar con motivo (`PendingApprovalOrders`, `ApproveOrder`, `RejectOrder`), auditado | `order.approve` | Sucursal asignada |
+| Retirar su propio pedido mientras espera (`WithdrawMyOrder`) | Cliente: su participación vigente en una mesa abierta | Su pedido |
 
 ### Pedidos, cocina y solicitudes (Fase 3, bloque 2, 2026-11-16)
 

@@ -102,13 +102,38 @@ query MyParticipation($sessionId: UUID!) @auth(level: USER_ANON) {
 }
 
 # «Mis pedidos» (D-06): solo los de quien consulta, en su participación vigente de una sesión
-# abierta y ya enviados a cocina, con el estado de cada línea. branchId acota el refresco a la
+# abierta: los enviados a cocina, con el estado de cada línea, y los que pasaron por la aprobación
+# del mesero (D-32): pendientes, rechazados con su motivo o retirados. branchId acota el refresco a la
 # sucursal de la mesa (ADR-0007) y debe coincidir con la de la sesión.
 query MyOrders($sessionId: UUID!, $branchId: UUID!)
 @auth(level: USER_ANON)
 @refresh(
   onMutationExecuted: {
     operation: "ServerSendOrderToKitchen"
+    condition: "request.variables.sessionId == mutation.variables.sessionId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerRequestOrderApproval"
+    condition: "request.variables.sessionId == mutation.variables.sessionId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ApproveOrder"
+    condition: "request.variables.sessionId == mutation.variables.sessionId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "RejectOrder"
+    condition: "request.variables.sessionId == mutation.variables.sessionId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "WithdrawMyOrder"
     condition: "request.variables.sessionId == mutation.variables.sessionId"
   }
 )
@@ -153,17 +178,20 @@ query MyOrders($sessionId: UUID!, $branchId: UUID!)
       _and: [
         { sessionId: { eq: $sessionId } }
         { branchId: { eq: $branchId } }
-        { sentToKitchenAt: { isNull: false } }
+        { _or: [{ sentToKitchenAt: { isNull: false } }, { approval: { ne: NOT_REQUIRED } }] }
         { participant: { authUid: { eq_expr: "auth.uid" } } }
         { participant: { removedAt: { isNull: true } } }
         { participant: { expiresAt: { gt_expr: "request.time" } } }
         { session: { status: { eq: OPEN } } }
       ]
     }
-    orderBy: [{ sentToKitchenAt: ASC }]
+    orderBy: [{ submittedAt: ASC }]
   ) {
     id
     sentToKitchenAt
+    approval
+    approvalRequestedAt
+    rejectionReason
     quote {
       currency
       totalMinor

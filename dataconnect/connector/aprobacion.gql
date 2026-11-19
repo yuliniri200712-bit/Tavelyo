@@ -1,0 +1,368 @@
+# Aprobación de pedidos por el mesero (D-32, ADR-0012). Cada sucursal elige si los pedidos que el
+# comensal hace desde su teléfono van directo a cocina o los aprueba un mesero. Pendiente, el pedido
+# no llega a cocina ni a la cuenta: el mesero lo aprueba (llega a cocina en la misma transacción) o
+# lo rechaza con motivo, y su comensal puede retirarlo. Cada decisión solo avanza desde PENDING
+# (_updateMany condicionado): dos decisiones simultáneas no pasan las dos.
+
+# Modo de la sucursal, para su ajuste en administración (branch.settings).
+query BranchOrderApproval($tenantId: UUID!, $branchId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(where: { permission: { code: { eq: "branch.settings" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: branch.settings") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  branches(where: { id: { eq: $branchId }, tenant: { id: { eq: $tenantId } } }, limit: 1) {
+    id
+    name
+    orderApproval
+  }
+}
+
+mutation SetBranchOrderApproval($tenantId: UUID!, $branchId: UUID!, $mode: OrderApprovalMode!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "branch.settings" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: branch.settings") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    branch(id: $branchId) @check(expr: "this != null", message: "Sucursal inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La sucursal no pertenece a la empresa")
+    }
+  }
+  branch_update(id: $branchId, data: { orderApproval: $mode })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation_expr: "vars.mode == 'WAITER_APPROVAL' ? 'branch.order_approval.waiter' : 'branch.order_approval.direct'"
+      resourceType: "branch"
+      resourceId_expr: "vars.branchId"
+    }
+  )
+}
+
+# Bandeja «Pedidos por aprobar» del mesero: los pendientes de las mesas abiertas de la sucursal, del
+# más antiguo al más reciente, con el momento en que se pidieron para ver cuánto llevan esperando.
+query PendingApprovalOrders($tenantId: UUID!, $branchId: UUID!)
+@auth(level: USER)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerRequestOrderApproval"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ApproveOrder"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "RejectOrder"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "WithdrawMyOrder"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "CloseTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(where: { permission: { code: { eq: "order.approve" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: order.approve") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  orders(
+    where: {
+      _and: [
+        { tenantId: { eq: $tenantId } }
+        { branchId: { eq: $branchId } }
+        { approval: { eq: PENDING } }
+        { session: { status: { eq: OPEN } } }
+      ]
+    }
+    orderBy: [{ approvalRequestedAt: ASC }]
+    limit: 200
+  ) {
+    id
+    approvalRequestedAt
+    session {
+      id
+      table {
+        code
+      }
+    }
+    quote {
+      currency
+      totalMinor
+    }
+    orderItems_on_order(orderBy: [{ position: ASC }]) {
+      id
+      quantity
+      productNameSnapshot
+      note
+      allergensSnapshot
+      orderItemModifiers_on_item(orderBy: [{ position: ASC }]) {
+        nameSnapshot
+      }
+    }
+  }
+}
+
+# Aprobar: el pedido pendiente llega a cocina en la misma transacción. La mesa debe seguir abierta y
+# su comensal en ella. sessionId acota el refresco de «Mis pedidos» (ADR-0007).
+mutation ApproveOrder($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!, $orderId: UUID!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "order.approve" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: order.approve") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    order(id: $orderId) @check(expr: "this != null", message: "Pedido inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El pedido no es de la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "El pedido no es de la sucursal")
+      sessionId @check(expr: "this == vars.sessionId", message: "El pedido no es de la mesa")
+    }
+    valid: orders(
+      where: {
+        _and: [
+          { id: { eq: $orderId } }
+          { session: { status: { eq: OPEN } } }
+          { participant: { removedAt: { isNull: true } } }
+        ]
+      }
+    ) @check(expr: "this.size() == 1", message: "La mesa ya se cerró o la persona ya no está") {
+      id
+    }
+  }
+  order_updateMany(
+    where: { id: { eq: $orderId }, approval: { eq: PENDING } }
+    data: {
+      approval: APPROVED
+      approvalDecidedAt_expr: "request.time"
+      approvalDecidedBy_expr: "auth.uid"
+      sentToKitchenAt_expr: "request.time"
+    }
+  )
+  applied: query @redact {
+    order(id: $orderId)
+      @check(expr: "response.order_updateMany == 1", message: "Este pedido ya se decidió") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "order.approve"
+      resourceType: "order"
+      resourceId_expr: "vars.orderId"
+    }
+  )
+}
+
+# Rechazar con motivo: el pedido no llega a cocina ni a la cuenta; su comensal ve el motivo.
+mutation RejectOrder(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sessionId: UUID!
+  $orderId: UUID!
+  $reason: String!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.reason.trim()) >= 5 && size(vars.reason) <= 200"
+        message: "Escribe un motivo de 5 a 200 caracteres"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "order.approve" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: order.approve") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    order(id: $orderId) @check(expr: "this != null", message: "Pedido inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El pedido no es de la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "El pedido no es de la sucursal")
+      sessionId @check(expr: "this == vars.sessionId", message: "El pedido no es de la mesa")
+    }
+  }
+  order_updateMany(
+    where: { id: { eq: $orderId }, approval: { eq: PENDING } }
+    data: {
+      approval: REJECTED
+      approvalDecidedAt_expr: "request.time"
+      approvalDecidedBy_expr: "auth.uid"
+      rejectionReason: $reason
+    }
+  )
+  applied: query @redact {
+    order(id: $orderId)
+      @check(expr: "response.order_updateMany == 1", message: "Este pedido ya se decidió") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "order.reject"
+      resourceType: "order"
+      resourceId_expr: "vars.orderId"
+      reason: $reason
+    }
+  )
+}
+
+# El comensal retira su pedido mientras espera la aprobación. Solo el suyo, en su participación
+# vigente de una mesa abierta. Quién y cuándo quedan en el propio pedido (approvalDecidedBy/At).
+mutation WithdrawMyOrder($sessionId: UUID!, $branchId: UUID!, $orderId: UUID!)
+@auth(level: USER_ANON)
+@transaction {
+  query @redact {
+    mine: orders(
+      where: {
+        _and: [
+          { id: { eq: $orderId } }
+          { sessionId: { eq: $sessionId } }
+          { branchId: { eq: $branchId } }
+          { participant: { authUid: { eq_expr: "auth.uid" } } }
+          { participant: { removedAt: { isNull: true } } }
+          { participant: { expiresAt: { gt_expr: "request.time" } } }
+          { session: { status: { eq: OPEN } } }
+        ]
+      }
+    ) @check(expr: "this.size() == 1", message: "No encontramos ese pedido en tu mesa") {
+      tenantId
+    }
+  }
+  order_updateMany(
+    where: { id: { eq: $orderId }, approval: { eq: PENDING } }
+    data: {
+      approval: WITHDRAWN
+      approvalDecidedAt_expr: "request.time"
+      approvalDecidedBy_expr: "auth.uid"
+    }
+  )
+  applied: query @redact {
+    order(id: $orderId)
+      @check(expr: "response.order_updateMany == 1", message: "El mesero ya decidió este pedido") {
+      id
+    }
+  }
+}

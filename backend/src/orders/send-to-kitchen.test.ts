@@ -3,11 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildOrder,
   createKitchenDispatcher,
-  type AuthorizedQuote,
+  type ConfirmedQuote,
   type KitchenOrderStore,
   type NewOrder,
   type OrderRouting,
+  type ApprovalRequestResult,
   type SendResult,
+  type StoredOrder,
 } from './send-to-kitchen.ts';
 
 const line = (
@@ -29,7 +31,7 @@ const line = (
   ...extra,
 });
 
-const quote: AuthorizedQuote = {
+const quote: ConfirmedQuote = {
   id: 'resumen',
   tenantId: 'empresa',
   branchId: 'sucursal',
@@ -96,8 +98,12 @@ describe('buildOrder', () => {
   });
 });
 
-function store(initial: { id: string; sent: boolean } | null = null, send: SendResult = 'sent') {
-  let existing = initial;
+function store(
+  initial: StoredOrder | null = null,
+  send: SendResult = 'sent',
+  approval: ApprovalRequestResult = 'requested',
+) {
+  let existing: StoredOrder | null = initial;
   let defaultStationId: string | null = 'predeterminada';
   const inserted: NewOrder[] = [];
   const orders = {
@@ -109,10 +115,11 @@ function store(initial: { id: string; sent: boolean } | null = null, send: SendR
     }),
     insert: vi.fn(async (order: NewOrder) => {
       inserted.push(order);
-      existing = { id: order.id, sent: false };
+      existing = { id: order.id, sent: false, approval: 'NOT_REQUIRED' };
       return true;
     }),
     send: vi.fn(async () => send),
+    requestApproval: vi.fn(async () => approval),
   } satisfies KitchenOrderStore;
   return {
     orders,
@@ -127,7 +134,7 @@ describe('createKitchenDispatcher', () => {
   it('guarda el pedido y lo envía a cocina', async () => {
     const { orders, inserted } = store();
     const dispatch = createKitchenDispatcher({ orders, newId: counter() });
-    expect(await dispatch(quote, 'uid')).toEqual({ kind: 'sent', orderId: 'id-1' });
+    expect(await dispatch(quote, 'uid', 'DIRECT')).toEqual({ kind: 'sent', orderId: 'id-1' });
     expect(inserted).toHaveLength(1);
     expect(orders.send).toHaveBeenCalledWith(
       { tenantId: 'empresa', branchId: 'sucursal', sessionId: 'sesion', orderId: 'id-1' },
@@ -136,17 +143,17 @@ describe('createKitchenDispatcher', () => {
   });
 
   it('un pedido ya enviado se devuelve sin guardar ni enviar otra vez (caso 3)', async () => {
-    const { orders } = store({ id: 'pedido', sent: true });
+    const { orders } = store({ id: 'pedido', sent: true, approval: 'NOT_REQUIRED' });
     const dispatch = createKitchenDispatcher({ orders });
-    expect(await dispatch(quote, 'uid')).toEqual({ kind: 'sent', orderId: 'pedido' });
+    expect(await dispatch(quote, 'uid', 'DIRECT')).toEqual({ kind: 'sent', orderId: 'pedido' });
     expect(orders.insert).not.toHaveBeenCalled();
     expect(orders.send).not.toHaveBeenCalled();
   });
 
   it('tras una caída entre guardar y enviar, el reintento envía el pedido ya guardado', async () => {
-    const { orders } = store({ id: 'guardado', sent: false });
+    const { orders } = store({ id: 'guardado', sent: false, approval: 'NOT_REQUIRED' });
     const dispatch = createKitchenDispatcher({ orders });
-    expect(await dispatch(quote, 'uid')).toEqual({ kind: 'sent', orderId: 'guardado' });
+    expect(await dispatch(quote, 'uid', 'DIRECT')).toEqual({ kind: 'sent', orderId: 'guardado' });
     expect(orders.insert).not.toHaveBeenCalled();
     expect(orders.send).toHaveBeenCalledOnce();
   });
@@ -156,22 +163,22 @@ describe('createKitchenDispatcher', () => {
     orders.insert.mockResolvedValueOnce(false);
     orders.byQuote
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: 'ganador', sent: false });
+      .mockResolvedValueOnce({ id: 'ganador', sent: false, approval: 'NOT_REQUIRED' });
     const dispatch = createKitchenDispatcher({ orders });
-    expect(await dispatch(quote, 'uid')).toEqual({ kind: 'sent', orderId: 'ganador' });
+    expect(await dispatch(quote, 'uid', 'DIRECT')).toEqual({ kind: 'sent', orderId: 'ganador' });
   });
 
   it('si otra solicitud lo envió a la vez, también cuenta como enviado', async () => {
     const { orders } = store(null, 'already-sent');
     const dispatch = createKitchenDispatcher({ orders, newId: counter() });
-    expect(await dispatch(quote, 'uid')).toEqual({ kind: 'sent', orderId: 'id-1' });
+    expect(await dispatch(quote, 'uid', 'DIRECT')).toEqual({ kind: 'sent', orderId: 'id-1' });
   });
 
   it('crea la estación predeterminada si la sucursal no la tiene', async () => {
     const { orders, inserted, withoutDefault } = store();
     withoutDefault();
     const dispatch = createKitchenDispatcher({ orders, newId: counter() });
-    await dispatch(quote, 'uid');
+    await dispatch(quote, 'uid', 'DIRECT');
     expect(orders.createDefaultStation).toHaveBeenCalledWith('empresa', 'sucursal');
     expect(inserted[0]?.items[2]?.stationId).toBe('creada');
   });
@@ -179,6 +186,68 @@ describe('createKitchenDispatcher', () => {
   it('si el servidor rechaza el envío, lo informa sin dar el pedido por enviado', async () => {
     const { orders } = store(null, 'rejected');
     const dispatch = createKitchenDispatcher({ orders });
-    expect(await dispatch(quote, 'uid')).toEqual({ kind: 'rejected' });
+    expect(await dispatch(quote, 'uid', 'DIRECT')).toEqual({ kind: 'rejected' });
+  });
+});
+
+describe('createKitchenDispatcher con aprobación del mesero (D-32)', () => {
+  it('guarda el pedido y lo deja pendiente del mesero, sin enviarlo a cocina', async () => {
+    const { orders, inserted } = store();
+    const dispatch = createKitchenDispatcher({ orders, newId: counter() });
+    expect(await dispatch(quote, 'uid', 'WAITER_APPROVAL')).toEqual({
+      kind: 'pending_approval',
+      orderId: 'id-1',
+    });
+    expect(inserted).toHaveLength(1);
+    expect(orders.requestApproval).toHaveBeenCalledWith(
+      { tenantId: 'empresa', branchId: 'sucursal', sessionId: 'sesion', orderId: 'id-1' },
+      'uid',
+    );
+    expect(orders.send).not.toHaveBeenCalled();
+  });
+
+  it('si otra solicitud ya lo dejó pendiente, también cuenta como pendiente', async () => {
+    const { orders } = store(null, 'sent', 'already-requested');
+    const dispatch = createKitchenDispatcher({ orders, newId: counter() });
+    expect(await dispatch(quote, 'uid', 'WAITER_APPROVAL')).toEqual({
+      kind: 'pending_approval',
+      orderId: 'id-1',
+    });
+  });
+
+  it('un pedido ya pendiente, aprobado, rechazado o retirado se informa sin tocarlo (caso 3)', async () => {
+    const cases: Array<[StoredOrder, unknown]> = [
+      [
+        { id: 'p', sent: false, approval: 'PENDING' },
+        { kind: 'pending_approval', orderId: 'p' },
+      ],
+      [
+        { id: 'a', sent: true, approval: 'APPROVED' },
+        { kind: 'sent', orderId: 'a' },
+      ],
+      [
+        { id: 'r', sent: false, approval: 'REJECTED' },
+        { kind: 'closed', orderId: 'r', approval: 'REJECTED' },
+      ],
+      [
+        { id: 'w', sent: false, approval: 'WITHDRAWN' },
+        { kind: 'closed', orderId: 'w', approval: 'WITHDRAWN' },
+      ],
+    ];
+    for (const [stored, expected] of cases) {
+      const { orders } = store(stored);
+      const dispatch = createKitchenDispatcher({ orders });
+      // Aunque la sucursal haya cambiado de modo, el pedido sigue su camino.
+      expect(await dispatch(quote, 'uid', 'DIRECT')).toEqual(expected);
+      expect(orders.insert).not.toHaveBeenCalled();
+      expect(orders.send).not.toHaveBeenCalled();
+      expect(orders.requestApproval).not.toHaveBeenCalled();
+    }
+  });
+
+  it('si la mesa se cerró, no queda pendiente', async () => {
+    const { orders } = store(null, 'sent', 'rejected');
+    const dispatch = createKitchenDispatcher({ orders });
+    expect(await dispatch(quote, 'uid', 'WAITER_APPROVAL')).toEqual({ kind: 'rejected' });
   });
 });

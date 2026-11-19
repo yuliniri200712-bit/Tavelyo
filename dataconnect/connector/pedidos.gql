@@ -111,6 +111,12 @@ query SessionOrders($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!)
 )
 @refresh(
   onMutationExecuted: {
+    operation: "ApproveOrder"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
     operation: "StartOrderItem"
     condition: "request.variables.branchId == mutation.variables.branchId"
   }

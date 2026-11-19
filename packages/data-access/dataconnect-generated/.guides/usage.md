@@ -14,8 +14,26 @@ If a user is not using a supported framework, they can use the generated SDK dir
 Here's an example of how to use it with the first 5 operations:
 
 ```js
-import { catalogAdmin, branchCatalog, createTaxRule, updateTaxRule, createCategory, updateCategory, createProduct, updateProduct, createModifierGroup, updateModifierGroup } from '@tavelyo/dataconnect-sdk';
+import { branchOrderApproval, setBranchOrderApproval, pendingApprovalOrders, approveOrder, rejectOrder, withdrawMyOrder, catalogAdmin, branchCatalog, createTaxRule, updateTaxRule } from '@tavelyo/dataconnect-sdk';
 
+
+// Operation BranchOrderApproval:  For variables, look at type BranchOrderApprovalVars in ../index.d.ts
+const { data } = await BranchOrderApproval(dataConnect, branchOrderApprovalVars);
+
+// Operation SetBranchOrderApproval:  For variables, look at type SetBranchOrderApprovalVars in ../index.d.ts
+const { data } = await SetBranchOrderApproval(dataConnect, setBranchOrderApprovalVars);
+
+// Operation PendingApprovalOrders:  For variables, look at type PendingApprovalOrdersVars in ../index.d.ts
+const { data } = await PendingApprovalOrders(dataConnect, pendingApprovalOrdersVars);
+
+// Operation ApproveOrder:  For variables, look at type ApproveOrderVars in ../index.d.ts
+const { data } = await ApproveOrder(dataConnect, approveOrderVars);
+
+// Operation RejectOrder:  For variables, look at type RejectOrderVars in ../index.d.ts
+const { data } = await RejectOrder(dataConnect, rejectOrderVars);
+
+// Operation WithdrawMyOrder:  For variables, look at type WithdrawMyOrderVars in ../index.d.ts
+const { data } = await WithdrawMyOrder(dataConnect, withdrawMyOrderVars);
 
 // Operation CatalogAdmin:  For variables, look at type CatalogAdminVars in ../index.d.ts
 const { data } = await CatalogAdmin(dataConnect, catalogAdminVars);
@@ -28,24 +46,6 @@ const { data } = await CreateTaxRule(dataConnect, createTaxRuleVars);
 
 // Operation UpdateTaxRule:  For variables, look at type UpdateTaxRuleVars in ../index.d.ts
 const { data } = await UpdateTaxRule(dataConnect, updateTaxRuleVars);
-
-// Operation CreateCategory:  For variables, look at type CreateCategoryVars in ../index.d.ts
-const { data } = await CreateCategory(dataConnect, createCategoryVars);
-
-// Operation UpdateCategory:  For variables, look at type UpdateCategoryVars in ../index.d.ts
-const { data } = await UpdateCategory(dataConnect, updateCategoryVars);
-
-// Operation CreateProduct:  For variables, look at type CreateProductVars in ../index.d.ts
-const { data } = await CreateProduct(dataConnect, createProductVars);
-
-// Operation UpdateProduct:  For variables, look at type UpdateProductVars in ../index.d.ts
-const { data } = await UpdateProduct(dataConnect, updateProductVars);
-
-// Operation CreateModifierGroup:  For variables, look at type CreateModifierGroupVars in ../index.d.ts
-const { data } = await CreateModifierGroup(dataConnect, createModifierGroupVars);
-
-// Operation UpdateModifierGroup:  For variables, look at type UpdateModifierGroupVars in ../index.d.ts
-const { data } = await UpdateModifierGroup(dataConnect, updateModifierGroupVars);
 
 
 ```

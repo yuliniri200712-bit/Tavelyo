@@ -8,6 +8,8 @@ This README will guide you through the process of using the generated JavaScript
 - [**Accessing the connector**](#accessing-the-connector)
   - [*Connecting to the local Emulator*](#connecting-to-the-local-emulator)
 - [**Queries**](#queries)
+  - [*BranchOrderApproval*](#branchorderapproval)
+  - [*PendingApprovalOrders*](#pendingapprovalorders)
   - [*CatalogAdmin*](#catalogadmin)
   - [*BranchCatalog*](#branchcatalog)
   - [*PublicMenu*](#publicmenu)
@@ -38,11 +40,15 @@ This README will guide you through the process of using the generated JavaScript
   - [*ServerQuoteContext*](#serverquotecontext)
   - [*ServerProductsForQuote*](#serverproductsforquote)
   - [*ServerQuoteByKey*](#serverquotebykey)
-  - [*ServerQuoteForPayment*](#serverquoteforpayment)
+  - [*ServerQuoteForSubmit*](#serverquoteforsubmit)
   - [*ServerOrderByQuote*](#serverorderbyquote)
   - [*ServerProductsForOrder*](#serverproductsfororder)
   - [*TenantBranches*](#tenantbranches)
 - [**Mutations**](#mutations)
+  - [*SetBranchOrderApproval*](#setbranchorderapproval)
+  - [*ApproveOrder*](#approveorder)
+  - [*RejectOrder*](#rejectorder)
+  - [*WithdrawMyOrder*](#withdrawmyorder)
   - [*CreateTaxRule*](#createtaxrule)
   - [*UpdateTaxRule*](#updatetaxrule)
   - [*CreateCategory*](#createcategory)
@@ -105,7 +111,8 @@ This README will guide you through the process of using the generated JavaScript
   - [*ServerHitRateLimit*](#serverhitratelimit)
   - [*ServerCreateDefaultStation*](#servercreatedefaultstation)
   - [*ServerSendOrderToKitchen*](#serversendordertokitchen)
-  - [*ServerMarkQuoteReleasePending*](#servermarkquotereleasepending)
+  - [*ServerConfirmQuote*](#serverconfirmquote)
+  - [*ServerRequestOrderApproval*](#serverrequestorderapproval)
   - [*ServerCreateServiceRequest*](#servercreateservicerequest)
   - [*CreateBranch*](#createbranch)
   - [*UpdateBranch*](#updatebranch)
@@ -154,6 +161,257 @@ The following is true for both the action shortcut function and the `QueryRef` f
 - Both functions can be called with or without passing in a `DataConnect` instance as an argument. If no `DataConnect` argument is passed in, then the generated SDK will call `getDataConnect(connectorConfig)` behind the scenes for you.
 
 Below are examples of how to use the `tavelyo` connector's generated functions to execute each query. You can also follow the examples from the [Data Connect documentation](https://firebase.google.com/docs/data-connect/web-sdk#using-queries).
+
+## BranchOrderApproval
+You can execute the `BranchOrderApproval` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+branchOrderApproval(vars: BranchOrderApprovalVariables, options?: ExecuteQueryOptions): QueryPromise<BranchOrderApprovalData, BranchOrderApprovalVariables>;
+
+interface BranchOrderApprovalRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: BranchOrderApprovalVariables): QueryRef<BranchOrderApprovalData, BranchOrderApprovalVariables>;
+}
+export const branchOrderApprovalRef: BranchOrderApprovalRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+branchOrderApproval(dc: DataConnect, vars: BranchOrderApprovalVariables, options?: ExecuteQueryOptions): QueryPromise<BranchOrderApprovalData, BranchOrderApprovalVariables>;
+
+interface BranchOrderApprovalRef {
+  ...
+  (dc: DataConnect, vars: BranchOrderApprovalVariables): QueryRef<BranchOrderApprovalData, BranchOrderApprovalVariables>;
+}
+export const branchOrderApprovalRef: BranchOrderApprovalRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the branchOrderApprovalRef:
+```typescript
+const name = branchOrderApprovalRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `BranchOrderApproval` query requires an argument of type `BranchOrderApprovalVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface BranchOrderApprovalVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `BranchOrderApproval` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `BranchOrderApprovalData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface BranchOrderApprovalData {
+  branches: ({
+    id: UUIDString;
+    name: string;
+    orderApproval: OrderApprovalMode;
+  } & Branch_Key)[];
+}
+```
+### Using `BranchOrderApproval`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, branchOrderApproval, BranchOrderApprovalVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `BranchOrderApproval` query requires an argument of type `BranchOrderApprovalVariables`:
+const branchOrderApprovalVars: BranchOrderApprovalVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `branchOrderApproval()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await branchOrderApproval(branchOrderApprovalVars);
+// Variables can be defined inline as well.
+const { data } = await branchOrderApproval({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await branchOrderApproval(dataConnect, branchOrderApprovalVars);
+
+console.log(data.branches);
+
+// Or, you can use the `Promise` API.
+branchOrderApproval(branchOrderApprovalVars).then((response) => {
+  const data = response.data;
+  console.log(data.branches);
+});
+```
+
+### Using `BranchOrderApproval`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, branchOrderApprovalRef, BranchOrderApprovalVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `BranchOrderApproval` query requires an argument of type `BranchOrderApprovalVariables`:
+const branchOrderApprovalVars: BranchOrderApprovalVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `branchOrderApprovalRef()` function to get a reference to the query.
+const ref = branchOrderApprovalRef(branchOrderApprovalVars);
+// Variables can be defined inline as well.
+const ref = branchOrderApprovalRef({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = branchOrderApprovalRef(dataConnect, branchOrderApprovalVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.branches);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.branches);
+});
+```
+
+## PendingApprovalOrders
+You can execute the `PendingApprovalOrders` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+pendingApprovalOrders(vars: PendingApprovalOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<PendingApprovalOrdersData, PendingApprovalOrdersVariables>;
+
+interface PendingApprovalOrdersRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: PendingApprovalOrdersVariables): QueryRef<PendingApprovalOrdersData, PendingApprovalOrdersVariables>;
+}
+export const pendingApprovalOrdersRef: PendingApprovalOrdersRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+pendingApprovalOrders(dc: DataConnect, vars: PendingApprovalOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<PendingApprovalOrdersData, PendingApprovalOrdersVariables>;
+
+interface PendingApprovalOrdersRef {
+  ...
+  (dc: DataConnect, vars: PendingApprovalOrdersVariables): QueryRef<PendingApprovalOrdersData, PendingApprovalOrdersVariables>;
+}
+export const pendingApprovalOrdersRef: PendingApprovalOrdersRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the pendingApprovalOrdersRef:
+```typescript
+const name = pendingApprovalOrdersRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `PendingApprovalOrders` query requires an argument of type `PendingApprovalOrdersVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface PendingApprovalOrdersVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `PendingApprovalOrders` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `PendingApprovalOrdersData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface PendingApprovalOrdersData {
+  orders: ({
+    id: UUIDString;
+    approvalRequestedAt?: TimestampString | null;
+    session: {
+      id: UUIDString;
+      table: {
+        code: string;
+      };
+    } & TableSession_Key;
+    quote: {
+      currency: string;
+      totalMinor: Int64String;
+    };
+    orderItems_on_order: ({
+      id: UUIDString;
+      quantity: number;
+      productNameSnapshot: string;
+      note?: string | null;
+      allergensSnapshot?: string[] | null;
+      orderItemModifiers_on_item: ({
+        nameSnapshot: string;
+      })[];
+    } & OrderItem_Key)[];
+  } & Order_Key)[];
+}
+```
+### Using `PendingApprovalOrders`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, pendingApprovalOrders, PendingApprovalOrdersVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `PendingApprovalOrders` query requires an argument of type `PendingApprovalOrdersVariables`:
+const pendingApprovalOrdersVars: PendingApprovalOrdersVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `pendingApprovalOrders()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await pendingApprovalOrders(pendingApprovalOrdersVars);
+// Variables can be defined inline as well.
+const { data } = await pendingApprovalOrders({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await pendingApprovalOrders(dataConnect, pendingApprovalOrdersVars);
+
+console.log(data.orders);
+
+// Or, you can use the `Promise` API.
+pendingApprovalOrders(pendingApprovalOrdersVars).then((response) => {
+  const data = response.data;
+  console.log(data.orders);
+});
+```
+
+### Using `PendingApprovalOrders`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, pendingApprovalOrdersRef, PendingApprovalOrdersVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `PendingApprovalOrders` query requires an argument of type `PendingApprovalOrdersVariables`:
+const pendingApprovalOrdersVars: PendingApprovalOrdersVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `pendingApprovalOrdersRef()` function to get a reference to the query.
+const ref = pendingApprovalOrdersRef(pendingApprovalOrdersVars);
+// Variables can be defined inline as well.
+const ref = pendingApprovalOrdersRef({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = pendingApprovalOrdersRef(dataConnect, pendingApprovalOrdersVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.orders);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.orders);
+});
+```
 
 ## CatalogAdmin
 You can execute the `CatalogAdmin` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
@@ -748,6 +1006,9 @@ export interface MyOrdersData {
   orders: ({
     id: UUIDString;
     sentToKitchenAt?: TimestampString | null;
+    approval: OrderApproval;
+    approvalRequestedAt?: TimestampString | null;
+    rejectionReason?: string | null;
     quote: {
       currency: string;
       totalMinor: Int64String;
@@ -3912,50 +4173,50 @@ executeQuery(ref).then((response) => {
 });
 ```
 
-## ServerQuoteForPayment
-You can execute the `ServerQuoteForPayment` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+## ServerQuoteForSubmit
+You can execute the `ServerQuoteForSubmit` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
 ```typescript
-serverQuoteForPayment(vars: ServerQuoteForPaymentVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
+serverQuoteForSubmit(vars: ServerQuoteForSubmitVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForSubmitData, ServerQuoteForSubmitVariables>;
 
-interface ServerQuoteForPaymentRef {
+interface ServerQuoteForSubmitRef {
   ...
   /* Allow users to create refs without passing in DataConnect */
-  (vars: ServerQuoteForPaymentVariables): QueryRef<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
+  (vars: ServerQuoteForSubmitVariables): QueryRef<ServerQuoteForSubmitData, ServerQuoteForSubmitVariables>;
 }
-export const serverQuoteForPaymentRef: ServerQuoteForPaymentRef;
+export const serverQuoteForSubmitRef: ServerQuoteForSubmitRef;
 ```
 You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
 ```typescript
-serverQuoteForPayment(dc: DataConnect, vars: ServerQuoteForPaymentVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
+serverQuoteForSubmit(dc: DataConnect, vars: ServerQuoteForSubmitVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForSubmitData, ServerQuoteForSubmitVariables>;
 
-interface ServerQuoteForPaymentRef {
+interface ServerQuoteForSubmitRef {
   ...
-  (dc: DataConnect, vars: ServerQuoteForPaymentVariables): QueryRef<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
+  (dc: DataConnect, vars: ServerQuoteForSubmitVariables): QueryRef<ServerQuoteForSubmitData, ServerQuoteForSubmitVariables>;
 }
-export const serverQuoteForPaymentRef: ServerQuoteForPaymentRef;
+export const serverQuoteForSubmitRef: ServerQuoteForSubmitRef;
 ```
 
-If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverQuoteForPaymentRef:
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverQuoteForSubmitRef:
 ```typescript
-const name = serverQuoteForPaymentRef.operationName;
+const name = serverQuoteForSubmitRef.operationName;
 console.log(name);
 ```
 
 ### Variables
-The `ServerQuoteForPayment` query requires an argument of type `ServerQuoteForPaymentVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+The `ServerQuoteForSubmit` query requires an argument of type `ServerQuoteForSubmitVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
 
 ```typescript
-export interface ServerQuoteForPaymentVariables {
+export interface ServerQuoteForSubmitVariables {
   quoteId: UUIDString;
   authUid: string;
 }
 ```
 ### Return Type
-Recall that executing the `ServerQuoteForPayment` query returns a `QueryPromise` that resolves to an object with a `data` property.
+Recall that executing the `ServerQuoteForSubmit` query returns a `QueryPromise` that resolves to an object with a `data` property.
 
-The `data` property is an object of type `ServerQuoteForPaymentData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+The `data` property is an object of type `ServerQuoteForSubmitData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
 ```typescript
-export interface ServerQuoteForPaymentData {
+export interface ServerQuoteForSubmitData {
   orderQuotes: ({
     id: UUIDString;
     tenantId: UUIDString;
@@ -3966,9 +4227,15 @@ export interface ServerQuoteForPaymentData {
     currency: string;
     totalMinor: Int64String;
     expiresAt: TimestampString;
-    paymentRef?: string | null;
     session: {
       status: TableSessionStatus;
+      table: {
+        sector: {
+          branch: {
+            orderApproval: OrderApprovalMode;
+          };
+        };
+      };
     };
     participant: {
       removedAt?: TimestampString | null;
@@ -3990,57 +4257,57 @@ export interface ServerQuoteForPaymentData {
   } & OrderQuote_Key)[];
 }
 ```
-### Using `ServerQuoteForPayment`'s action shortcut function
+### Using `ServerQuoteForSubmit`'s action shortcut function
 
 ```typescript
 import { getDataConnect } from 'firebase/data-connect';
-import { connectorConfig, serverQuoteForPayment, ServerQuoteForPaymentVariables } from '@tavelyo/dataconnect-sdk';
+import { connectorConfig, serverQuoteForSubmit, ServerQuoteForSubmitVariables } from '@tavelyo/dataconnect-sdk';
 
-// The `ServerQuoteForPayment` query requires an argument of type `ServerQuoteForPaymentVariables`:
-const serverQuoteForPaymentVars: ServerQuoteForPaymentVariables = {
+// The `ServerQuoteForSubmit` query requires an argument of type `ServerQuoteForSubmitVariables`:
+const serverQuoteForSubmitVars: ServerQuoteForSubmitVariables = {
   quoteId: ..., 
   authUid: ..., 
 };
 
-// Call the `serverQuoteForPayment()` function to execute the query.
+// Call the `serverQuoteForSubmit()` function to execute the query.
 // You can use the `await` keyword to wait for the promise to resolve.
-const { data } = await serverQuoteForPayment(serverQuoteForPaymentVars);
+const { data } = await serverQuoteForSubmit(serverQuoteForSubmitVars);
 // Variables can be defined inline as well.
-const { data } = await serverQuoteForPayment({ quoteId: ..., authUid: ..., });
+const { data } = await serverQuoteForSubmit({ quoteId: ..., authUid: ..., });
 
 // You can also pass in a `DataConnect` instance to the action shortcut function.
 const dataConnect = getDataConnect(connectorConfig);
-const { data } = await serverQuoteForPayment(dataConnect, serverQuoteForPaymentVars);
+const { data } = await serverQuoteForSubmit(dataConnect, serverQuoteForSubmitVars);
 
 console.log(data.orderQuotes);
 
 // Or, you can use the `Promise` API.
-serverQuoteForPayment(serverQuoteForPaymentVars).then((response) => {
+serverQuoteForSubmit(serverQuoteForSubmitVars).then((response) => {
   const data = response.data;
   console.log(data.orderQuotes);
 });
 ```
 
-### Using `ServerQuoteForPayment`'s `QueryRef` function
+### Using `ServerQuoteForSubmit`'s `QueryRef` function
 
 ```typescript
 import { getDataConnect, executeQuery } from 'firebase/data-connect';
-import { connectorConfig, serverQuoteForPaymentRef, ServerQuoteForPaymentVariables } from '@tavelyo/dataconnect-sdk';
+import { connectorConfig, serverQuoteForSubmitRef, ServerQuoteForSubmitVariables } from '@tavelyo/dataconnect-sdk';
 
-// The `ServerQuoteForPayment` query requires an argument of type `ServerQuoteForPaymentVariables`:
-const serverQuoteForPaymentVars: ServerQuoteForPaymentVariables = {
+// The `ServerQuoteForSubmit` query requires an argument of type `ServerQuoteForSubmitVariables`:
+const serverQuoteForSubmitVars: ServerQuoteForSubmitVariables = {
   quoteId: ..., 
   authUid: ..., 
 };
 
-// Call the `serverQuoteForPaymentRef()` function to get a reference to the query.
-const ref = serverQuoteForPaymentRef(serverQuoteForPaymentVars);
+// Call the `serverQuoteForSubmitRef()` function to get a reference to the query.
+const ref = serverQuoteForSubmitRef(serverQuoteForSubmitVars);
 // Variables can be defined inline as well.
-const ref = serverQuoteForPaymentRef({ quoteId: ..., authUid: ..., });
+const ref = serverQuoteForSubmitRef({ quoteId: ..., authUid: ..., });
 
 // You can also pass in a `DataConnect` instance to the `QueryRef` function.
 const dataConnect = getDataConnect(connectorConfig);
-const ref = serverQuoteForPaymentRef(dataConnect, serverQuoteForPaymentVars);
+const ref = serverQuoteForSubmitRef(dataConnect, serverQuoteForSubmitVars);
 
 // Call `executeQuery()` on the reference to execute the query.
 // You can use the `await` keyword to wait for the promise to resolve.
@@ -4101,6 +4368,7 @@ export interface ServerOrderByQuoteData {
   orders: ({
     id: UUIDString;
     sentToKitchenAt?: TimestampString | null;
+    approval: OrderApproval;
   } & Order_Key)[];
 }
 ```
@@ -4427,6 +4695,490 @@ The following is true for both the action shortcut function and the `MutationRef
 - Both functions can be called with or without passing in a `DataConnect` instance as an argument. If no `DataConnect` argument is passed in, then the generated SDK will call `getDataConnect(connectorConfig)` behind the scenes for you.
 
 Below are examples of how to use the `tavelyo` connector's generated functions to execute each mutation. You can also follow the examples from the [Data Connect documentation](https://firebase.google.com/docs/data-connect/web-sdk#using-mutations).
+
+## SetBranchOrderApproval
+You can execute the `SetBranchOrderApproval` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+setBranchOrderApproval(vars: SetBranchOrderApprovalVariables): MutationPromise<SetBranchOrderApprovalData, SetBranchOrderApprovalVariables>;
+
+interface SetBranchOrderApprovalRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: SetBranchOrderApprovalVariables): MutationRef<SetBranchOrderApprovalData, SetBranchOrderApprovalVariables>;
+}
+export const setBranchOrderApprovalRef: SetBranchOrderApprovalRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+setBranchOrderApproval(dc: DataConnect, vars: SetBranchOrderApprovalVariables): MutationPromise<SetBranchOrderApprovalData, SetBranchOrderApprovalVariables>;
+
+interface SetBranchOrderApprovalRef {
+  ...
+  (dc: DataConnect, vars: SetBranchOrderApprovalVariables): MutationRef<SetBranchOrderApprovalData, SetBranchOrderApprovalVariables>;
+}
+export const setBranchOrderApprovalRef: SetBranchOrderApprovalRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the setBranchOrderApprovalRef:
+```typescript
+const name = setBranchOrderApprovalRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `SetBranchOrderApproval` mutation requires an argument of type `SetBranchOrderApprovalVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface SetBranchOrderApprovalVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  mode: OrderApprovalMode;
+}
+```
+### Return Type
+Recall that executing the `SetBranchOrderApproval` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `SetBranchOrderApprovalData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface SetBranchOrderApprovalData {
+  branch_update?: Branch_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `SetBranchOrderApproval`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, setBranchOrderApproval, SetBranchOrderApprovalVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `SetBranchOrderApproval` mutation requires an argument of type `SetBranchOrderApprovalVariables`:
+const setBranchOrderApprovalVars: SetBranchOrderApprovalVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  mode: ..., 
+};
+
+// Call the `setBranchOrderApproval()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await setBranchOrderApproval(setBranchOrderApprovalVars);
+// Variables can be defined inline as well.
+const { data } = await setBranchOrderApproval({ tenantId: ..., branchId: ..., mode: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await setBranchOrderApproval(dataConnect, setBranchOrderApprovalVars);
+
+console.log(data.branch_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+setBranchOrderApproval(setBranchOrderApprovalVars).then((response) => {
+  const data = response.data;
+  console.log(data.branch_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `SetBranchOrderApproval`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, setBranchOrderApprovalRef, SetBranchOrderApprovalVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `SetBranchOrderApproval` mutation requires an argument of type `SetBranchOrderApprovalVariables`:
+const setBranchOrderApprovalVars: SetBranchOrderApprovalVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  mode: ..., 
+};
+
+// Call the `setBranchOrderApprovalRef()` function to get a reference to the mutation.
+const ref = setBranchOrderApprovalRef(setBranchOrderApprovalVars);
+// Variables can be defined inline as well.
+const ref = setBranchOrderApprovalRef({ tenantId: ..., branchId: ..., mode: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = setBranchOrderApprovalRef(dataConnect, setBranchOrderApprovalVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.branch_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.branch_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## ApproveOrder
+You can execute the `ApproveOrder` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+approveOrder(vars: ApproveOrderVariables): MutationPromise<ApproveOrderData, ApproveOrderVariables>;
+
+interface ApproveOrderRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ApproveOrderVariables): MutationRef<ApproveOrderData, ApproveOrderVariables>;
+}
+export const approveOrderRef: ApproveOrderRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+approveOrder(dc: DataConnect, vars: ApproveOrderVariables): MutationPromise<ApproveOrderData, ApproveOrderVariables>;
+
+interface ApproveOrderRef {
+  ...
+  (dc: DataConnect, vars: ApproveOrderVariables): MutationRef<ApproveOrderData, ApproveOrderVariables>;
+}
+export const approveOrderRef: ApproveOrderRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the approveOrderRef:
+```typescript
+const name = approveOrderRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `ApproveOrder` mutation requires an argument of type `ApproveOrderVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface ApproveOrderVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  orderId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `ApproveOrder` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `ApproveOrderData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface ApproveOrderData {
+  order_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `ApproveOrder`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, approveOrder, ApproveOrderVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ApproveOrder` mutation requires an argument of type `ApproveOrderVariables`:
+const approveOrderVars: ApproveOrderVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  orderId: ..., 
+};
+
+// Call the `approveOrder()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await approveOrder(approveOrderVars);
+// Variables can be defined inline as well.
+const { data } = await approveOrder({ tenantId: ..., branchId: ..., sessionId: ..., orderId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await approveOrder(dataConnect, approveOrderVars);
+
+console.log(data.order_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+approveOrder(approveOrderVars).then((response) => {
+  const data = response.data;
+  console.log(data.order_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `ApproveOrder`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, approveOrderRef, ApproveOrderVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ApproveOrder` mutation requires an argument of type `ApproveOrderVariables`:
+const approveOrderVars: ApproveOrderVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  orderId: ..., 
+};
+
+// Call the `approveOrderRef()` function to get a reference to the mutation.
+const ref = approveOrderRef(approveOrderVars);
+// Variables can be defined inline as well.
+const ref = approveOrderRef({ tenantId: ..., branchId: ..., sessionId: ..., orderId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = approveOrderRef(dataConnect, approveOrderVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.order_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.order_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## RejectOrder
+You can execute the `RejectOrder` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+rejectOrder(vars: RejectOrderVariables): MutationPromise<RejectOrderData, RejectOrderVariables>;
+
+interface RejectOrderRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: RejectOrderVariables): MutationRef<RejectOrderData, RejectOrderVariables>;
+}
+export const rejectOrderRef: RejectOrderRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+rejectOrder(dc: DataConnect, vars: RejectOrderVariables): MutationPromise<RejectOrderData, RejectOrderVariables>;
+
+interface RejectOrderRef {
+  ...
+  (dc: DataConnect, vars: RejectOrderVariables): MutationRef<RejectOrderData, RejectOrderVariables>;
+}
+export const rejectOrderRef: RejectOrderRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the rejectOrderRef:
+```typescript
+const name = rejectOrderRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `RejectOrder` mutation requires an argument of type `RejectOrderVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface RejectOrderVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  orderId: UUIDString;
+  reason: string;
+}
+```
+### Return Type
+Recall that executing the `RejectOrder` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `RejectOrderData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface RejectOrderData {
+  order_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `RejectOrder`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, rejectOrder, RejectOrderVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `RejectOrder` mutation requires an argument of type `RejectOrderVariables`:
+const rejectOrderVars: RejectOrderVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  orderId: ..., 
+  reason: ..., 
+};
+
+// Call the `rejectOrder()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await rejectOrder(rejectOrderVars);
+// Variables can be defined inline as well.
+const { data } = await rejectOrder({ tenantId: ..., branchId: ..., sessionId: ..., orderId: ..., reason: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await rejectOrder(dataConnect, rejectOrderVars);
+
+console.log(data.order_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+rejectOrder(rejectOrderVars).then((response) => {
+  const data = response.data;
+  console.log(data.order_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `RejectOrder`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, rejectOrderRef, RejectOrderVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `RejectOrder` mutation requires an argument of type `RejectOrderVariables`:
+const rejectOrderVars: RejectOrderVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  orderId: ..., 
+  reason: ..., 
+};
+
+// Call the `rejectOrderRef()` function to get a reference to the mutation.
+const ref = rejectOrderRef(rejectOrderVars);
+// Variables can be defined inline as well.
+const ref = rejectOrderRef({ tenantId: ..., branchId: ..., sessionId: ..., orderId: ..., reason: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = rejectOrderRef(dataConnect, rejectOrderVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.order_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.order_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## WithdrawMyOrder
+You can execute the `WithdrawMyOrder` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+withdrawMyOrder(vars: WithdrawMyOrderVariables): MutationPromise<WithdrawMyOrderData, WithdrawMyOrderVariables>;
+
+interface WithdrawMyOrderRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: WithdrawMyOrderVariables): MutationRef<WithdrawMyOrderData, WithdrawMyOrderVariables>;
+}
+export const withdrawMyOrderRef: WithdrawMyOrderRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+withdrawMyOrder(dc: DataConnect, vars: WithdrawMyOrderVariables): MutationPromise<WithdrawMyOrderData, WithdrawMyOrderVariables>;
+
+interface WithdrawMyOrderRef {
+  ...
+  (dc: DataConnect, vars: WithdrawMyOrderVariables): MutationRef<WithdrawMyOrderData, WithdrawMyOrderVariables>;
+}
+export const withdrawMyOrderRef: WithdrawMyOrderRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the withdrawMyOrderRef:
+```typescript
+const name = withdrawMyOrderRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `WithdrawMyOrder` mutation requires an argument of type `WithdrawMyOrderVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface WithdrawMyOrderVariables {
+  sessionId: UUIDString;
+  branchId: UUIDString;
+  orderId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `WithdrawMyOrder` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `WithdrawMyOrderData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface WithdrawMyOrderData {
+  order_updateMany: number;
+}
+```
+### Using `WithdrawMyOrder`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, withdrawMyOrder, WithdrawMyOrderVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `WithdrawMyOrder` mutation requires an argument of type `WithdrawMyOrderVariables`:
+const withdrawMyOrderVars: WithdrawMyOrderVariables = {
+  sessionId: ..., 
+  branchId: ..., 
+  orderId: ..., 
+};
+
+// Call the `withdrawMyOrder()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await withdrawMyOrder(withdrawMyOrderVars);
+// Variables can be defined inline as well.
+const { data } = await withdrawMyOrder({ sessionId: ..., branchId: ..., orderId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await withdrawMyOrder(dataConnect, withdrawMyOrderVars);
+
+console.log(data.order_updateMany);
+
+// Or, you can use the `Promise` API.
+withdrawMyOrder(withdrawMyOrderVars).then((response) => {
+  const data = response.data;
+  console.log(data.order_updateMany);
+});
+```
+
+### Using `WithdrawMyOrder`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, withdrawMyOrderRef, WithdrawMyOrderVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `WithdrawMyOrder` mutation requires an argument of type `WithdrawMyOrderVariables`:
+const withdrawMyOrderVars: WithdrawMyOrderVariables = {
+  sessionId: ..., 
+  branchId: ..., 
+  orderId: ..., 
+};
+
+// Call the `withdrawMyOrderRef()` function to get a reference to the mutation.
+const ref = withdrawMyOrderRef(withdrawMyOrderVars);
+// Variables can be defined inline as well.
+const ref = withdrawMyOrderRef({ sessionId: ..., branchId: ..., orderId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = withdrawMyOrderRef(dataConnect, withdrawMyOrderVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.order_updateMany);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.order_updateMany);
+});
+```
 
 ## CreateTaxRule
 You can execute the `CreateTaxRule` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
@@ -12115,122 +12867,248 @@ executeMutation(ref).then((response) => {
 });
 ```
 
-## ServerMarkQuoteReleasePending
-You can execute the `ServerMarkQuoteReleasePending` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+## ServerConfirmQuote
+You can execute the `ServerConfirmQuote` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
 ```typescript
-serverMarkQuoteReleasePending(vars: ServerMarkQuoteReleasePendingVariables): MutationPromise<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
+serverConfirmQuote(vars: ServerConfirmQuoteVariables): MutationPromise<ServerConfirmQuoteData, ServerConfirmQuoteVariables>;
 
-interface ServerMarkQuoteReleasePendingRef {
+interface ServerConfirmQuoteRef {
   ...
   /* Allow users to create refs without passing in DataConnect */
-  (vars: ServerMarkQuoteReleasePendingVariables): MutationRef<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
+  (vars: ServerConfirmQuoteVariables): MutationRef<ServerConfirmQuoteData, ServerConfirmQuoteVariables>;
 }
-export const serverMarkQuoteReleasePendingRef: ServerMarkQuoteReleasePendingRef;
+export const serverConfirmQuoteRef: ServerConfirmQuoteRef;
 ```
 You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
 ```typescript
-serverMarkQuoteReleasePending(dc: DataConnect, vars: ServerMarkQuoteReleasePendingVariables): MutationPromise<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
+serverConfirmQuote(dc: DataConnect, vars: ServerConfirmQuoteVariables): MutationPromise<ServerConfirmQuoteData, ServerConfirmQuoteVariables>;
 
-interface ServerMarkQuoteReleasePendingRef {
+interface ServerConfirmQuoteRef {
   ...
-  (dc: DataConnect, vars: ServerMarkQuoteReleasePendingVariables): MutationRef<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
+  (dc: DataConnect, vars: ServerConfirmQuoteVariables): MutationRef<ServerConfirmQuoteData, ServerConfirmQuoteVariables>;
 }
-export const serverMarkQuoteReleasePendingRef: ServerMarkQuoteReleasePendingRef;
+export const serverConfirmQuoteRef: ServerConfirmQuoteRef;
 ```
 
-If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverMarkQuoteReleasePendingRef:
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverConfirmQuoteRef:
 ```typescript
-const name = serverMarkQuoteReleasePendingRef.operationName;
+const name = serverConfirmQuoteRef.operationName;
 console.log(name);
 ```
 
 ### Variables
-The `ServerMarkQuoteReleasePending` mutation requires an argument of type `ServerMarkQuoteReleasePendingVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+The `ServerConfirmQuote` mutation requires an argument of type `ServerConfirmQuoteVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
 
 ```typescript
-export interface ServerMarkQuoteReleasePendingVariables {
+export interface ServerConfirmQuoteVariables {
   quoteId: UUIDString;
   tenantId: UUIDString;
   authUid: string;
 }
 ```
 ### Return Type
-Recall that executing the `ServerMarkQuoteReleasePending` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+Recall that executing the `ServerConfirmQuote` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
 
-The `data` property is an object of type `ServerMarkQuoteReleasePendingData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+The `data` property is an object of type `ServerConfirmQuoteData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
 ```typescript
-export interface ServerMarkQuoteReleasePendingData {
-  orderQuote_update?: OrderQuote_Key | null;
+export interface ServerConfirmQuoteData {
+  orderQuote_updateMany: number;
   auditEvent_insert: AuditEvent_Key;
 }
 ```
-### Using `ServerMarkQuoteReleasePending`'s action shortcut function
+### Using `ServerConfirmQuote`'s action shortcut function
 
 ```typescript
 import { getDataConnect } from 'firebase/data-connect';
-import { connectorConfig, serverMarkQuoteReleasePending, ServerMarkQuoteReleasePendingVariables } from '@tavelyo/dataconnect-sdk';
+import { connectorConfig, serverConfirmQuote, ServerConfirmQuoteVariables } from '@tavelyo/dataconnect-sdk';
 
-// The `ServerMarkQuoteReleasePending` mutation requires an argument of type `ServerMarkQuoteReleasePendingVariables`:
-const serverMarkQuoteReleasePendingVars: ServerMarkQuoteReleasePendingVariables = {
+// The `ServerConfirmQuote` mutation requires an argument of type `ServerConfirmQuoteVariables`:
+const serverConfirmQuoteVars: ServerConfirmQuoteVariables = {
   quoteId: ..., 
   tenantId: ..., 
   authUid: ..., 
 };
 
-// Call the `serverMarkQuoteReleasePending()` function to execute the mutation.
+// Call the `serverConfirmQuote()` function to execute the mutation.
 // You can use the `await` keyword to wait for the promise to resolve.
-const { data } = await serverMarkQuoteReleasePending(serverMarkQuoteReleasePendingVars);
+const { data } = await serverConfirmQuote(serverConfirmQuoteVars);
 // Variables can be defined inline as well.
-const { data } = await serverMarkQuoteReleasePending({ quoteId: ..., tenantId: ..., authUid: ..., });
+const { data } = await serverConfirmQuote({ quoteId: ..., tenantId: ..., authUid: ..., });
 
 // You can also pass in a `DataConnect` instance to the action shortcut function.
 const dataConnect = getDataConnect(connectorConfig);
-const { data } = await serverMarkQuoteReleasePending(dataConnect, serverMarkQuoteReleasePendingVars);
+const { data } = await serverConfirmQuote(dataConnect, serverConfirmQuoteVars);
 
-console.log(data.orderQuote_update);
+console.log(data.orderQuote_updateMany);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
-serverMarkQuoteReleasePending(serverMarkQuoteReleasePendingVars).then((response) => {
+serverConfirmQuote(serverConfirmQuoteVars).then((response) => {
   const data = response.data;
-  console.log(data.orderQuote_update);
+  console.log(data.orderQuote_updateMany);
   console.log(data.auditEvent_insert);
 });
 ```
 
-### Using `ServerMarkQuoteReleasePending`'s `MutationRef` function
+### Using `ServerConfirmQuote`'s `MutationRef` function
 
 ```typescript
 import { getDataConnect, executeMutation } from 'firebase/data-connect';
-import { connectorConfig, serverMarkQuoteReleasePendingRef, ServerMarkQuoteReleasePendingVariables } from '@tavelyo/dataconnect-sdk';
+import { connectorConfig, serverConfirmQuoteRef, ServerConfirmQuoteVariables } from '@tavelyo/dataconnect-sdk';
 
-// The `ServerMarkQuoteReleasePending` mutation requires an argument of type `ServerMarkQuoteReleasePendingVariables`:
-const serverMarkQuoteReleasePendingVars: ServerMarkQuoteReleasePendingVariables = {
+// The `ServerConfirmQuote` mutation requires an argument of type `ServerConfirmQuoteVariables`:
+const serverConfirmQuoteVars: ServerConfirmQuoteVariables = {
   quoteId: ..., 
   tenantId: ..., 
   authUid: ..., 
 };
 
-// Call the `serverMarkQuoteReleasePendingRef()` function to get a reference to the mutation.
-const ref = serverMarkQuoteReleasePendingRef(serverMarkQuoteReleasePendingVars);
+// Call the `serverConfirmQuoteRef()` function to get a reference to the mutation.
+const ref = serverConfirmQuoteRef(serverConfirmQuoteVars);
 // Variables can be defined inline as well.
-const ref = serverMarkQuoteReleasePendingRef({ quoteId: ..., tenantId: ..., authUid: ..., });
+const ref = serverConfirmQuoteRef({ quoteId: ..., tenantId: ..., authUid: ..., });
 
 // You can also pass in a `DataConnect` instance to the `MutationRef` function.
 const dataConnect = getDataConnect(connectorConfig);
-const ref = serverMarkQuoteReleasePendingRef(dataConnect, serverMarkQuoteReleasePendingVars);
+const ref = serverConfirmQuoteRef(dataConnect, serverConfirmQuoteVars);
 
 // Call `executeMutation()` on the reference to execute the mutation.
 // You can use the `await` keyword to wait for the promise to resolve.
 const { data } = await executeMutation(ref);
 
-console.log(data.orderQuote_update);
+console.log(data.orderQuote_updateMany);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
 executeMutation(ref).then((response) => {
   const data = response.data;
-  console.log(data.orderQuote_update);
+  console.log(data.orderQuote_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## ServerRequestOrderApproval
+You can execute the `ServerRequestOrderApproval` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+serverRequestOrderApproval(vars: ServerRequestOrderApprovalVariables): MutationPromise<ServerRequestOrderApprovalData, ServerRequestOrderApprovalVariables>;
+
+interface ServerRequestOrderApprovalRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerRequestOrderApprovalVariables): MutationRef<ServerRequestOrderApprovalData, ServerRequestOrderApprovalVariables>;
+}
+export const serverRequestOrderApprovalRef: ServerRequestOrderApprovalRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+serverRequestOrderApproval(dc: DataConnect, vars: ServerRequestOrderApprovalVariables): MutationPromise<ServerRequestOrderApprovalData, ServerRequestOrderApprovalVariables>;
+
+interface ServerRequestOrderApprovalRef {
+  ...
+  (dc: DataConnect, vars: ServerRequestOrderApprovalVariables): MutationRef<ServerRequestOrderApprovalData, ServerRequestOrderApprovalVariables>;
+}
+export const serverRequestOrderApprovalRef: ServerRequestOrderApprovalRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverRequestOrderApprovalRef:
+```typescript
+const name = serverRequestOrderApprovalRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `ServerRequestOrderApproval` mutation requires an argument of type `ServerRequestOrderApprovalVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface ServerRequestOrderApprovalVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  orderId: UUIDString;
+  authUid: string;
+}
+```
+### Return Type
+Recall that executing the `ServerRequestOrderApproval` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `ServerRequestOrderApprovalData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface ServerRequestOrderApprovalData {
+  order_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `ServerRequestOrderApproval`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, serverRequestOrderApproval, ServerRequestOrderApprovalVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerRequestOrderApproval` mutation requires an argument of type `ServerRequestOrderApprovalVariables`:
+const serverRequestOrderApprovalVars: ServerRequestOrderApprovalVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  orderId: ..., 
+  authUid: ..., 
+};
+
+// Call the `serverRequestOrderApproval()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await serverRequestOrderApproval(serverRequestOrderApprovalVars);
+// Variables can be defined inline as well.
+const { data } = await serverRequestOrderApproval({ tenantId: ..., branchId: ..., sessionId: ..., orderId: ..., authUid: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await serverRequestOrderApproval(dataConnect, serverRequestOrderApprovalVars);
+
+console.log(data.order_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+serverRequestOrderApproval(serverRequestOrderApprovalVars).then((response) => {
+  const data = response.data;
+  console.log(data.order_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `ServerRequestOrderApproval`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, serverRequestOrderApprovalRef, ServerRequestOrderApprovalVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerRequestOrderApproval` mutation requires an argument of type `ServerRequestOrderApprovalVariables`:
+const serverRequestOrderApprovalVars: ServerRequestOrderApprovalVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  orderId: ..., 
+  authUid: ..., 
+};
+
+// Call the `serverRequestOrderApprovalRef()` function to get a reference to the mutation.
+const ref = serverRequestOrderApprovalRef(serverRequestOrderApprovalVars);
+// Variables can be defined inline as well.
+const ref = serverRequestOrderApprovalRef({ tenantId: ..., branchId: ..., sessionId: ..., orderId: ..., authUid: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = serverRequestOrderApprovalRef(dataConnect, serverRequestOrderApprovalVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.order_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.order_updateMany);
   console.log(data.auditEvent_insert);
 });
 ```

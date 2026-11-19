@@ -117,7 +117,7 @@ async function storeOrder(
   table: Table,
   who: Participant,
   lines: number,
-  quoteStatus: 'QUOTED' | 'AUTHORIZED' = 'AUTHORIZED',
+  quoteStatus: 'QUOTED' | 'CONFIRMED' | 'AUTHORIZED' = 'CONFIRMED',
 ) {
   const base = { t: fixture.tenantId, b: fixture.branchId };
   const quoteId = await insertId(
@@ -359,14 +359,38 @@ describe('estaciones', () => {
   });
 });
 
-describe('envío a cocina (D-04)', () => {
-  it('sin el pago autorizado el pedido no llega a cocina', async () => {
+describe('envío a cocina (D-04, desde ADR-0012)', () => {
+  it('sin la confirmación de su comensal el pedido no llega a cocina', async () => {
     const order = await storeOrder(main, alice, 1, 'QUOTED');
     expect((await sendToKitchen(main, alice, order.orderId)).errors.join(' ')).toMatch(
-      /El pago no está autorizado/,
+      /El pedido no está confirmado/,
     );
     const queue = expectOk(await kitchenQueue(kitchen), 'Cola').orderItems.map((item) => item.id);
     expect(queue).not.toContain(order.items[0]?.id);
+  });
+
+  it('un pedido que espera al mesero no entra a cocina por el envío directo (D-32)', async () => {
+    const order = await storeOrder(main, alice, 1);
+    expectOk(
+      await server('mutation', 'ServerRequestOrderApproval', {
+        tenantId: fixture.tenantId,
+        branchId: fixture.branchId,
+        sessionId: main.sessionId,
+        orderId: order.orderId,
+        authUid: alice.user.uid,
+      }),
+      'Pedir aprobación',
+    );
+    expect((await sendToKitchen(main, alice, order.orderId)).errors.join(' ')).toMatch(
+      /lo aprueba el mesero/,
+    );
+    const queue = expectOk(await kitchenQueue(kitchen), 'Cola').orderItems.map((item) => item.id);
+    expect(queue).not.toContain(order.items[0]?.id);
+  });
+
+  it('los resúmenes autorizados antes de ADR-0012 siguen llegando a cocina', async () => {
+    const order = await storeOrder(main, alice, 1, 'AUTHORIZED');
+    expectOk(await sendToKitchen(main, alice, order.orderId), 'Envío');
   });
 
   it('autorizado llega una sola vez; un reintento encuentra el pedido ya enviado', async () => {

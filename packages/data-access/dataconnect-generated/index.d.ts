@@ -25,6 +25,19 @@ export enum MembershipStatus {
   REVOKED = "REVOKED",
 };
 
+export enum OrderApproval {
+  NOT_REQUIRED = "NOT_REQUIRED",
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+  WITHDRAWN = "WITHDRAWN",
+};
+
+export enum OrderApprovalMode {
+  DIRECT = "DIRECT",
+  WAITER_APPROVAL = "WAITER_APPROVAL",
+};
+
 export enum OrderItemStatus {
   RECEIVED = "RECEIVED",
   IN_PREPARATION = "IN_PREPARATION",
@@ -36,6 +49,7 @@ export enum OrderItemStatus {
 
 export enum OrderQuoteStatus {
   QUOTED = "QUOTED",
+  CONFIRMED = "CONFIRMED",
   AUTHORIZED = "AUTHORIZED",
   DECLINED = "DECLINED",
   EXPIRED = "EXPIRED",
@@ -74,6 +88,18 @@ export interface AddMemberVariables {
   tenantId: UUIDString;
   userId: string;
   roleCode: string;
+}
+
+export interface ApproveOrderData {
+  order_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ApproveOrderVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  orderId: UUIDString;
 }
 
 export interface AssignMemberBranchData {
@@ -152,6 +178,19 @@ export interface BranchLayoutData {
 }
 
 export interface BranchLayoutVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+
+export interface BranchOrderApprovalData {
+  branches: ({
+    id: UUIDString;
+    name: string;
+    orderApproval: OrderApprovalMode;
+  } & Branch_Key)[];
+}
+
+export interface BranchOrderApprovalVariables {
   tenantId: UUIDString;
   branchId: UUIDString;
 }
@@ -579,6 +618,9 @@ export interface MyOrdersData {
   orders: ({
     id: UUIDString;
     sentToKitchenAt?: TimestampString | null;
+    approval: OrderApproval;
+    approvalRequestedAt?: TimestampString | null;
+    rejectionReason?: string | null;
     quote: {
       currency: string;
       totalMinor: Int64String;
@@ -681,6 +723,38 @@ export interface PaymentAuthorization_Key {
 export interface PaymentOperation_Key {
   id: UUIDString;
   __typename?: 'PaymentOperation_Key';
+}
+
+export interface PendingApprovalOrdersData {
+  orders: ({
+    id: UUIDString;
+    approvalRequestedAt?: TimestampString | null;
+    session: {
+      id: UUIDString;
+      table: {
+        code: string;
+      };
+    } & TableSession_Key;
+    quote: {
+      currency: string;
+      totalMinor: Int64String;
+    };
+    orderItems_on_order: ({
+      id: UUIDString;
+      quantity: number;
+      productNameSnapshot: string;
+      note?: string | null;
+      allergensSnapshot?: string[] | null;
+      orderItemModifiers_on_item: ({
+        nameSnapshot: string;
+      })[];
+    } & OrderItem_Key)[];
+  } & Order_Key)[];
+}
+
+export interface PendingApprovalOrdersVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
 }
 
 export interface PendingServiceRequestsData {
@@ -840,6 +914,19 @@ export interface Register_Key {
   __typename?: 'Register_Key';
 }
 
+export interface RejectOrderData {
+  order_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface RejectOrderVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  orderId: UUIDString;
+  reason: string;
+}
+
 export interface RemoveParticipantData {
   sessionParticipant_update?: SessionParticipant_Key | null;
   auditEvent_insert: AuditEvent_Key;
@@ -972,6 +1059,17 @@ export interface ServerCompleteOutboxEventData {
 
 export interface ServerCompleteOutboxEventVariables {
   outboxId: UUIDString;
+}
+
+export interface ServerConfirmQuoteData {
+  orderQuote_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerConfirmQuoteVariables {
+  quoteId: UUIDString;
+  tenantId: UUIDString;
+  authUid: string;
 }
 
 export interface ServerCreateDefaultStationData {
@@ -1144,17 +1242,6 @@ export interface ServerMarkPaymentOperationUnknownVariables {
   operationId: UUIDString;
 }
 
-export interface ServerMarkQuoteReleasePendingData {
-  orderQuote_update?: OrderQuote_Key | null;
-  auditEvent_insert: AuditEvent_Key;
-}
-
-export interface ServerMarkQuoteReleasePendingVariables {
-  quoteId: UUIDString;
-  tenantId: UUIDString;
-  authUid: string;
-}
-
 export interface ServerMarkRefundPendingData {
   paymentOperation_updateMany: number;
   refund_updateMany: number;
@@ -1195,6 +1282,7 @@ export interface ServerOrderByQuoteData {
   orders: ({
     id: UUIDString;
     sentToKitchenAt?: TimestampString | null;
+    approval: OrderApproval;
   } & Order_Key)[];
 }
 
@@ -1361,7 +1449,7 @@ export interface ServerQuoteContextVariables {
   authUid: string;
 }
 
-export interface ServerQuoteForPaymentData {
+export interface ServerQuoteForSubmitData {
   orderQuotes: ({
     id: UUIDString;
     tenantId: UUIDString;
@@ -1372,9 +1460,15 @@ export interface ServerQuoteForPaymentData {
     currency: string;
     totalMinor: Int64String;
     expiresAt: TimestampString;
-    paymentRef?: string | null;
     session: {
       status: TableSessionStatus;
+      table: {
+        sector: {
+          branch: {
+            orderApproval: OrderApprovalMode;
+          };
+        };
+      };
     };
     participant: {
       removedAt?: TimestampString | null;
@@ -1396,7 +1490,7 @@ export interface ServerQuoteForPaymentData {
   } & OrderQuote_Key)[];
 }
 
-export interface ServerQuoteForPaymentVariables {
+export interface ServerQuoteForSubmitVariables {
   quoteId: UUIDString;
   authUid: string;
 }
@@ -1434,6 +1528,19 @@ export interface ServerRenewParticipantData {
 export interface ServerRenewParticipantVariables {
   participantId: UUIDString;
   expiresAt: TimestampString;
+}
+
+export interface ServerRequestOrderApprovalData {
+  order_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerRequestOrderApprovalVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  orderId: UUIDString;
+  authUid: string;
 }
 
 export interface ServerRetryOutboxEventData {
@@ -1615,6 +1722,17 @@ export interface SessionParticipantsVariables {
   tenantId: UUIDString;
   branchId: UUIDString;
   sessionId: UUIDString;
+}
+
+export interface SetBranchOrderApprovalData {
+  branch_update?: Branch_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface SetBranchOrderApprovalVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  mode: OrderApprovalMode;
 }
 
 export interface SetProductAvailabilityData {
@@ -1883,6 +2001,88 @@ export interface UserProfile_Key {
   id: string;
   __typename?: 'UserProfile_Key';
 }
+
+export interface WithdrawMyOrderData {
+  order_updateMany: number;
+}
+
+export interface WithdrawMyOrderVariables {
+  sessionId: UUIDString;
+  branchId: UUIDString;
+  orderId: UUIDString;
+}
+
+interface BranchOrderApprovalRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: BranchOrderApprovalVariables): QueryRef<BranchOrderApprovalData, BranchOrderApprovalVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: BranchOrderApprovalVariables): QueryRef<BranchOrderApprovalData, BranchOrderApprovalVariables>;
+  operationName: string;
+}
+export const branchOrderApprovalRef: BranchOrderApprovalRef;
+
+export function branchOrderApproval(vars: BranchOrderApprovalVariables, options?: ExecuteQueryOptions): QueryPromise<BranchOrderApprovalData, BranchOrderApprovalVariables>;
+export function branchOrderApproval(dc: DataConnect, vars: BranchOrderApprovalVariables, options?: ExecuteQueryOptions): QueryPromise<BranchOrderApprovalData, BranchOrderApprovalVariables>;
+
+interface SetBranchOrderApprovalRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: SetBranchOrderApprovalVariables): MutationRef<SetBranchOrderApprovalData, SetBranchOrderApprovalVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: SetBranchOrderApprovalVariables): MutationRef<SetBranchOrderApprovalData, SetBranchOrderApprovalVariables>;
+  operationName: string;
+}
+export const setBranchOrderApprovalRef: SetBranchOrderApprovalRef;
+
+export function setBranchOrderApproval(vars: SetBranchOrderApprovalVariables): MutationPromise<SetBranchOrderApprovalData, SetBranchOrderApprovalVariables>;
+export function setBranchOrderApproval(dc: DataConnect, vars: SetBranchOrderApprovalVariables): MutationPromise<SetBranchOrderApprovalData, SetBranchOrderApprovalVariables>;
+
+interface PendingApprovalOrdersRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: PendingApprovalOrdersVariables): QueryRef<PendingApprovalOrdersData, PendingApprovalOrdersVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: PendingApprovalOrdersVariables): QueryRef<PendingApprovalOrdersData, PendingApprovalOrdersVariables>;
+  operationName: string;
+}
+export const pendingApprovalOrdersRef: PendingApprovalOrdersRef;
+
+export function pendingApprovalOrders(vars: PendingApprovalOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<PendingApprovalOrdersData, PendingApprovalOrdersVariables>;
+export function pendingApprovalOrders(dc: DataConnect, vars: PendingApprovalOrdersVariables, options?: ExecuteQueryOptions): QueryPromise<PendingApprovalOrdersData, PendingApprovalOrdersVariables>;
+
+interface ApproveOrderRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ApproveOrderVariables): MutationRef<ApproveOrderData, ApproveOrderVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ApproveOrderVariables): MutationRef<ApproveOrderData, ApproveOrderVariables>;
+  operationName: string;
+}
+export const approveOrderRef: ApproveOrderRef;
+
+export function approveOrder(vars: ApproveOrderVariables): MutationPromise<ApproveOrderData, ApproveOrderVariables>;
+export function approveOrder(dc: DataConnect, vars: ApproveOrderVariables): MutationPromise<ApproveOrderData, ApproveOrderVariables>;
+
+interface RejectOrderRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: RejectOrderVariables): MutationRef<RejectOrderData, RejectOrderVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: RejectOrderVariables): MutationRef<RejectOrderData, RejectOrderVariables>;
+  operationName: string;
+}
+export const rejectOrderRef: RejectOrderRef;
+
+export function rejectOrder(vars: RejectOrderVariables): MutationPromise<RejectOrderData, RejectOrderVariables>;
+export function rejectOrder(dc: DataConnect, vars: RejectOrderVariables): MutationPromise<RejectOrderData, RejectOrderVariables>;
+
+interface WithdrawMyOrderRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: WithdrawMyOrderVariables): MutationRef<WithdrawMyOrderData, WithdrawMyOrderVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: WithdrawMyOrderVariables): MutationRef<WithdrawMyOrderData, WithdrawMyOrderVariables>;
+  operationName: string;
+}
+export const withdrawMyOrderRef: WithdrawMyOrderRef;
+
+export function withdrawMyOrder(vars: WithdrawMyOrderVariables): MutationPromise<WithdrawMyOrderData, WithdrawMyOrderVariables>;
+export function withdrawMyOrder(dc: DataConnect, vars: WithdrawMyOrderVariables): MutationPromise<WithdrawMyOrderData, WithdrawMyOrderVariables>;
 
 interface CatalogAdminRef {
   /* Allow users to create refs without passing in DataConnect */
@@ -2952,17 +3152,17 @@ export const serverQuoteByKeyRef: ServerQuoteByKeyRef;
 export function serverQuoteByKey(vars: ServerQuoteByKeyVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteByKeyData, ServerQuoteByKeyVariables>;
 export function serverQuoteByKey(dc: DataConnect, vars: ServerQuoteByKeyVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteByKeyData, ServerQuoteByKeyVariables>;
 
-interface ServerQuoteForPaymentRef {
+interface ServerQuoteForSubmitRef {
   /* Allow users to create refs without passing in DataConnect */
-  (vars: ServerQuoteForPaymentVariables): QueryRef<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
+  (vars: ServerQuoteForSubmitVariables): QueryRef<ServerQuoteForSubmitData, ServerQuoteForSubmitVariables>;
   /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect, vars: ServerQuoteForPaymentVariables): QueryRef<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
+  (dc: DataConnect, vars: ServerQuoteForSubmitVariables): QueryRef<ServerQuoteForSubmitData, ServerQuoteForSubmitVariables>;
   operationName: string;
 }
-export const serverQuoteForPaymentRef: ServerQuoteForPaymentRef;
+export const serverQuoteForSubmitRef: ServerQuoteForSubmitRef;
 
-export function serverQuoteForPayment(vars: ServerQuoteForPaymentVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
-export function serverQuoteForPayment(dc: DataConnect, vars: ServerQuoteForPaymentVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForPaymentData, ServerQuoteForPaymentVariables>;
+export function serverQuoteForSubmit(vars: ServerQuoteForSubmitVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForSubmitData, ServerQuoteForSubmitVariables>;
+export function serverQuoteForSubmit(dc: DataConnect, vars: ServerQuoteForSubmitVariables, options?: ExecuteQueryOptions): QueryPromise<ServerQuoteForSubmitData, ServerQuoteForSubmitVariables>;
 
 interface ServerHitRateLimitRef {
   /* Allow users to create refs without passing in DataConnect */
@@ -3024,17 +3224,29 @@ export const serverSendOrderToKitchenRef: ServerSendOrderToKitchenRef;
 export function serverSendOrderToKitchen(vars: ServerSendOrderToKitchenVariables): MutationPromise<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
 export function serverSendOrderToKitchen(dc: DataConnect, vars: ServerSendOrderToKitchenVariables): MutationPromise<ServerSendOrderToKitchenData, ServerSendOrderToKitchenVariables>;
 
-interface ServerMarkQuoteReleasePendingRef {
+interface ServerConfirmQuoteRef {
   /* Allow users to create refs without passing in DataConnect */
-  (vars: ServerMarkQuoteReleasePendingVariables): MutationRef<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
+  (vars: ServerConfirmQuoteVariables): MutationRef<ServerConfirmQuoteData, ServerConfirmQuoteVariables>;
   /* Allow users to pass in custom DataConnect instances */
-  (dc: DataConnect, vars: ServerMarkQuoteReleasePendingVariables): MutationRef<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
+  (dc: DataConnect, vars: ServerConfirmQuoteVariables): MutationRef<ServerConfirmQuoteData, ServerConfirmQuoteVariables>;
   operationName: string;
 }
-export const serverMarkQuoteReleasePendingRef: ServerMarkQuoteReleasePendingRef;
+export const serverConfirmQuoteRef: ServerConfirmQuoteRef;
 
-export function serverMarkQuoteReleasePending(vars: ServerMarkQuoteReleasePendingVariables): MutationPromise<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
-export function serverMarkQuoteReleasePending(dc: DataConnect, vars: ServerMarkQuoteReleasePendingVariables): MutationPromise<ServerMarkQuoteReleasePendingData, ServerMarkQuoteReleasePendingVariables>;
+export function serverConfirmQuote(vars: ServerConfirmQuoteVariables): MutationPromise<ServerConfirmQuoteData, ServerConfirmQuoteVariables>;
+export function serverConfirmQuote(dc: DataConnect, vars: ServerConfirmQuoteVariables): MutationPromise<ServerConfirmQuoteData, ServerConfirmQuoteVariables>;
+
+interface ServerRequestOrderApprovalRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerRequestOrderApprovalVariables): MutationRef<ServerRequestOrderApprovalData, ServerRequestOrderApprovalVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerRequestOrderApprovalVariables): MutationRef<ServerRequestOrderApprovalData, ServerRequestOrderApprovalVariables>;
+  operationName: string;
+}
+export const serverRequestOrderApprovalRef: ServerRequestOrderApprovalRef;
+
+export function serverRequestOrderApproval(vars: ServerRequestOrderApprovalVariables): MutationPromise<ServerRequestOrderApprovalData, ServerRequestOrderApprovalVariables>;
+export function serverRequestOrderApproval(dc: DataConnect, vars: ServerRequestOrderApprovalVariables): MutationPromise<ServerRequestOrderApprovalData, ServerRequestOrderApprovalVariables>;
 
 interface ServerCreateServiceRequestRef {
   /* Allow users to create refs without passing in DataConnect */

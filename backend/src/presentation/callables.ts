@@ -1,9 +1,9 @@
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https';
 import type {
-  AuthorizeQuoteResponse,
   JoinTableSessionResponse,
   QuoteOrderResponse,
   RequestServiceResponse,
+  SubmitOrderResponse,
 } from '@tavelyo/contracts';
 import type { RevokeMemberResult } from '../members/revoke-member.ts';
 import type { ProvisionTenantResult } from '../provisioning/provision-tenant.ts';
@@ -16,7 +16,7 @@ export interface UseCases {
   readonly provisionTenant: UseCase<ProvisionTenantResult>;
   readonly joinTableSession: UseCase<JoinTableSessionResponse>;
   readonly quoteOrder: UseCase<QuoteOrderResponse>;
-  readonly authorizeQuote: UseCase<AuthorizeQuoteResponse>;
+  readonly submitOrder: UseCase<SubmitOrderResponse>;
   readonly requestService: UseCase<RequestServiceResponse>;
 }
 
@@ -57,7 +57,7 @@ export function createCallables(useCases: UseCases) {
     // Del cliente en la mesa: exigen sesión de Firebase Auth, también anónima (ADR-0011).
     joinTableSession: onCall(OPTIONS, (request) => handle(request, useCases.joinTableSession)),
     quoteOrder: onCall(OPTIONS, (request) => handle(request, useCases.quoteOrder)),
-    authorizeQuote: onCall(OPTIONS, (request) => handle(request, useCases.authorizeQuote)),
+    submitOrder: onCall(OPTIONS, (request) => handle(request, useCases.submitOrder)),
     requestService: onCall(OPTIONS, (request) => handle(request, useCases.requestService)),
   };
 }

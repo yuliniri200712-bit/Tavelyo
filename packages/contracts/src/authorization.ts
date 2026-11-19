@@ -17,6 +17,7 @@ export const PERMISSIONS = {
   'session.merge': 'Unir sesiones de mesa',
   'order.create': 'Crear pedidos',
   'order.amend': 'Modificar un pedido enviado',
+  'order.approve': 'Aprobar o rechazar los pedidos de los clientes',
   'order_item.cancel': 'Anular líneas de pedido',
   'kitchen.advance': 'Avanzar estados en cocina',
   'delivery.pickup': 'Recoger platos listos',
@@ -38,6 +39,7 @@ export const PERMISSIONS = {
   'report.read': 'Ver reportes',
   'report.export': 'Exportar reportes',
   'tenant.settings': 'Configurar la empresa',
+  'branch.settings': 'Configurar la sucursal',
   'audit.read': 'Ver el registro de auditoría',
 } as const;
 
@@ -79,6 +81,7 @@ export const ROLES: Readonly<Record<RoleCode, RoleDefinition>> = {
       'session.merge',
       'order.create',
       'order.amend',
+      'order.approve',
       'order_item.cancel',
       'delivery.skip_sequence',
       'service_request.handle',
@@ -95,6 +98,7 @@ export const ROLES: Readonly<Record<RoleCode, RoleDefinition>> = {
       'role.assign',
       'report.read',
       'report.export',
+      'branch.settings',
     ],
   },
   cashier: {
@@ -128,6 +132,7 @@ export const ROLES: Readonly<Record<RoleCode, RoleDefinition>> = {
       'session.merge',
       'order.create',
       'order.amend',
+      'order.approve',
       'order_item.cancel',
       'delivery.pickup',
       'delivery.deliver',

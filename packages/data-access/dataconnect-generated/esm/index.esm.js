@@ -17,6 +17,19 @@ export const MembershipStatus = {
   REVOKED: "REVOKED",
 }
 
+export const OrderApproval = {
+  NOT_REQUIRED: "NOT_REQUIRED",
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+  WITHDRAWN: "WITHDRAWN",
+}
+
+export const OrderApprovalMode = {
+  DIRECT: "DIRECT",
+  WAITER_APPROVAL: "WAITER_APPROVAL",
+}
+
 export const OrderItemStatus = {
   RECEIVED: "RECEIVED",
   IN_PREPARATION: "IN_PREPARATION",
@@ -28,6 +41,7 @@ export const OrderItemStatus = {
 
 export const OrderQuoteStatus = {
   QUOTED: "QUOTED",
+  CONFIRMED: "CONFIRMED",
   AUTHORIZED: "AUTHORIZED",
   DECLINED: "DECLINED",
   EXPIRED: "EXPIRED",
@@ -60,6 +74,80 @@ export const connectorConfig = {
   service: 'tavelyo',
   location: 'us-central1'
 };
+export const branchOrderApprovalRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'BranchOrderApproval', inputVars);
+}
+branchOrderApprovalRef.operationName = 'BranchOrderApproval';
+
+export function branchOrderApproval(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(branchOrderApprovalRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+
+export const setBranchOrderApprovalRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'SetBranchOrderApproval', inputVars);
+}
+setBranchOrderApprovalRef.operationName = 'SetBranchOrderApproval';
+
+export function setBranchOrderApproval(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(setBranchOrderApprovalRef(dcInstance, inputVars));
+}
+
+export const pendingApprovalOrdersRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'PendingApprovalOrders', inputVars);
+}
+pendingApprovalOrdersRef.operationName = 'PendingApprovalOrders';
+
+export function pendingApprovalOrders(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(pendingApprovalOrdersRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+
+export const approveOrderRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ApproveOrder', inputVars);
+}
+approveOrderRef.operationName = 'ApproveOrder';
+
+export function approveOrder(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(approveOrderRef(dcInstance, inputVars));
+}
+
+export const rejectOrderRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'RejectOrder', inputVars);
+}
+rejectOrderRef.operationName = 'RejectOrder';
+
+export function rejectOrder(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(rejectOrderRef(dcInstance, inputVars));
+}
+
+export const withdrawMyOrderRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'WithdrawMyOrder', inputVars);
+}
+withdrawMyOrderRef.operationName = 'WithdrawMyOrder';
+
+export function withdrawMyOrder(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(withdrawMyOrderRef(dcInstance, inputVars));
+}
+
 export const catalogAdminRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();
@@ -1158,17 +1246,17 @@ export function serverQuoteByKey(dcOrVars, varsOrOptions, options) {
   return executeQuery(serverQuoteByKeyRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
 }
 
-export const serverQuoteForPaymentRef = (dcOrVars, vars) => {
+export const serverQuoteForSubmitRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();
-  return queryRef(dcInstance, 'ServerQuoteForPayment', inputVars);
+  return queryRef(dcInstance, 'ServerQuoteForSubmit', inputVars);
 }
-serverQuoteForPaymentRef.operationName = 'ServerQuoteForPayment';
+serverQuoteForSubmitRef.operationName = 'ServerQuoteForSubmit';
 
-export function serverQuoteForPayment(dcOrVars, varsOrOptions, options) {
+export function serverQuoteForSubmit(dcOrVars, varsOrOptions, options) {
   
   const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
-  return executeQuery(serverQuoteForPaymentRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+  return executeQuery(serverQuoteForSubmitRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
 }
 
 export const serverHitRateLimitRef = (dcOrVars, vars) => {
@@ -1233,16 +1321,28 @@ export function serverSendOrderToKitchen(dcOrVars, vars) {
   return executeMutation(serverSendOrderToKitchenRef(dcInstance, inputVars));
 }
 
-export const serverMarkQuoteReleasePendingRef = (dcOrVars, vars) => {
+export const serverConfirmQuoteRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();
-  return mutationRef(dcInstance, 'ServerMarkQuoteReleasePending', inputVars);
+  return mutationRef(dcInstance, 'ServerConfirmQuote', inputVars);
 }
-serverMarkQuoteReleasePendingRef.operationName = 'ServerMarkQuoteReleasePending';
+serverConfirmQuoteRef.operationName = 'ServerConfirmQuote';
 
-export function serverMarkQuoteReleasePending(dcOrVars, vars) {
+export function serverConfirmQuote(dcOrVars, vars) {
   const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
-  return executeMutation(serverMarkQuoteReleasePendingRef(dcInstance, inputVars));
+  return executeMutation(serverConfirmQuoteRef(dcInstance, inputVars));
+}
+
+export const serverRequestOrderApprovalRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerRequestOrderApproval', inputVars);
+}
+serverRequestOrderApprovalRef.operationName = 'ServerRequestOrderApproval';
+
+export function serverRequestOrderApproval(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverRequestOrderApprovalRef(dcInstance, inputVars));
 }
 
 export const serverCreateServiceRequestRef = (dcOrVars, vars) => {

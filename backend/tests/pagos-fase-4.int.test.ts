@@ -1,16 +1,12 @@
-// Pagos en el backend (Fase 4, bloque 3) contra los emuladores de Auth, SQL Connect y Functions:
-// la autorización real del cliente deja su PaymentAuthorization y su operación; captura, liberación,
-// reembolso, avisos y conciliación se ejercitan con el libro real (SQL Connect) y un adaptador
-// simulado en el propio proceso de la prueba, para inyectar fallos y avisos.
+// Libro de pagos (Fase 4, bloque 3) contra los emuladores de Auth, SQL Connect y Functions. Desde
+// ADR-0012 está DESCONECTADO del restaurante y se conserva para las suscripciones a Tavelyo: captura,
+// liberación, reembolso, avisos y conciliación se ejercitan con el libro real (SQL Connect) y un
+// adaptador simulado en el propio proceso de la prueba, para inyectar fallos y avisos. Las
+// autorizaciones se registran con ServerSettleAuthorize sobre resúmenes reales de una mesa.
 import { randomUUID } from 'node:crypto';
 import { initializeApp } from 'firebase-admin/app';
 import { getDataConnect } from 'firebase-admin/data-connect';
-import {
-  PREAUTHORIZATION_CONSENT_VERSION,
-  type AuthorizeQuoteResponse,
-  type JoinTableSessionResponse,
-  type QuoteOrderResponse,
-} from '@tavelyo/contracts';
+import type { JoinTableSessionResponse, QuoteOrderResponse } from '@tavelyo/contracts';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
   buildFixture,
@@ -34,7 +30,6 @@ import {
   provisionTenant,
   seedAuthorizationCatalog,
 } from '../../dataconnect/tests/support/provisioning.ts';
-import { createPaymentQuoteStore } from '../src/data/order-quotes.ts';
 import {
   createPaymentLedger,
   createProviderEventStore,
@@ -51,7 +46,6 @@ import {
 } from '../src/payments/simulated-gateway.ts';
 import { callFunction, type CallResult } from './support/functions.ts';
 
-const FUNCTIONS_URL = `http://127.0.0.1:5001/${PROJECT_ID}/us-central1`;
 const TOTAL = (BigInt(FIXTURE_PRICE_MINOR) * 2n).toString();
 const CASHIER = 'cajero-de-prueba';
 
@@ -62,7 +56,6 @@ const dataConnect = getDataConnect(
 );
 const ledger = createPaymentLedger(dataConnect);
 const store = createReconciliationStore(dataConnect);
-const quoteStore = createPaymentQuoteStore(dataConnect);
 const gateway = createSimulatedPaymentGateway(PROJECT_ID);
 const processor = createPaymentProcessor({ gateway, ledger, now: () => new Date() });
 const silentLog = { warn: () => undefined, error: () => undefined };
@@ -198,14 +191,51 @@ async function operation(idempotencyKey: string) {
   );
 }
 
-/**
- * Autorización hecha con el adaptador de ESTA prueba (para poder inyectarle fallos), registrada con
- * las mismas mutaciones que usa authorizeQuote.
- */
+interface QuoteForHold {
+  sessionId: string;
+  participantId: string;
+  totalMinor: string;
+}
+
+async function quoteForHold(quoteId: string): Promise<QuoteForHold> {
+  return expectOk(
+    await admin<{ orderQuote: QuoteForHold }>(
+      `query ($q: UUID!) { orderQuote(id: $q) { sessionId participantId totalMinor } }`,
+      { q: quoteId },
+    ),
+    'Resumen',
+  ).orderQuote;
+}
+
+/** ServerSettleAuthorize: registra la autorización de un resumen y cierra su operación. */
+function settleAuthorize(
+  scope: { tenantId: string; branchId: string },
+  quoteId: string,
+  quote: QuoteForHold,
+  operationId: string,
+  paymentRef: string,
+  expiresAt: string | null,
+) {
+  return server('mutation', 'ServerSettleAuthorize', {
+    operationId,
+    quoteId,
+    ...scope,
+    sessionId: quote.sessionId,
+    participantId: quote.participantId,
+    authUid: 'cliente-de-prueba',
+    provider: 'simulated',
+    paymentRef,
+    currency: 'COP',
+    amountMinor: quote.totalMinor,
+    expiresAt,
+    consentTextVersion: 'prueba',
+  });
+}
+
+/** Autorización hecha con el adaptador de ESTA prueba (para poder inyectarle fallos). */
 async function localAuthorization(label: string): Promise<AuthorizationRecord> {
-  const { user, quoteId } = await quotedCustomer(label);
-  const quote = await quoteStore.forPayment(quoteId, user.uid);
-  if (!quote) throw new Error('Resumen no encontrado');
+  const { quoteId } = await quotedCustomer(label);
+  const quote = await quoteForHold(quoteId);
   const { operation: started } = await ledger.begin({
     ...tenantBranch(a),
     kind: 'AUTHORIZE',
@@ -220,19 +250,17 @@ async function localAuthorization(label: string): Promise<AuthorizationRecord> {
     idempotencyKey: `quote_${quoteId}`,
     reference: quoteId,
   });
-  expect(
-    await quoteStore.setAuthorized(
+  expectOk(
+    await settleAuthorize(
+      tenantBranch(a),
+      quoteId,
       quote,
       started.id,
-      user.uid,
-      {
-        provider: 'simulated',
-        paymentRef: hold.paymentRef,
-        expiresAt: new Date(hold.expiresAt ?? ''),
-      },
-      PREAUTHORIZATION_CONSENT_VERSION,
+      hold.paymentRef,
+      hold.expiresAt ?? null,
     ),
-  ).toBe(true);
+    'Registrar la autorización',
+  );
   const row = await authorizationOfQuote(quoteId);
   if (!row) throw new Error('Sin autorización');
   return toAuthorization(row);
@@ -305,79 +333,6 @@ beforeAll(async () => {
     ),
     'Cuenta',
   ).bill_insert.id;
-});
-
-describe('autorización del cliente (función real en el emulador)', () => {
-  it('deja la operación AUTHORIZE cerrada y nace la PaymentAuthorization del resumen', async () => {
-    const { user, joined, quoteId } = await quotedCustomer('pg-autoriza');
-    const result = expectOkCall(
-      await callFunction<AuthorizeQuoteResponse>(user, 'authorizeQuote', {
-        quoteId,
-        consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
-      }),
-      'Autorizar',
-    );
-    expect(result).toMatchObject({ status: 'authorized', simulated: true });
-    const authorization = await authorizationOfQuote(quoteId);
-    expect(authorization).toMatchObject({
-      tenantId: a.tenantId,
-      branchId: a.branchId,
-      participantId: joined.participantId,
-      provider: 'simulated',
-      providerRef: expect.stringMatching(/^sim_/),
-      currency: 'COP',
-      authorizedMinor: TOTAL,
-      capturedMinor: '0',
-      status: 'AUTHORIZED',
-    });
-    // Vence a los 7 días, como informa el adaptador simulado.
-    const days = (Date.parse(authorization?.expiresAt ?? '') - Date.now()) / 86_400_000;
-    expect(days).toBeGreaterThan(6.9);
-    expect(days).toBeLessThanOrEqual(7);
-    expect(await operation(`quote_${quoteId}`)).toMatchObject({
-      kind: 'AUTHORIZE',
-      status: 'SUCCEEDED',
-      attempts: 1,
-      quoteId,
-      providerRef: authorization?.providerRef,
-    });
-
-    // Reintentar no crea otra operación ni otra autorización.
-    expectOkCall(
-      await callFunction<AuthorizeQuoteResponse>(user, 'authorizeQuote', {
-        quoteId,
-        consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
-      }),
-      'Reintento',
-    );
-    const count = expectOk(
-      await admin<{ paymentAuthorizations: Array<{ id: string }> }>(
-        `query ($q: UUID!) { paymentAuthorizations(where: { quoteId: { eq: $q } }) { id } }`,
-        { q: quoteId },
-      ),
-      'Autorizaciones',
-    ).paymentAuthorizations.length;
-    expect(count).toBe(1);
-  });
-
-  it('rechazada: la operación queda FAILED y no hay retención', async () => {
-    const { user, quoteId } = await quotedCustomer('pg-rechazo');
-    expect(
-      expectOkCall(
-        await callFunction<AuthorizeQuoteResponse>(user, 'authorizeQuote', {
-          quoteId,
-          consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
-          simulatedOutcome: 'declined',
-        }),
-        'Rechazo',
-      ).status,
-    ).toBe('declined');
-    expect(await operation(`quote_${quoteId}`)).toMatchObject({
-      status: 'FAILED',
-      failureCode: 'declined',
-    });
-    expect(await authorizationOfQuote(quoteId)).toBeUndefined();
-  });
 });
 
 describe('libro de operaciones (SQL Connect real)', () => {
@@ -476,9 +431,8 @@ describe('libro de operaciones (SQL Connect real)', () => {
   });
 
   it('la autorización de un resumen no se registra con otra empresa', async () => {
-    const { user, quoteId } = await quotedCustomer('pg-otra-empresa');
-    const quote = await quoteStore.forPayment(quoteId, user.uid);
-    if (!quote) throw new Error('Resumen no encontrado');
+    const { quoteId } = await quotedCustomer('pg-otra-empresa');
+    const quote = await quoteForHold(quoteId);
     const { operation: started } = await ledger.begin({
       ...tenantBranch(a),
       kind: 'AUTHORIZE',
@@ -488,15 +442,15 @@ describe('libro de operaciones (SQL Connect real)', () => {
       providerRef: null,
       quoteId,
     });
-    await expect(
-      quoteStore.setAuthorized(
-        { ...quote, tenantId: b.tenantId, branchId: b.branchId },
-        started.id,
-        user.uid,
-        { provider: 'simulated', paymentRef: 'sim_x', expiresAt: null },
-        PREAUTHORIZATION_CONSENT_VERSION,
-      ),
-    ).rejects.toThrow();
+    const crossed = await settleAuthorize(
+      tenantBranch(b),
+      quoteId,
+      quote,
+      started.id,
+      'sim_x',
+      null,
+    );
+    expect(crossed.errors.length).toBeGreaterThan(0);
     expect(await authorizationOfQuote(quoteId)).toBeUndefined();
     expect((await operation(`quote_${quoteId}`))?.status).toBe('PROCESSING');
   });
@@ -589,30 +543,6 @@ describe('reembolsos y avisos firmados (casos 8 y 10)', () => {
       },
     ]);
   });
-
-  it('el punto de entrada del emulador rechaza avisos sin firma válida y otros métodos', async () => {
-    const url = `${FUNCTIONS_URL}/paymentWebhook`;
-    const get = await fetch(url);
-    expect(get.status).toBe(405);
-    const body = JSON.stringify({ id: 'evt_falso', type: 'capture.succeeded' });
-    const unsigned = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body,
-    });
-    expect(unsigned.status).toBe(400);
-    expect(await unsigned.json()).toEqual({ error: 'rejected' });
-    // Firmado con el secreto de OTRA instancia (la de esta prueba): tampoco.
-    const foreign = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        [SIMULATED_SIGNATURE_HEADER]: gateway.controls.sign(body, new Date()),
-      },
-      body,
-    });
-    expect(foreign.status).toBe(400);
-  });
 });
 
 describe('conciliación (caso 7)', () => {
@@ -643,9 +573,13 @@ describe('conciliación (caso 7)', () => {
       ),
       'Resumen de la autorización',
     ).paymentAuthorization;
-    const quote = await quoteStore.forPayment(quoteRow.quoteId, quoteRow.participant.authUid);
-    if (!quote) throw new Error('Resumen no encontrado');
-    await quoteStore.markReleasePending(quote, quoteRow.participant.authUid);
+    expectOk(
+      await admin(
+        `mutation ($q: UUID!) { orderQuote_update(id: $q, data: { status: RELEASE_PENDING }) }`,
+        { q: quoteRow.quoteId },
+      ),
+      'Para liberar',
+    );
 
     await reconcileAt(new Date());
     expect((await rowStatus('paymentAuthorization', authorization.id))?.status).toBe('VOIDED');

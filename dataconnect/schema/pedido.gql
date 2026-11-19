@@ -1,9 +1,13 @@
 # Resumen verificable de pedido (Fase 2) y pedido enviado a cocina (Fase 3). Ambos los escribe solo
-# el backend (operaciones NO_ACCESS, ADR-0011): un pedido nace únicamente de un resumen cuya
-# preautorización confirmó el servidor (D-04).
+# el backend (operaciones NO_ACCESS, ADR-0011): un pedido nace únicamente de un resumen que su
+# comensal confirmó. Desde ADR-0012 (2026-11-18) no hay preautorización: se paga al final en el
+# restaurante, y cada sucursal decide si el mesero aprueba los pedidos antes de cocina (D-32).
 
 enum OrderQuoteStatus {
   QUOTED
+  "Confirmado por su comensal («Enviar pedido»): se suma a la cuenta de la mesa (ADR-0012)."
+  CONFIRMED
+  "Estados de la preautorización anterior a ADR-0012: ya no se asignan."
   AUTHORIZED
   DECLINED
   EXPIRED
@@ -88,9 +92,22 @@ enum OrderItemStatus {
   CANCELLED
 }
 
+"Aprobación del mesero de un pedido del comensal (D-32)."
+enum OrderApproval {
+  "La sucursal envía directo a cocina (o lo tomó el personal)."
+  NOT_REQUIRED
+  "Espera a que un mesero lo apruebe o lo rechace."
+  PENDING
+  "Aprobado: llegó a cocina en la misma transacción."
+  APPROVED
+  "Rechazado por el mesero, con motivo: no llega a cocina ni a la cuenta."
+  REJECTED
+  "Retirado por su comensal mientras esperaba: no llega a cocina ni a la cuenta."
+  WITHDRAWN
+}
+
 """
-Pedido enviado a cocina. Lo crea solo el backend tras confirmar la preautorización de su resumen
-(D-04). quoteId es único: un resumen da como máximo un pedido, aunque se pulse dos veces o se
+Pedido de la mesa. Lo crea solo el backend cuando su comensal confirma el resumen (D-04, ADR-0012). quoteId es único: un resumen da como máximo un pedido, aunque se pulse dos veces o se
 reintente (caso 3). Los importes son los del resumen. El estado no se guarda: se deriva de sus
 líneas (packages/core, order-status.ts). La tabla se llama customer_order porque «order» es una
 palabra reservada de SQL.
@@ -116,9 +133,20 @@ type Order @table(name: "customer_order") @unique(fields: ["id", "tenantId", "br
   """
   Cuándo llegó a cocina. El backend guarda el pedido con sus líneas (el SDK web no admite listas
   de entrada) y después lo envía con ServerSendOrderToKitchen, que comprueba la autorización, la
-  mesa y la persona, y avisa a las pantallas (ADR-0007). Mientras es null, nadie lo ve.
+  mesa y la persona, y avisa a las pantallas (ADR-0007). Mientras es null, cocina no lo ve.
   """
   sentToKitchenAt: Timestamp
+  """
+  Si la sucursal exige aprobación (D-32), ServerRequestOrderApproval lo deja PENDING y el mesero lo
+  aprueba (llega a cocina) o lo rechaza; su comensal puede retirarlo mientras espera. Solo avanza
+  desde PENDING: dos decisiones simultáneas no pasan las dos.
+  """
+  approval: OrderApproval! @default(value: NOT_REQUIRED)
+  approvalRequestedAt: Timestamp
+  approvalDecidedAt: Timestamp
+  "Quien lo aprobó o lo rechazó (uid del mesero) o su comensal, si lo retiró."
+  approvalDecidedBy: String
+  rejectionReason: String
 }
 
 """

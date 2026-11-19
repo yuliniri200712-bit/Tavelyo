@@ -1,7 +1,9 @@
 import type { DataConnect } from 'firebase-admin/data-connect';
 import type {
+  ApprovalRequestResult,
   KitchenOrderStore,
   NewOrder,
+  OrderApprovalState,
   OrderRouting,
   SendResult,
 } from '../orders/send-to-kitchen.ts';
@@ -78,16 +80,25 @@ export function orderVariables(order: NewOrder) {
 }
 
 const ALREADY_SENT = /ya está en cocina/;
+const ALREADY_REQUESTED = /La aprobación ya se pidió/;
 
 export function createKitchenOrderStore(dataConnect: DataConnect): KitchenOrderStore {
   return {
     async byQuote(quoteId) {
       const { data } = await dataConnect.executeQuery<
-        { orders: Array<{ id: string; sentToKitchenAt: string | null }> },
+        {
+          orders: Array<{
+            id: string;
+            sentToKitchenAt: string | null;
+            approval: OrderApprovalState;
+          }>;
+        },
         { quoteId: string }
       >('ServerOrderByQuote', { quoteId });
       const order = data.orders[0];
-      return order ? { id: order.id, sent: order.sentToKitchenAt !== null } : null;
+      return order
+        ? { id: order.id, sent: order.sentToKitchenAt !== null, approval: order.approval }
+        : null;
     },
 
     async routing(tenantId, branchId, productIds): Promise<OrderRouting> {
@@ -139,6 +150,18 @@ export function createKitchenOrderStore(dataConnect: DataConnect): KitchenOrderS
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (ALREADY_SENT.test(message)) return 'already-sent';
+        if (isConnectorRejection(error)) return 'rejected';
+        throw error;
+      }
+    },
+
+    async requestApproval(target, authUid): Promise<ApprovalRequestResult> {
+      try {
+        await dataConnect.executeMutation('ServerRequestOrderApproval', { ...target, authUid });
+        return 'requested';
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (ALREADY_REQUESTED.test(message)) return 'already-requested';
         if (isConnectorRejection(error)) return 'rejected';
         throw error;
       }

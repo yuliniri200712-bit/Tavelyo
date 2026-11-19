@@ -176,10 +176,10 @@ query ServerQuoteByKey($participantId: UUID!, $idempotencyKey: String!) @auth(le
 # El resumen con sus líneas lo guarda el backend con executeGraphql (documento fijo en
 # backend/src/data/order-quotes.ts): el SDK web generado no admite listas de tipo _Data.
 
-# Resumen de un cliente para autorizar su pago y enviarlo a cocina: solo el suyo, con sus líneas.
-# Devuelve el estado de la mesa y de la participación en lugar de filtrarlos: un resumen ya
-# autorizado de una mesa que se cerró debe quedar para liberar (Fase 3), no desaparecer.
-query ServerQuoteForPayment($quoteId: UUID!, $authUid: String!) @auth(level: NO_ACCESS) {
+# Resumen de un cliente para enviarlo («Enviar pedido», ADR-0012): solo el suyo, con sus líneas y
+# el modo de su sucursal (D-32). Devuelve el estado de la mesa y de la participación en lugar de
+# filtrarlos, para responder por qué no se envió.
+query ServerQuoteForSubmit($quoteId: UUID!, $authUid: String!) @auth(level: NO_ACCESS) {
   orderQuotes(
     where: { _and: [{ id: { eq: $quoteId } }, { participant: { authUid: { eq: $authUid } } }] }
     limit: 1
@@ -193,9 +193,15 @@ query ServerQuoteForPayment($quoteId: UUID!, $authUid: String!) @auth(level: NO_
     currency
     totalMinor
     expiresAt
-    paymentRef
     session {
       status
+      table {
+        sector {
+          branch {
+            orderApproval
+          }
+        }
+      }
     }
     participant {
       removedAt
@@ -238,6 +244,7 @@ query ServerOrderByQuote($quoteId: UUID!) @auth(level: NO_ACCESS) {
   orders(where: { quoteId: { eq: $quoteId } }, limit: 1) {
     id
     sentToKitchenAt
+    approval
   }
 }
 
@@ -283,8 +290,9 @@ mutation ServerCreateDefaultStation($tenantId: UUID!, $branchId: UUID!) @auth(le
   )
 }
 
-# Envía a cocina un pedido que el backend ya guardó con sus líneas. Es la única puerta a cocina:
-# exige el resumen autorizado (D-04), la mesa abierta, la persona vigente en ella y el resumen
+# Envía a cocina un pedido que el backend ya guardó con sus líneas, en una sucursal que envía
+# directo (D-32). Con aprobación del mesero, la puerta a cocina es ApproveOrder. Exige el resumen
+# confirmado por su comensal (ADR-0012), la mesa abierta, la persona vigente en ella y el resumen
 # sin vencer, todo en la misma transacción. Avisa a las pantallas por @refresh (ADR-0007).
 mutation ServerSendOrderToKitchen(
   $tenantId: UUID!
@@ -299,8 +307,13 @@ mutation ServerSendOrderToKitchen(
       branchId @check(expr: "this == vars.branchId", message: "El pedido no es de la sucursal")
       sessionId @check(expr: "this == vars.sessionId", message: "El pedido no es de la mesa")
       sentToKitchenAt @check(expr: "this == null", message: "El pedido ya está en cocina")
+      approval @check(expr: "this == 'NOT_REQUIRED'", message: "Este pedido lo aprueba el mesero")
       quote {
-        status @check(expr: "this == 'AUTHORIZED'", message: "El pago no está autorizado")
+        status
+          @check(
+            expr: "this == 'CONFIRMED' || this == 'AUTHORIZED'"
+            message: "El pedido no está confirmado"
+          )
       }
     }
     valid: orders(
@@ -334,25 +347,91 @@ mutation ServerSendOrderToKitchen(
   )
 }
 
-# Un resumen autorizado que no se pudo enviar a cocina (la mesa se cerró, la persona ya no está o
-# venció): la retención queda para liberar (Fase 4, con la pasarela real).
-mutation ServerMarkQuoteReleasePending($quoteId: UUID!, $tenantId: UUID!, $authUid: String!)
+# «Enviar pedido» (ADR-0012): el comensal confirma su resumen vigente; se suma a la cuenta de la
+# mesa y se paga al final en el restaurante. Solo una vez: un reintento lo encuentra confirmado.
+mutation ServerConfirmQuote($quoteId: UUID!, $tenantId: UUID!, $authUid: String!)
 @auth(level: NO_ACCESS)
 @transaction {
+  orderQuote_updateMany(
+    where: {
+      id: { eq: $quoteId }
+      tenantId: { eq: $tenantId }
+      status: { eq: QUOTED }
+      expiresAt: { gt_expr: "request.time" }
+    }
+    data: { status: CONFIRMED }
+  )
   query @redact {
-    orderQuote(id: $quoteId) @check(expr: "this != null", message: "Resumen inexistente") {
-      tenantId @check(expr: "this == vars.tenantId", message: "El resumen no es de la empresa")
-      status @check(expr: "this == 'AUTHORIZED'", message: "El resumen no está autorizado")
+    orderQuote(id: $quoteId)
+      @check(expr: "response.orderQuote_updateMany == 1", message: "El resumen ya cambió") {
+      id
     }
   }
-  orderQuote_update(id: $quoteId, data: { status: RELEASE_PENDING })
   auditEvent_insert(
     data: {
       tenantId: $tenantId
       actorId: $authUid
-      operation: "order_quote.release_pending"
+      operation: "order_quote.confirm"
       resourceType: "order_quote"
       resourceId_expr: "vars.quoteId"
+    }
+  )
+}
+
+# Sucursal con aprobación del mesero (D-32): el pedido guardado queda PENDING y aparece en la bandeja
+# «Pedidos por aprobar». Mismas comprobaciones que el envío directo; solo una vez por pedido.
+mutation ServerRequestOrderApproval(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sessionId: UUID!
+  $orderId: UUID!
+  $authUid: String!
+) @auth(level: NO_ACCESS) @transaction {
+  query @redact {
+    order(id: $orderId) @check(expr: "this != null", message: "Pedido inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "El pedido no es de la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "El pedido no es de la sucursal")
+      sessionId @check(expr: "this == vars.sessionId", message: "El pedido no es de la mesa")
+      sentToKitchenAt @check(expr: "this == null", message: "El pedido ya está en cocina")
+      quote {
+        status @check(expr: "this == 'CONFIRMED'", message: "El pedido no está confirmado")
+      }
+    }
+    valid: orders(
+      where: {
+        _and: [
+          { id: { eq: $orderId } }
+          { session: { status: { eq: OPEN } } }
+          {
+            participant: {
+              authUid: { eq: $authUid }
+              removedAt: { isNull: true }
+              expiresAt: { gt_expr: "request.time" }
+            }
+          }
+        ]
+      }
+    ) @check(expr: "this.size() == 1", message: "La mesa o la participación ya no están vigentes") {
+      id
+    }
+  }
+  order_updateMany(
+    where: { id: { eq: $orderId }, approval: { eq: NOT_REQUIRED } }
+    data: { approval: PENDING, approvalRequestedAt_expr: "request.time" }
+  )
+  applied: query @redact {
+    order(id: $orderId)
+      @check(expr: "response.order_updateMany == 1", message: "La aprobación ya se pidió") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "order.request_approval"
+      resourceType: "order"
+      resourceId_expr: "vars.orderId"
     }
   )
 }

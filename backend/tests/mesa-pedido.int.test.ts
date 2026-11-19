@@ -1,16 +1,15 @@
-// Flujo del cliente en la mesa (Fases 2 y 3): unirse con sesión anónima, «Revisar pedido» validado
-// por el servidor, autorización con el adaptador simulado y envío a cocina, y solicitudes de servicio. Funciones reales en el emulador de Cloud
+// Flujo del cliente en la mesa (Fases 2 y 3, y ADR-0012): unirse con sesión anónima, «Revisar pedido»
+// validado por el servidor, «Enviar pedido» sin pasarela, aprobación del mesero (D-32) y envío a cocina, y solicitudes de servicio. Funciones reales en el emulador de Cloud
 // Functions, contra Auth y SQL Connect, con dos empresas, IDs alterados y sesiones cerradas.
 import { randomUUID } from 'node:crypto';
 import {
-  PREAUTHORIZATION_CONSENT_VERSION,
-  type AuthorizeQuoteResponse,
   type JoinTableSessionResponse,
   type QuoteOrderRequest,
   type QuoteOrderResponse,
   type RequestServiceResponse,
+  type SubmitOrderResponse,
 } from '@tavelyo/contracts';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   buildFixture,
   FIXTURE_PRICE_MINOR,
@@ -41,8 +40,6 @@ let ownerB: TestUser;
 let a: Fixture;
 let b: Fixture;
 let priceIdA: string;
-
-const CONSENT = { consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION };
 
 const tenantBranch = (f: Fixture) => ({ tenantId: f.tenantId, branchId: f.branchId });
 
@@ -405,7 +402,56 @@ describe('quoteOrder', () => {
   });
 });
 
-describe('authorizeQuote (adaptador SIMULADO)', () => {
+const submit = (user: TestUser, quoteId: string) =>
+  callFunction<SubmitOrderResponse>(user, 'submitOrder', { quoteId });
+
+async function ordersOf(quoteId: string) {
+  return expectOk(
+    await admin<{
+      orders: Array<{
+        id: string;
+        sentToKitchenAt: string | null;
+        approval: string;
+        orderItems_on_order: Array<{
+          status: string;
+          quantity: number;
+          note: string | null;
+          allergensSnapshot: string[] | null;
+          orderItemModifiers_on_item: Array<{ nameSnapshot: string }>;
+        }>;
+      }>;
+    }>(
+      `query ($q: UUID!) { orders(where: { quoteId: { eq: $q } }) { id sentToKitchenAt approval orderItems_on_order { status quantity note allergensSnapshot orderItemModifiers_on_item { nameSnapshot } } } }`,
+      { q: quoteId },
+    ),
+    'Pedidos del resumen',
+  ).orders;
+}
+
+async function kitchenQueueIds(): Promise<string[]> {
+  const stations = expectOk(
+    await query<{ stations: Array<{ id: string; defaultForBranchId: string | null }> }>(
+      kitchenA,
+      'KitchenStations',
+      tenantBranch(a),
+    ),
+    'Estaciones',
+  ).stations;
+  const ids: string[] = [];
+  for (const station of stations) {
+    const queue = expectOk(
+      await query<{ orderItems: Array<{ order: { id: string } }> }>(kitchenA, 'KitchenQueue', {
+        ...tenantBranch(a),
+        stationId: station.id,
+      }),
+      'Cola de cocina',
+    );
+    ids.push(...queue.orderItems.map((item) => item.order.id));
+  }
+  return ids;
+}
+
+describe('submitOrder (sin pasarela, ADR-0012)', () => {
   async function quotedFor(label: string) {
     const { user, joined } = await seatedCustomer(label, a);
     const quoted = expectOkCall(
@@ -416,84 +462,38 @@ describe('authorizeQuote (adaptador SIMULADO)', () => {
     return { user, joined, quoteId: quoted.quoteId };
   }
 
-  it('autoriza el importe del resumen y lo deja registrado; repetir no autoriza otra vez', async () => {
-    const { user, joined, quoteId } = await quotedFor('mp-paga');
-    const result = expectOkCall(
-      await callFunction(user, 'authorizeQuote', { ...CONSENT, quoteId }),
-      'Autorizar',
-    );
-    expect(result).toEqual({
-      quoteId,
-      status: 'authorized',
-      orderId: expect.any(String),
-      simulated: true,
-    });
+  it('confirma el resumen y envía el pedido sin pasar por ninguna pasarela; repetir da lo mismo', async () => {
+    const { user, joined, quoteId } = await quotedFor('mp-envia');
+    const result = expectOkCall(await submit(user, quoteId), 'Enviar');
+    expect(result).toEqual({ quoteId, status: 'sent', orderId: expect.any(String) });
     const [stored] = await storedQuotes(joined.participantId);
-    expect(stored).toMatchObject({
-      status: 'AUTHORIZED',
-      paymentRef: expect.stringMatching(/^sim_/),
-    });
-    expect(
-      expectOkCall(await callFunction(user, 'authorizeQuote', { ...CONSENT, quoteId }), 'Repetir'),
-    ).toEqual(result);
-    expect((await storedQuotes(joined.participantId))[0]?.paymentRef).toBe(stored?.paymentRef);
+    expect(stored).toMatchObject({ status: 'CONFIRMED', paymentRef: null });
+    expect(expectOkCall(await submit(user, quoteId), 'Repetir')).toEqual(result);
   });
 
-  it('rechazado, requiere acción y tiempo agotado', async () => {
-    const declined = await quotedFor('mp-rechazado');
-    expect(
-      expectOkCall(
-        await callFunction(declined.user, 'authorizeQuote', {
-          ...CONSENT,
-          quoteId: declined.quoteId,
-          simulatedOutcome: 'declined',
-        }),
-        'Rechazo',
-      ),
-    ).toMatchObject({ status: 'declined' });
-    expect((await storedQuotes(declined.joined.participantId))[0]?.status).toBe('DECLINED');
-
-    const action = await quotedFor('mp-accion');
-    expect(
-      expectOkCall(
-        await callFunction(action.user, 'authorizeQuote', {
-          ...CONSENT,
-          quoteId: action.quoteId,
-          simulatedOutcome: 'requires_action',
-        }),
-        'Acción',
-      ),
-    ).toMatchObject({ status: 'requires_action' });
-    expect((await storedQuotes(action.joined.participantId))[0]?.status).toBe('QUOTED');
-
-    const timeout = await quotedFor('mp-sin-respuesta');
-    expect(
-      expectOkCall(
-        await callFunction(timeout.user, 'authorizeQuote', {
-          ...CONSENT,
-          quoteId: timeout.quoteId,
-          simulatedOutcome: 'timeout',
-        }),
-        'Tiempo agotado',
-      ),
-    ).toMatchObject({ status: 'authorized' });
+  it('solo admite el resumen: sin importes, consentimiento ni resultados simulados', async () => {
+    const { user, quoteId } = await quotedFor('mp-campos');
+    for (const extra of [
+      { simulatedOutcome: 'declined' },
+      { consentTextVersion: '2026-11-16' },
+      { amountMinor: '1' },
+    ]) {
+      expectFailure(
+        await callFunction(user, 'submitOrder', { quoteId, ...extra }),
+        'INVALID_ARGUMENT',
+      );
+    }
   });
 
-  it('nadie autoriza el resumen de otra persona', async () => {
+  it('nadie envía el resumen de otra persona', async () => {
     const { quoteId } = await quotedFor('mp-dueno');
     const other = await seatedCustomer('mp-vecino', a);
-    expectFailure(
-      await callFunction(other.user, 'authorizeQuote', { ...CONSENT, quoteId }),
-      'NOT_FOUND',
-    );
-    expectFailure(
-      await callFunction(ownerA, 'authorizeQuote', { ...CONSENT, quoteId }),
-      'NOT_FOUND',
-    );
+    expectFailure(await submit(other.user, quoteId), 'NOT_FOUND');
+    expectFailure(await submit(ownerA, quoteId), 'NOT_FOUND');
   });
 });
 
-describe('envío a cocina al autorizar (Fase 3, D-04)', () => {
+describe('envío a cocina al confirmar (Fase 3, D-04 desde ADR-0012)', () => {
   let qr: string;
   beforeAll(async () => {
     qr = await openExtraTable('F3-envio');
@@ -509,66 +509,19 @@ describe('envío a cocina al autorizar (Fase 3, D-04)', () => {
     return { user, joined, quoteId: quoted.quoteId };
   }
 
-  const pay = (user: TestUser, quoteId: string) =>
-    callFunction<AuthorizeQuoteResponse>(user, 'authorizeQuote', { ...CONSENT, quoteId });
-
-  async function ordersOf(quoteId: string) {
-    return expectOk(
-      await admin<{
-        orders: Array<{
-          id: string;
-          sentToKitchenAt: string | null;
-          orderItems_on_order: Array<{
-            status: string;
-            quantity: number;
-            note: string | null;
-            allergensSnapshot: string[] | null;
-            orderItemModifiers_on_item: Array<{ nameSnapshot: string }>;
-          }>;
-        }>;
-      }>(
-        `query ($q: UUID!) { orders(where: { quoteId: { eq: $q } }) { id sentToKitchenAt orderItems_on_order { status quantity note allergensSnapshot orderItemModifiers_on_item { nameSnapshot } } } }`,
-        { q: quoteId },
-      ),
-      'Pedidos del resumen',
-    ).orders;
-  }
-
-  async function kitchenQueueIds(): Promise<string[]> {
-    const stations = expectOk(
-      await query<{ stations: Array<{ id: string; defaultForBranchId: string | null }> }>(
-        kitchenA,
-        'KitchenStations',
-        tenantBranch(a),
-      ),
-      'Estaciones',
-    ).stations;
-    const ids: string[] = [];
-    for (const station of stations) {
-      const queue = expectOk(
-        await query<{ orderItems: Array<{ order: { id: string } }> }>(kitchenA, 'KitchenQueue', {
-          ...tenantBranch(a),
-          stationId: station.id,
-        }),
-        'Cola de cocina',
-      );
-      ids.push(...queue.orderItems.map((item) => item.order.id));
-    }
-    return ids;
-  }
-
-  const markAuthorized = (quoteId: string) =>
-    admin(`mutation ($q: UUID!) { orderQuote_update(id: $q, data: { status: AUTHORIZED }) }`, {
+  const markConfirmed = (quoteId: string) =>
+    admin(`mutation ($q: UUID!) { orderQuote_update(id: $q, data: { status: CONFIRMED }) }`, {
       q: quoteId,
     });
 
-  it('autorizado, el pedido llega a cocina con sus líneas y el consentimiento queda guardado', async () => {
+  it('confirmado, el pedido llega a cocina con sus líneas', async () => {
     const { user, quoteId } = await quotedFor('mp3-envia');
-    const paid = expectOkCall(await pay(user, quoteId), 'Autorizar');
-    if (paid.status !== 'authorized') throw new Error(`esperaba autorizado: ${paid.status}`);
+    const sentOrder = expectOkCall(await submit(user, quoteId), 'Enviar');
+    if (sentOrder.status !== 'sent') throw new Error(`esperaba enviado: ${sentOrder.status}`);
     const [sent] = await ordersOf(quoteId);
     expect(sent).toMatchObject({
-      id: paid.orderId,
+      id: sentOrder.orderId,
+      approval: 'NOT_REQUIRED',
       orderItems_on_order: [
         {
           status: 'RECEIVED',
@@ -580,81 +533,30 @@ describe('envío a cocina al autorizar (Fase 3, D-04)', () => {
       ],
     });
     expect(sent?.sentToKitchenAt).toBeTruthy();
-    expect(await kitchenQueueIds()).toContain(paid.orderId);
-
-    const stored = expectOk(
-      await admin<{ orderQuote: { consentTextVersion: string; authorizedAt: string | null } }>(
-        `query ($q: UUID!) { orderQuote(id: $q) { consentTextVersion authorizedAt } }`,
-        { q: quoteId },
-      ),
-      'Consentimiento',
-    ).orderQuote;
-    expect(stored.consentTextVersion).toBe(PREAUTHORIZATION_CONSENT_VERSION);
-    expect(stored.authorizedAt).toBeTruthy();
+    expect(await kitchenQueueIds()).toContain(sentOrder.orderId);
   });
 
   it('doble pulsación y reintento: un solo pedido para el resumen (caso 3)', async () => {
     const { user, quoteId } = await quotedFor('mp3-doble');
-    const results = await Promise.all([pay(user, quoteId), pay(user, quoteId)]);
-    const orderIds = results.map((result) => {
-      const value = expectOkCall(result, 'Pulsación');
-      return value.status === 'authorized' ? value.orderId : null;
-    });
+    const results = await Promise.all([submit(user, quoteId), submit(user, quoteId)]);
+    const orderIds = results.map((result) => expectOkCall(result, 'Pulsación').orderId);
     expect(orderIds[0]).toBeTruthy();
     expect(orderIds[1]).toBe(orderIds[0]);
-    const again = expectOkCall(await pay(user, quoteId), 'Reintento');
-    expect(again).toMatchObject({ status: 'authorized', orderId: orderIds[0] });
+    const again = expectOkCall(await submit(user, quoteId), 'Reintento');
+    expect(again).toMatchObject({ status: 'sent', orderId: orderIds[0] });
     expect(await ordersOf(quoteId)).toHaveLength(1);
   });
 
-  it('sin la autorización confirmada no hay pedido', async () => {
-    const { user, quoteId } = await quotedFor('mp3-rechazo');
-    expectOkCall(
-      await callFunction(user, 'authorizeQuote', {
-        ...CONSENT,
-        quoteId,
-        simulatedOutcome: 'declined',
-      }),
-      'Rechazo',
-    );
-    const action = await quotedFor('mp3-accion');
-    expectOkCall(
-      await callFunction(action.user, 'authorizeQuote', {
-        ...CONSENT,
-        quoteId: action.quoteId,
-        simulatedOutcome: 'requires_action',
-      }),
-      'Acción pendiente',
-    );
-    expect(await ordersOf(quoteId)).toEqual([]);
-    expect(await ordersOf(action.quoteId)).toEqual([]);
-  });
-
-  it('un texto de autorización que no es el vigente se rechaza sin autorizar', async () => {
-    const { user, quoteId } = await quotedFor('mp3-texto');
-    expectFailure(
-      await callFunction(user, 'authorizeQuote', { quoteId, consentTextVersion: '2020-01-01' }),
-      'FAILED_PRECONDITION',
-      /texto de la autorización cambió/,
-    );
-    expectFailure(await callFunction(user, 'authorizeQuote', { quoteId }), 'INVALID_ARGUMENT');
-    expect(
-      (await storedQuotes((await quotedFor('mp3-otro')).joined.participantId))[0]?.status,
-    ).toBe('QUOTED');
-  });
-
-  it('recuperación: autorizado sin pedido, o pedido guardado sin enviar, termina en cocina', async () => {
-    // Caída justo después de autorizar: el resumen quedó autorizado y sin pedido.
+  it('recuperación: confirmado sin pedido, o pedido guardado sin enviar, termina en cocina', async () => {
+    // Caída justo después de confirmar: el resumen quedó confirmado y sin pedido.
     const lost = await quotedFor('mp3-caida');
-    expectOk(await markAuthorized(lost.quoteId), 'Autorizado sin pedido');
-    const recovered = expectOkCall(await pay(lost.user, lost.quoteId), 'Recuperar');
-    expect(recovered.status).toBe('authorized');
+    expectOk(await markConfirmed(lost.quoteId), 'Confirmado sin pedido');
+    expect(expectOkCall(await submit(lost.user, lost.quoteId), 'Recuperar').status).toBe('sent');
     expect((await ordersOf(lost.quoteId))[0]?.sentToKitchenAt).toBeTruthy();
 
-    // Caída entre guardar el pedido y enviarlo: nadie lo ve hasta el reintento.
+    // Caída entre guardar el pedido y enviarlo: cocina no lo ve hasta el reintento.
     const half = await quotedFor('mp3-medio');
-    const first = expectOkCall(await pay(half.user, half.quoteId), 'Primer envío');
-    if (first.status !== 'authorized') throw new Error('esperaba autorizado');
+    const first = expectOkCall(await submit(half.user, half.quoteId), 'Primer envío');
     expectOk(
       await admin(
         `mutation ($o: UUID!) { order_update(id: $o, data: { sentToKitchenAt: null }) }`,
@@ -663,17 +565,17 @@ describe('envío a cocina al autorizar (Fase 3, D-04)', () => {
       'Simular la caída',
     );
     expect(await kitchenQueueIds()).not.toContain(first.orderId);
-    expect(expectOkCall(await pay(half.user, half.quoteId), 'Reintento')).toMatchObject({
-      status: 'authorized',
+    expect(expectOkCall(await submit(half.user, half.quoteId), 'Reintento')).toMatchObject({
+      status: 'sent',
       orderId: first.orderId,
     });
     expect(await kitchenQueueIds()).toContain(first.orderId);
     expect(await ordersOf(half.quoteId)).toHaveLength(1);
   });
 
-  it('si la persona sale de la mesa antes del envío, no llega a cocina y queda para liberar', async () => {
+  it('si la persona sale de la mesa antes del envío, no llega a cocina', async () => {
     const { user, joined, quoteId } = await quotedFor('mp3-sale');
-    expectOk(await markAuthorized(quoteId), 'Autorizado');
+    expectOk(await markConfirmed(quoteId), 'Confirmado');
     expectOk(
       await mutate(waiterA, 'RemoveParticipant', {
         ...tenantBranch(a),
@@ -681,10 +583,194 @@ describe('envío a cocina al autorizar (Fase 3, D-04)', () => {
       }),
       'Retirar',
     );
-    expectFailure(await pay(user, quoteId), 'FAILED_PRECONDITION', /no se envió a cocina/);
-    expect((await storedQuotes(joined.participantId))[0]?.status).toBe('RELEASE_PENDING');
+    expectFailure(await submit(user, quoteId), 'FAILED_PRECONDITION', /no se envió/);
     expect((await ordersOf(quoteId)).filter((o) => o.sentToKitchenAt !== null)).toEqual([]);
-    expectFailure(await pay(user, quoteId), 'FAILED_PRECONDITION', /no se envió a cocina/);
+  });
+});
+
+describe('aprobación del mesero (D-32)', () => {
+  let qr: string;
+  const mode = (user: TestUser, value: 'DIRECT' | 'WAITER_APPROVAL', f: Fixture = a) =>
+    mutate(user, 'SetBranchOrderApproval', { ...tenantBranch(f), mode: value });
+
+  beforeAll(async () => {
+    qr = await openExtraTable('F3-aprobacion');
+    expectOk(await mode(ownerA, 'WAITER_APPROVAL'), 'Activar aprobación');
+  });
+  afterAll(async () => {
+    expectOk(await mode(ownerA, 'DIRECT'), 'Volver a directo');
+  });
+
+  async function pendingFor(label: string) {
+    const { user, joined } = await seatedAt(label, qr);
+    const quoted = expectOkCall(
+      await quote(user, order(joined.sessionId, { expectedTotalMinor: '7000000' })),
+      'Revisar',
+    );
+    if (quoted.outcome !== 'quoted') throw new Error(`esperaba un resumen: ${quoted.outcome}`);
+    const result = expectOkCall(await submit(user, quoted.quoteId), 'Enviar');
+    expect(result).toMatchObject({ status: 'pending_approval' });
+    return { user, joined, quoteId: quoted.quoteId, orderId: result.orderId };
+  }
+
+  const pendingIds = async (staff: TestUser) =>
+    expectOk(
+      await query<{ orders: Array<{ id: string; session: { table: { code: string } } }> }>(
+        staff,
+        'PendingApprovalOrders',
+        tenantBranch(a),
+      ),
+      'Pedidos por aprobar',
+    ).orders.map((o) => o.id);
+
+  const myOrders = async (user: TestUser, sessionId: string) =>
+    expectOk(
+      await query<{
+        orders: Array<{ id: string; approval: string; rejectionReason: string | null }>;
+      }>(user, 'MyOrders', { sessionId, branchId: a.branchId }),
+      'Mis pedidos',
+    ).orders;
+
+  const decide = (
+    staff: TestUser,
+    operation: 'ApproveOrder' | 'RejectOrder',
+    pending: { joined: { sessionId: string }; orderId: string },
+    reason?: string,
+  ) =>
+    mutate(staff, operation, {
+      ...tenantBranch(a),
+      sessionId: pending.joined.sessionId,
+      orderId: pending.orderId,
+      ...(reason === undefined ? {} : { reason }),
+    });
+
+  it('solo el propietario o el administrador de sucursal cambian el modo, y solo en su empresa', async () => {
+    expect((await mode(waiterA, 'DIRECT')).errors.join()).toMatch(/branch.settings/);
+    expect((await mode(kitchenA, 'DIRECT')).errors.length).toBeGreaterThan(0);
+    expect(
+      (await mode(ownerB, 'DIRECT', { ...b, branchId: a.branchId })).errors.length,
+    ).toBeGreaterThan(0);
+    const current = expectOk(
+      await query<{ branches: Array<{ orderApproval: string }> }>(
+        ownerA,
+        'BranchOrderApproval',
+        tenantBranch(a),
+      ),
+      'Modo',
+    ).branches;
+    expect(current).toEqual([
+      { id: a.branchId, name: 'Centro', orderApproval: 'WAITER_APPROVAL' },
+    ]);
+    const audits = expectOk(
+      await admin<{ auditEvents: Array<{ operation: string }> }>(
+        `query ($b: String!) { auditEvents(where: { resourceId: { eq: $b }, operation: { eq: "branch.order_approval.waiter" } }) { operation } }`,
+        { b: a.branchId },
+      ),
+      'Auditoría',
+    ).auditEvents;
+    expect(audits.length).toBeGreaterThan(0);
+  });
+
+  it('pendiente: no llega a cocina; el mesero lo ve, y su comensal también, como pendiente', async () => {
+    const pending = await pendingFor('mp-apr-espera');
+    expect(await kitchenQueueIds()).not.toContain(pending.orderId);
+    expect(await pendingIds(waiterA)).toContain(pending.orderId);
+    expect(await myOrders(pending.user, pending.joined.sessionId)).toEqual([
+      expect.objectContaining({ id: pending.orderId, approval: 'PENDING' }),
+    ]);
+    // Repetir el envío no crea otro pedido ni lo manda a cocina.
+    expect(expectOkCall(await submit(pending.user, pending.quoteId), 'Repetir')).toEqual({
+      quoteId: pending.quoteId,
+      status: 'pending_approval',
+      orderId: pending.orderId,
+    });
+    // Cocina no tiene permiso para la bandeja; otra empresa, tampoco.
+    expect((await query(kitchenA, 'PendingApprovalOrders', tenantBranch(a))).errors.join()).toMatch(
+      /order.approve/,
+    );
+    expect(
+      (await query(ownerB, 'PendingApprovalOrders', tenantBranch(a))).errors.length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('aprobado: llega a cocina en ese momento; decidir dos veces no pasa', async () => {
+    const pending = await pendingFor('mp-apr-si');
+    expect((await decide(kitchenA, 'ApproveOrder', pending)).errors.join()).toMatch(
+      /order.approve/,
+    );
+    expectOk(await decide(waiterA, 'ApproveOrder', pending), 'Aprobar');
+    expect(await kitchenQueueIds()).toContain(pending.orderId);
+    expect(await pendingIds(waiterA)).not.toContain(pending.orderId);
+    expect((await decide(waiterA, 'ApproveOrder', pending)).errors.join()).toMatch(/ya se decidió/);
+    expect(
+      (await decide(waiterA, 'RejectOrder', pending, 'Sin existencias')).errors.join(),
+    ).toMatch(/ya se decidió/);
+    expect(await myOrders(pending.user, pending.joined.sessionId)).toEqual([
+      expect.objectContaining({ id: pending.orderId, approval: 'APPROVED' }),
+    ]);
+    expect(expectOkCall(await submit(pending.user, pending.quoteId), 'Después')).toMatchObject({
+      status: 'sent',
+    });
+  });
+
+  it('rechazado con motivo: no llega a cocina y su comensal ve el motivo', async () => {
+    const pending = await pendingFor('mp-apr-no');
+    expect((await decide(waiterA, 'RejectOrder', pending, 'no')).errors.join()).toMatch(/motivo/);
+    expectOk(await decide(waiterA, 'RejectOrder', pending, 'Se agotó el ajiaco'), 'Rechazar');
+    expect(await kitchenQueueIds()).not.toContain(pending.orderId);
+    expect(await myOrders(pending.user, pending.joined.sessionId)).toEqual([
+      expect.objectContaining({
+        id: pending.orderId,
+        approval: 'REJECTED',
+        rejectionReason: 'Se agotó el ajiaco',
+      }),
+    ]);
+    expectFailure(await submit(pending.user, pending.quoteId), 'FAILED_PRECONDITION', /no aprobó/);
+    expect((await decide(waiterA, 'ApproveOrder', pending)).errors.join()).toMatch(/ya se decidió/);
+  });
+
+  it('su comensal lo retira mientras espera; nadie más puede, y después no se aprueba', async () => {
+    const pending = await pendingFor('mp-apr-retira');
+    const neighbour = await seatedAt('mp-apr-vecino', qr);
+    const withdraw = (user: TestUser) =>
+      mutate(user, 'WithdrawMyOrder', {
+        sessionId: pending.joined.sessionId,
+        branchId: a.branchId,
+        orderId: pending.orderId,
+      });
+    expect((await withdraw(neighbour.user)).errors.length).toBeGreaterThan(0);
+    expectOk(await withdraw(pending.user), 'Retirar');
+    expect((await withdraw(pending.user)).errors.join()).toMatch(/ya decidió/);
+    expect((await decide(waiterA, 'ApproveOrder', pending)).errors.join()).toMatch(/ya se decidió/);
+    expect(await kitchenQueueIds()).not.toContain(pending.orderId);
+    expectFailure(await submit(pending.user, pending.quoteId), 'FAILED_PRECONDITION', /Retiraste/);
+  });
+
+  it('no se aprueba si la persona ya salió de la mesa', async () => {
+    const pending = await pendingFor('mp-apr-sale');
+    expectOk(
+      await mutate(waiterA, 'RemoveParticipant', {
+        ...tenantBranch(a),
+        participantId: pending.joined.participantId,
+      }),
+      'Retirar',
+    );
+    expect((await decide(waiterA, 'ApproveOrder', pending)).errors.join()).toMatch(/ya no está/);
+    expectOk(await decide(waiterA, 'RejectOrder', pending, 'La persona se fue'), 'Rechazar');
+  });
+
+  it('con el modo directo otra vez, los pedidos nuevos van directo a cocina', async () => {
+    expectOk(await mode(ownerA, 'DIRECT'), 'Directo');
+    const { user, joined } = await seatedAt('mp-apr-directo', qr);
+    const quoted = expectOkCall(
+      await quote(user, order(joined.sessionId, { expectedTotalMinor: '7000000' })),
+      'Revisar',
+    );
+    if (quoted.outcome !== 'quoted') throw new Error('esperaba un resumen');
+    const sent = expectOkCall(await submit(user, quoted.quoteId), 'Enviar');
+    expect(sent.status).toBe('sent');
+    expect(await kitchenQueueIds()).toContain(sent.orderId);
+    expectOk(await mode(ownerA, 'WAITER_APPROVAL'), 'Aprobación otra vez');
   });
 });
 
@@ -749,10 +835,7 @@ describe('expulsión y cierre de la mesa', () => {
       await quote(user, order(sessionA, { expectedTotalMinor: '7000000' })),
       'PERMISSION_DENIED',
     );
-    expectFailure(
-      await callFunction(user, 'authorizeQuote', { ...CONSENT, quoteId: quoted.quoteId }),
-      'NOT_FOUND',
-    );
+    expectFailure(await submit(user, quoted.quoteId), 'NOT_FOUND');
     expectFailure(await join(user, a.qrPublicId), 'PERMISSION_DENIED', /retiró/);
   });
 
@@ -771,10 +854,7 @@ describe('expulsión y cierre de la mesa', () => {
       await quote(user, order(sessionA, { expectedTotalMinor: '7000000' })),
       'PERMISSION_DENIED',
     );
-    expectFailure(
-      await callFunction(user, 'authorizeQuote', { ...CONSENT, quoteId: quoted.quoteId }),
-      'NOT_FOUND',
-    );
+    expectFailure(await submit(user, quoted.quoteId), 'NOT_FOUND');
     expectFailure(await join(user, a.qrPublicId), 'FAILED_PRECONDITION');
 
     const next = await openTable(a, waiterA);

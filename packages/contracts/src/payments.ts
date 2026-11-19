@@ -1,12 +1,16 @@
-import type { SimulatedPaymentOutcome } from './customer-api.ts';
-
 /**
  * Contrato de la pasarela de pago (RF-PA-01, ADR-0006). Operaciones separadas: autorizar,
  * consultar, capturar, anular la autorización y reembolsar, más la verificación de sus avisos
  * (webhooks). Ninguna recibe ni devuelve datos de tarjeta: el proveedor certificado tokeniza en su
  * propio formulario y aquí solo viajan referencias e importes (CLAUDE.md §7). El proveedor real
  * está pendiente (D-02); mientras tanto solo existe el adaptador simulado del backend.
+ *
+ * Desde ADR-0012 (2026-11-18) solo se usará para cobrar las suscripciones de los restaurantes a
+ * Tavelyo: los pedidos de los comensales no pasan por la pasarela.
  */
+
+/** Resultados que se pueden forzar en el adaptador simulado (solo con un proyecto demo). */
+export type SimulatedPaymentOutcome = 'approved' | 'declined' | 'requires_action' | 'timeout';
 
 /** Importe en unidades menores como cadena decimal canónica (`Int64` de SQL Connect). */
 export interface PaymentAmount {

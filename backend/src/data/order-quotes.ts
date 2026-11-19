@@ -2,8 +2,12 @@ import type { QuotedLine, QuotedModifier } from '@tavelyo/contracts';
 import type { DataConnect } from 'firebase-admin/data-connect';
 import type { CatalogEntry } from '../orders/pricing.ts';
 import type { QuoteStatus, QuoteStore, StoredQuote } from '../orders/quote-order.ts';
-import type { PayableQuote, PaymentQuoteStore } from '../payments/authorize-quote.ts';
-import { isAlreadyClosed } from './payments.ts';
+import type { OrderApprovalMode } from '../orders/send-to-kitchen.ts';
+import type {
+  SubmittableQuote,
+  SubmittableQuoteStatus,
+  SubmitQuoteStore,
+} from '../orders/submit-order.ts';
 import { isUniqueViolation } from './table-sessions.ts';
 
 // Resúmenes de pedido con el Admin SDK: lecturas con operaciones NO_ACCESS del conector y el
@@ -221,22 +225,22 @@ export function createQuoteStore(dataConnect: DataConnect): QuoteStore {
   };
 }
 
-interface PayableRow {
+interface SubmittableRow {
   id: string;
   tenantId: string;
   branchId: string;
   sessionId: string;
   participantId: string;
-  status: QuoteStatus;
+  status: SubmittableQuoteStatus;
   currency: string;
   totalMinor: string;
   expiresAt: string;
-  session: { status: string };
+  session: { status: string; table: { sector: { branch: { orderApproval: OrderApprovalMode } } } };
   participant: { removedAt: string | null; expiresAt: string };
   orderQuoteLines_on_quote: LineRow[];
 }
 
-export function toPayableQuote(row: PayableRow): PayableQuote {
+export function toSubmittableQuote(row: SubmittableRow): SubmittableQuote {
   return {
     id: row.id,
     tenantId: row.tenantId,
@@ -250,68 +254,38 @@ export function toPayableQuote(row: PayableRow): PayableQuote {
     sessionOpen: row.session.status === 'OPEN',
     participantRemoved: row.participant.removedAt !== null,
     participantExpiresAt: new Date(row.participant.expiresAt),
+    orderApproval: row.session.table.sector.branch.orderApproval,
     lines: toQuotedLines(row.orderQuoteLines_on_quote),
   };
 }
 
-export function createPaymentQuoteStore(dataConnect: DataConnect): PaymentQuoteStore {
+/** El @check de ServerConfirmQuote cuando el resumen ya no está pendiente de confirmar. */
+const ALREADY_CHANGED = /El resumen ya cambió/;
+
+export function createSubmitQuoteStore(dataConnect: DataConnect): SubmitQuoteStore {
   return {
-    async forPayment(quoteId, authUid): Promise<PayableQuote | null> {
+    async forSubmit(quoteId, authUid): Promise<SubmittableQuote | null> {
       const { data } = await dataConnect.executeQuery<
-        { orderQuotes: PayableRow[] },
+        { orderQuotes: SubmittableRow[] },
         { quoteId: string; authUid: string }
-      >('ServerQuoteForPayment', { quoteId, authUid });
+      >('ServerQuoteForSubmit', { quoteId, authUid });
       const row = data.orderQuotes[0];
-      return row ? toPayableQuote(row) : null;
+      return row ? toSubmittableQuote(row) : null;
     },
 
-    async setAuthorized(quote, operationId, authUid, hold, consentTextVersion) {
+    async confirm(quote, authUid) {
       try {
-        await dataConnect.executeMutation('ServerSettleAuthorize', {
-          operationId,
-          quoteId: quote.id,
-          tenantId: quote.tenantId,
-          branchId: quote.branchId,
-          sessionId: quote.sessionId,
-          participantId: quote.participantId,
-          authUid,
-          provider: hold.provider,
-          paymentRef: hold.paymentRef,
-          currency: quote.currency,
-          amountMinor: quote.totalMinor,
-          expiresAt: hold.expiresAt?.toISOString() ?? null,
-          consentTextVersion,
-        });
-        return true;
-      } catch (error) {
-        if (isAlreadyClosed(error)) return false;
-        throw error;
-      }
-    },
-
-    async setDeclined(quote, operationId, authUid, paymentRef, consentTextVersion) {
-      try {
-        await dataConnect.executeMutation('ServerDeclineAuthorize', {
-          operationId,
+        await dataConnect.executeMutation('ServerConfirmQuote', {
           quoteId: quote.id,
           tenantId: quote.tenantId,
           authUid,
-          paymentRef,
-          consentTextVersion,
         });
         return true;
       } catch (error) {
-        if (isAlreadyClosed(error)) return false;
+        const message = error instanceof Error ? error.message : String(error);
+        if (ALREADY_CHANGED.test(message)) return false;
         throw error;
       }
-    },
-
-    async markReleasePending(quote, authUid) {
-      await dataConnect.executeMutation('ServerMarkQuoteReleasePending', {
-        quoteId: quote.id,
-        tenantId: quote.tenantId,
-        authUid,
-      });
     },
   };
 }
