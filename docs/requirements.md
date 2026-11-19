@@ -164,6 +164,7 @@ Moneda, zona horaria, impuestos, precios con o sin impuestos, horarios, cargos d
 | D-33 | Medios de pago del comensal | **Efectivo, datáfono propio del restaurante y transferencia** (2026-11-18), registrados por el cajero. Del datáfono y de la transferencia solo se guarda el número de comprobante, nunca datos de la tarjeta | ADR-0012; bloque 4 |
 | D-34 | Topes de reembolso | **Cajero hasta $ 50.000, administrador de sucursal hasta $ 300.000 y propietario sin tope, siempre con motivo** (2026-11-18). Nunca más de lo pagado | Bloque 4; `architecture/permissions.md` |
 | D-35 | Pasarela de pago | **Solo para cobrar los planes de los restaurantes a Tavelyo** (2026-11-18, ADR-0012). Fase nueva «Suscripciones a Tavelyo» después de la Fase 4. El bloque 3 se conserva desconectado para reutilizarlo allí | ADR-0012 |
+| D-36 | Largo del número de comprobante (datáfono y transferencia) | **Máximo 12 caracteres** (2026-11-19): letras, números, guion y guion bajo. Un número de tarjeta tiene de 13 a 19 dígitos, así que no cabe completo aunque se escriba por error (D-33). Constante `RECEIPT_NUMBER_MAX_LENGTH` en `packages/contracts` | Bloque 4; la pantalla del cajero (bloque 6) usa el mismo límite |
 | D-16 | Bibliotecas y herramientas del stack web, y Firebase Hosting | **Aceptadas** según ADR-0010; formateador **Prettier** (2026-11-13); validación de formularios se decide en Fase 1 | ADR-0010 aceptado |
 
 ### Pendientes

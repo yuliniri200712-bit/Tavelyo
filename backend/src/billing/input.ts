@@ -1,5 +1,9 @@
 import { err, ok } from '@tavelyo/core';
-import type { BillScope, RecordPaymentRequest } from '@tavelyo/contracts';
+import {
+  RECEIPT_NUMBER_MAX_LENGTH,
+  type BillScope,
+  type RecordPaymentRequest,
+} from '@tavelyo/contracts';
 import { canonicalUuid } from '../shared/clock.ts';
 import { isUuid, readFields } from '../shared/input.ts';
 import { failure, type Outcome } from '../shared/outcome.ts';
@@ -24,6 +28,8 @@ const invalid = () =>
       'Revisa los datos del pago. Solo se admite el número de comprobante; nunca datos de tarjeta.',
     ),
   );
+// Letras, números, guion o guion bajo; empieza por letra o número (D-36).
+const RECEIPT_NUMBER = new RegExp(`^[A-Za-z0-9][A-Za-z0-9_-]{0,${RECEIPT_NUMBER_MAX_LENGTH - 1}}$`);
 const isAmount = (v: unknown): v is string =>
   typeof v === 'string' && /^(0|[1-9][0-9]{0,14})$/.test(v);
 
@@ -63,7 +69,7 @@ export function parseRecordPayment(data: unknown): Outcome<RecordPaymentRequest>
     if (
       f.receivedMinor !== undefined ||
       typeof f.receiptNumber !== 'string' ||
-      !/^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$/.test(f.receiptNumber)
+      !RECEIPT_NUMBER.test(f.receiptNumber)
     )
       return invalid();
   }

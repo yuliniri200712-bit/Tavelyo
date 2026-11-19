@@ -291,7 +291,7 @@ describe('4a: cuenta y registro real en emuladores', () => {
       await order(s);
       const { receivedMinor: _received, ...base } = await paymentInput(s);
       void _received;
-      const input = { ...base, method, receiptNumber: `REF-${method}-001` };
+      const input = { ...base, method, receiptNumber: `REF-${method.slice(0, 3)}-001` };
       const first = result(await pay(input, method === 'TERMINAL' ? owner : branchAdmin));
       expect(first).toMatchObject({
         method,

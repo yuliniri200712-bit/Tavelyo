@@ -102,6 +102,18 @@ describe('cuenta y pagos registrados (4a)', () => {
       expect(parseRecordPayment({ ...input, method, receiptNumber: 'REF-0001' }).ok).toBe(false);
     },
   );
+  it.each([
+    ['12 caracteres', 'AB12-3456_78', true],
+    ['13 caracteres', 'AB12-3456_789', false],
+    ['un número de tarjeta de 16 dígitos', '4111111111111111', false],
+    ['un número de tarjeta de 13 dígitos', '4222222222222', false],
+    ['espacios', 'REF 0001', false],
+    ['vacío', '', false],
+  ])('número de comprobante con %s (D-36)', (_caso, receiptNumber, valid) => {
+    const { receivedMinor: _received, ...base } = input;
+    void _received;
+    expect(parseRecordPayment({ ...base, method: 'TERMINAL', receiptNumber }).ok).toBe(valid);
+  });
   it.each(['cardNumber', 'last4', 'cvv', 'expiry', 'cardToken', 'note'])(
     'rechaza el campo %s antes de consultar o persistir',
     async (field) => {

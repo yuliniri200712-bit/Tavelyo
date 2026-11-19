@@ -81,3 +81,13 @@ Hallazgos durante la verificación:
 - El recorrido de siete pedidos reales superó 30 segundos; solo esa prueba tiene ahora un límite de 60 segundos. Después pasó completa.
 - ESLint analizaba la copia temporal del SDK en `tools/emuladores-docker/salida`, ya ignorada por Git. Se excluye únicamente esa salida generada; las reglas sobre el código del proyecto se mantienen.
 - Una línea pagada no puede cancelarse directamente: el conector revierte la cancelación si encuentra asignaciones confirmadas. El flujo de revisión/reembolso corresponde a 4b.
+
+## 2026-11-19 — Corrección D-36: número de comprobante de 12 caracteres como máximo
+
+Al revisar 4a se vio que el comprobante admitía 40 caracteres, así que un número de tarjeta completo (13 a 19 dígitos) escrito por error se habría guardado. El propietario eligió limitarlo: máximo 12 caracteres (D-36, `RECEIPT_NUMBER_MAX_LENGTH` en `packages/contracts`).
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Calidad completa | `npm run check` | ✅ 881 pruebas unitarias (6 nuevas: 12 caracteres admitidos; 13 caracteres, tarjetas de 16 y 13 dígitos, espacios y vacío rechazados) |
+| Backend compilado | `npm run build -w backend` | ✅ |
+| Integración de 4a | `npx vitest run --config vitest.integration.config.ts backend/tests/cuenta-fase-4a.int.test.ts` con las variables del backend | ✅ 10 pruebas (la primera ejecución falló porque los emuladores aún arrancaban tras `docker restart`; se repitió con ellos listos) |

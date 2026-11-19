@@ -1,6 +1,12 @@
 /** Registro de pagos del restaurante (ADR-0012); importes decimales enteros en unidades menores. */
 export type RecordedPaymentMethod = 'CASH' | 'TERMINAL' | 'TRANSFER';
 
+/**
+ * Largo máximo del número de comprobante (D-36). Un número de tarjeta tiene de 13 a 19 dígitos,
+ * así que con 12 caracteres no cabe completo aunque el cajero lo escriba por error.
+ */
+export const RECEIPT_NUMBER_MAX_LENGTH = 12;
+
 export interface BillScope {
   readonly tenantId: string;
   readonly branchId: string;
