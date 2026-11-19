@@ -3,7 +3,16 @@ import { err, ok } from '@tavelyo/core';
 import type { AccountLine, AccountPayment, BillingStore } from '../billing/store.ts';
 import { newId } from '../shared/clock.ts';
 import { failure } from '../shared/outcome.ts';
-import { READ_BILL, recordPaymentDocument } from './billing-documents.ts';
+import { READ_BILL, recordPaymentDocument, refundDocument } from './billing-documents.ts';
+
+/** La cuenta cambió entre la lectura y la escritura, o hubo una carrera: se vuelve a leer. */
+function isLostRace(error: unknown): boolean {
+  return (
+    isUniqueViolation(error) ||
+    (error instanceof Error &&
+      /CUENTA_CAMBIO|CUENTA_SIN_ACCESO|could not serialize|deadlock detected/i.test(error.message))
+  );
+}
 import { isUniqueViolation } from './table-sessions.ts';
 
 interface AccountData {
@@ -16,9 +25,10 @@ interface AccountData {
     version: number;
     status: string;
     billPayments_on_bill: Array<
-      Omit<AccountPayment, 'paymentId' | 'allocations'> & {
+      Omit<AccountPayment, 'paymentId' | 'allocations' | 'refunds'> & {
         id: string;
         paymentAllocations_on_payment: AccountPayment['allocations'];
+        refunds_on_payment: AccountPayment['refunds'];
       }
     >;
   }>;
@@ -51,7 +61,10 @@ export function createBillingStore(dc: DataConnect): BillingStore {
         if (
           data.orderItems.length >= 1000 ||
           (bill?.billPayments_on_bill.length ?? 0) >= 1000 ||
-          bill?.billPayments_on_bill.some((p) => p.paymentAllocations_on_payment.length >= 1000)
+          bill?.billPayments_on_bill.some(
+            (p) =>
+              p.paymentAllocations_on_payment.length >= 1000 || p.refunds_on_payment.length >= 1000,
+          )
         ) {
           return err(
             failure(
@@ -63,13 +76,15 @@ export function createBillingStore(dc: DataConnect): BillingStore {
         return ok({
           currency: data.branch.currency,
           open: data.tableSession.status === 'OPEN',
+          roleCode: data.membership.role.code,
           bill: bill ? { id: bill.id, version: bill.version, status: bill.status } : null,
           lines: data.orderItems,
           payments: (bill?.billPayments_on_bill ?? []).map(
-            ({ id, paymentAllocations_on_payment, ...p }) => ({
+            ({ id, paymentAllocations_on_payment, refunds_on_payment, ...p }) => ({
               ...p,
               paymentId: id,
               allocations: paymentAllocations_on_payment,
+              refunds: refunds_on_payment,
             }),
           ),
         });
@@ -120,14 +135,40 @@ export function createBillingStore(dc: DataConnect): BillingStore {
         });
         return true;
       } catch (error) {
-        if (
-          isUniqueViolation(error) ||
-          (error instanceof Error &&
-            /CUENTA_CAMBIO|CUENTA_SIN_ACCESO|could not serialize|deadlock detected/i.test(
-              error.message,
-            ))
-        )
-          return false;
+        if (isLostRace(error)) return false;
+        throw error;
+      }
+    },
+    async refund(actor, write) {
+      const { scope, snapshot, refunds, line } = write;
+      const variables = {
+        tenantId: scope.tenantId,
+        branchId: scope.branchId,
+        sessionId: scope.sessionId,
+        actorId: actor.uid,
+        permission: 'payment.refund',
+        roleCode: snapshot.roleCode,
+        billId: snapshot.bill.id,
+        billVersion: snapshot.bill.version,
+        key: write.idempotencyKey,
+        fingerprint: write.fingerprint,
+        reason: write.reason,
+        billRef: snapshot.bill.id,
+        lineId: line?.id ?? null,
+        ...(line ? { lineRef: line.id, lineVersion: line.version, wasted: line.wasted } : {}),
+        ...Object.fromEntries(
+          refunds.flatMap((r, i) => [
+            [`refund${i}`, r.refundId],
+            [`payment${i}`, r.paymentId],
+            [`amount${i}`, r.amountMinor],
+          ]),
+        ),
+      };
+      try {
+        await dc.executeGraphql(refundDocument(refunds.length, line !== null), { variables });
+        return true;
+      } catch (error) {
+        if (isLostRace(error)) return false;
         throw error;
       }
     },

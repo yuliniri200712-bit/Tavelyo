@@ -222,7 +222,15 @@ Se omiten las columnas comunes de la sección 1 salvo cuando aportan.
 - Pago `CONFIRMED`, asignaciones por línea y `AuditEvent(payment.record)` se insertan en una transacción. La versión de la cuenta y las versiones de las líneas asignadas se incrementan de forma condicionada; un conflicto revierte todas las escrituras. La cancelación de una línea con asignaciones confirmadas se rechaza hasta su revisión con reembolsos (4b).
 - El backend rechaza calcular cuentas si una colección alcanza el límite de lectura de 1000 filas, para no calcular saldos truncados. La paginación de cuentas mayores queda pendiente.
 
-## 5. Pendiente de definir
+## 5. División y reembolsos (Fase 4, parte 4b, 2026-11-19)
+
+- `Refund` añade `orderItemId` (opcional, FK compuesta a `OrderItem`) y `requestFingerprint`. Con `orderItemId` es un reembolso por plato; sin él, general (D-37). Campos aditivos.
+- Un reembolso por plato inserta un `Refund` por cada pago que cubrió el plato, con la misma clave idempotente (única por pago), y cancela la línea en la misma transacción (`cancelReason`, `wasted` si ya se empezó a preparar) con su `AuditEvent(order_item.cancel)`.
+- La cuenta excluye las asignaciones de una línea cancelada **solo si** sus reembolsos por plato confirmados las cubren exactamente; si no, la cuenta exige revisión.
+- Lo reembolsable de un pago es consumo más propina menos los reembolsos no rechazados. Cada reembolso sube la versión de la cuenta: dos reembolsos simultáneos con la misma revisión no pasan los dos.
+- La división en partes iguales no guarda nada: `readBill` la calcula con `splitEvenly` (D-38).
+
+## 6. Pendiente de definir
 
 - Política de stock negativo y concurrencia de la última unidad (Fase 5).
 - Retención y anonimización de datos personales (D-10).

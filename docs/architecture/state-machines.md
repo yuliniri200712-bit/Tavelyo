@@ -20,6 +20,7 @@ stateDiagram-v2
 
 - Saltar `recogido` exige `delivery.skip_sequence` y queda auditado.
 - Retroceder (p. ej. `en_preparacion → recibido`) **no está permitido** (D-26, 2026-11-16): un error se corrige cancelando la línea con motivo.
+- **Plato pagado devuelto (D-37, Fase 4, parte 4b):** el reembolso por plato cancela la línea desde cualquier estado salvo `cancelado`, también `recogido` o `entregado`, en la misma transacción que el reembolso y con su motivo. Es la única vía para cancelar una línea con pagos; `CancelOrderItem` la sigue rechazando.
 - **Estado de la orden (derivado):** `recibido` si todas sus líneas activas lo están; `parcialmente_listo` si alguna está `listo` y otras no; `listo` cuando todas las activas lo están; `entregado` cuando todas se entregaron.
 
 **Implementación (Fase 3, bloque 1):** `packages/core/src/order-status.ts`, con los códigos del enum `OrderItemStatus` del esquema.
@@ -98,7 +99,7 @@ stateDiagram-v2
 
 ## 4. Reembolso (Refund)
 
-`solicitado → procesando → confirmado | rechazado | resultado_desconocido`. La interfaz no lo muestra completado hasta `confirmado`. En el esquema: `RefundStatus` (`REQUESTED`, `PROCESSING`, `CONFIRMED`, `REJECTED`, `UNKNOWN`).
+`solicitado → procesando → confirmado | rechazado | resultado_desconocido`. La interfaz no lo muestra completado hasta `confirmado`. **En el restaurante (ADR-0012, D-37)** el reembolso se registra directamente como `confirmado`, porque el dinero se entrega en el momento; los demás estados quedan para la pasarela de las suscripciones. En el esquema: `RefundStatus` (`REQUESTED`, `PROCESSING`, `CONFIRMED`, `REJECTED`, `UNKNOWN`).
 
 ## 5. Sesión de caja (CashSession)
 

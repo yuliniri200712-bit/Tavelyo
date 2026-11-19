@@ -207,6 +207,15 @@ type Refund
   amountMinor: Int64!
   reason: String!
   status: RefundStatus!
+  "Reembolso por plato (D-37): el plato devuelto, que se cancela en la misma transacción. Vacío en el reembolso general."
+  orderItemId: UUID
+  orderItem: OrderItem
+    @ref(
+      fields: ["orderItemId", "tenantId", "branchId"]
+      references: ["id", "tenantId", "branchId"]
+    )
+  "Huella de la intención normalizada para rechazar claves reutilizadas con otro contenido."
+  requestFingerprint: String
   providerRef: String
   requestedBy: String!
   requestedAt: Timestamp! @default(expr: "request.time")

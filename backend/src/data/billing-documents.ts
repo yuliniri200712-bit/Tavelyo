@@ -30,6 +30,7 @@ export const BILL_ROWS = `
     billPayments_on_bill(where: { status: { eq: CONFIRMED } }, orderBy: [{ id: ASC }], limit: 1000) {
       id method amountMinor tipMinor currency receivedMinor changeMinor receiptNumber idempotencyKey requestFingerprint
       paymentAllocations_on_payment(orderBy: [{ orderItemId: ASC }], limit: 1000) { orderItemId amountMinor }
+      refunds_on_payment(orderBy: [{ id: ASC }], limit: 1000) { id amountMinor status orderItemId idempotencyKey requestFingerprint }
     }
   }
   orderItems(where: { tenantId: { eq: $tenantId }, branchId: { eq: $branchId }, order: { sessionId: { eq: $sessionId } } }, orderBy: [{ id: ASC }], limit: 1000) {
@@ -76,5 +77,47 @@ export function recordPaymentDocument(newBill: boolean, lineCount: number): stri
       createdBy: $actorId, confirmedAt_expr: "request.time" })
     paymentAllocation_insertMany(data: $allocations)
     auditEvent_insert(data: { tenantId: $tenantId, actorId: $actorId, operation: "payment.record", resourceType: "bill_payment", resourceId: $paymentRef })
+  }`;
+}
+
+/**
+ * Reembolso registrado (D-34, D-37): sube la versión de la cuenta, inserta un reembolso por pago y,
+ * si es por plato, cancela la línea en la misma transacción. El rol se vuelve a comprobar dentro,
+ * porque decide el tope. Los índices nunca son entrada libre.
+ */
+export function refundDocument(refundCount: number, cancelsLine: boolean): string {
+  const refundVars = Array.from(
+    { length: refundCount },
+    (_, i) => `$refund${i}: UUID!, $payment${i}: UUID!, $amount${i}: Int64!`,
+  ).join(', ');
+  const inserts = Array.from(
+    { length: refundCount },
+    (_, i) => `
+    refund${i}: refund_insert(data: { id: $refund${i}, tenantId: $tenantId, branchId: $branchId, paymentId: $payment${i},
+      idempotencyKey: $key, requestFingerprint: $fingerprint, currency: "COP", amountMinor: $amount${i}, reason: $reason,
+      status: CONFIRMED, orderItemId: $lineId, requestedBy: $actorId, confirmedAt_expr: "request.time" })`,
+  ).join('\n');
+  const lineVars = cancelsLine ? ', $lineRef: String!, $lineVersion: Int!, $wasted: Boolean!' : '';
+  const cancel = cancelsLine
+    ? `
+    line: orderItem_updateMany(where: { id: { eq: $lineId }, tenantId: { eq: $tenantId }, branchId: { eq: $branchId }, version: { eq: $lineVersion }, status: { ne: CANCELLED }, order: { sessionId: { eq: $sessionId } } },
+      data: { status: CANCELLED, version_update: { inc: 1 }, cancelledAt_expr: "request.time", cancelReason: $reason, wasted: $wasted })
+    checkedLine: query @redact { orderItem(id: $lineId) @check(expr: "response.line == 1", message: "CUENTA_CAMBIO") { id } }
+    lineAudit: auditEvent_insert(data: { tenantId: $tenantId, actorId: $actorId, operation: "order_item.cancel", resourceType: "order_item", resourceId: $lineRef, reason: $reason })`
+    : '';
+  return `mutation RefundAccountPayment(${BILL_SCOPE_VARIABLES}, $roleCode: String!, $billId: UUID!, $billVersion: Int!,
+    $key: String!, $fingerprint: String!, $reason: String!, $billRef: String!, $lineId: UUID${lineVars}, ${refundVars}) @transaction {
+    query @redact { ${BILL_ACCESS} }
+    access: query @redact {
+      tableSession(id: $sessionId)
+        @check(expr: "response.query.membership.role.code == 'tenant_owner' || response.query.membership.membershipBranches_on_membership.size() > 0", message: "CUENTA_SIN_ACCESO")
+        @check(expr: "response.query.membership.role.code == vars.roleCode", message: "CUENTA_CAMBIO")
+        ${cancelsLine ? `@check(expr: "response.query.tableSession.status == 'OPEN'", message: "CUENTA_CAMBIO")` : ''} { id }
+    }
+    bill_updateMany(where: { id: { eq: $billId }, version: { eq: $billVersion } }, data: { version_update: { inc: 1 } })
+    checkedBill: query @redact { bill(id: $billId) @check(expr: "response.bill_updateMany == 1", message: "CUENTA_CAMBIO") { id } }
+    ${cancel}
+    ${inserts}
+    auditEvent_insert(data: { tenantId: $tenantId, actorId: $actorId, operation: "payment.refund", resourceType: "bill", resourceId: $billRef, reason: $reason })
   }`;
 }

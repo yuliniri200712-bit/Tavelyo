@@ -31,8 +31,17 @@ export type {
   RecordPaymentRequest,
   RecordedPaymentMethod,
   RecordedPaymentResponse,
+  ReadBillRequest,
+  BillPaymentsResponse,
+  RecordRefundRequest,
+  RecordRefundResponse,
 } from './billing-api.ts';
-export { RECEIPT_NUMBER_MAX_LENGTH } from './billing-api.ts';
+export {
+  RECEIPT_NUMBER_MAX_LENGTH,
+  BILL_SPLIT_PARTS,
+  REFUND_LIMIT_PESOS,
+  REFUND_REASON,
+} from './billing-api.ts';
 export {
   PaymentKeyConflictError,
   PaymentTimeoutError,

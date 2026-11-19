@@ -5,7 +5,9 @@ import type {
   RequestServiceResponse,
   SubmitOrderResponse,
   BillResponse,
+  BillPaymentsResponse,
   RecordedPaymentResponse,
+  RecordRefundResponse,
 } from '@tavelyo/contracts';
 import type { RevokeMemberResult } from '../members/revoke-member.ts';
 import type { ProvisionTenantResult } from '../provisioning/provision-tenant.ts';
@@ -15,7 +17,9 @@ type UseCase<T> = (actor: Actor, data: unknown) => Promise<Outcome<T>>;
 
 export interface UseCases {
   readonly readBill: UseCase<BillResponse>;
+  readonly readBillPayments: UseCase<BillPaymentsResponse>;
   readonly recordPayment: UseCase<RecordedPaymentResponse>;
+  readonly refundPayment: UseCase<RecordRefundResponse>;
   readonly revokeMember: UseCase<RevokeMemberResult>;
   readonly provisionTenant: UseCase<ProvisionTenantResult>;
   readonly joinTableSession: UseCase<JoinTableSessionResponse>;
@@ -57,7 +61,9 @@ const OPTIONS = { enforceAppCheck: false } as const;
 export function createCallables(useCases: UseCases) {
   return {
     readBill: onCall(OPTIONS, (request) => handle(request, useCases.readBill)),
+    readBillPayments: onCall(OPTIONS, (request) => handle(request, useCases.readBillPayments)),
     recordPayment: onCall(OPTIONS, (request) => handle(request, useCases.recordPayment)),
+    refundPayment: onCall(OPTIONS, (request) => handle(request, useCases.refundPayment)),
     revokeMember: onCall(OPTIONS, (request) => handle(request, useCases.revokeMember)),
     provisionTenant: onCall(OPTIONS, (request) => handle(request, useCases.provisionTenant)),
     // Del cliente en la mesa: exigen sesión de Firebase Auth, también anónima (ADR-0011).

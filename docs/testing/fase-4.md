@@ -91,3 +91,23 @@ Al revisar 4a se vio que el comprobante admitía 40 caracteres, así que un núm
 | Calidad completa | `npm run check` | ✅ 881 pruebas unitarias (6 nuevas: 12 caracteres admitidos; 13 caracteres, tarjetas de 16 y 13 dígitos, espacios y vacío rechazados) |
 | Backend compilado | `npm run build -w backend` | ✅ |
 | Integración de 4a | `npx vitest run --config vitest.integration.config.ts backend/tests/cuenta-fase-4a.int.test.ts` con las variables del backend | ✅ 10 pruebas (la primera ejecución falló porque los emuladores aún arrancaban tras `docker restart`; se repitió con ellos listos) |
+
+## 2026-11-19 — Parte 4b: división y reembolsos
+
+Alcance aprobado: división en partes iguales (D-38) y reembolsos por plato y generales (D-37) con los topes de D-34. Funciones nuevas `readBillPayments` y `refundPayment`; `readBill` admite `parts`. Sin cambios en pantallas (bloque 6).
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Calidad completa | `npm run check` | ✅ 911 pruebas unitarias en 69 archivos (36 nuevas en `backend/src/billing/refund.test.ts`: división exacta y límites de partes; reembolso general y lo que queda del pago; topes por rol; reembolso por plato desde varios pagos, merma y mesa cerrada; la cuenta sin el plato devuelto; idempotencia, revisión antigua, conflicto y entrada inválida, incluido un campo de tarjeta) |
+| SDK y esquema | `docker exec tavelyo-emu sh /scripts/gen-sdk.sh`, copiar al paquete y `git status` | ✅ Sin diferencias: los campos nuevos de `Refund` no cambian las operaciones públicas |
+| Integración de 4b | `npx vitest run --config vitest.integration.config.ts backend/tests/cuenta-fase-4b.int.test.ts` con las variables del backend | ✅ 6 pruebas: división en 3 partes cobrada hasta saldar; reembolso general con reintento único, auditoría y lista de pagos; topes de cajero y administrador y exceso del propietario; reembolso por plato que cancela el plato y baja el total; aislamiento (mesero, otra empresa y otra sucursal); dos reembolsos simultáneos, solo uno pasa |
+| Regresión de conectores | `npx vitest run --config vitest.integration.config.ts dataconnect` | ✅ 117 pruebas |
+| Regresión del backend | `npx vitest run --config vitest.integration.config.ts backend/tests` con las variables del backend | ✅ 79 pruebas en 5 archivos |
+| Secretos | `npm run check:secrets` | ✅ Sin secretos en 495 archivos |
+| CI | Rama `fase-4-caja-pagos` | Pendiente del resultado tras subir el commit |
+
+Hallazgos durante la verificación:
+
+- **Regresión encontrada y corregida:** la primera ejecución completa del backend falló en 4 pruebas de 4a. Al añadir los reembolsos a los datos del pago, el reintento de un pago devolvía también el campo `refunds`. Ahora la respuesta del reintento se arma campo por campo, con una prueba unitaria nueva que lo vigila.
+- Docker Desktop estaba apagado al reanudar; se inició únicamente Docker Desktop y `tavelyo-emu`.
+- Limitación conocida: un reembolso por plato de una línea que sigue en cocina la cancela desde el backend, que no dispara el `@refresh` de las pantallas en vivo; la cocina lo ve en su siguiente lectura completa. Lo habitual es devolver platos ya entregados. Se revisa en el bloque 6.

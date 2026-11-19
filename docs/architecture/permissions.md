@@ -136,8 +136,14 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - `recordPayment`: exige el nuevo permiso aprobado `payment.record` (propietario, administrador de sucursal y cajero), el mismo aislamiento y una sesión abierta. Vuelve a validar el acceso en la transacción de escritura. No acepta identidades del actor ni campos de tarjeta del cliente; usa el uid verificado por Firebase Auth. Los cálculos y las asignaciones proceden del servidor.
 - El backend usa documentos GraphQL con variables mediante el Admin SDK, como para insertar las listas de líneas de pedido. No hay operación web que acepte totales o asignaciones de pago autoritativas. `payment.capture` permanece separado, en el módulo de pasarela desconectado.
 
-## 7. Pendiente
+## 7. División y reembolsos (Fase 4, parte 4b, 2026-11-19)
 
-- Topes concretos de descuento por rol; los de reembolso ya están decididos en D-34 y se implementarán en 4b.
+- `readBill` admite `parts` (2 a 20) y devuelve la división en partes iguales y lo reembolsado de la cuenta; mismos permisos que en 4a.
+- `readBillPayments`: exige `payment.refund` y el mismo aislamiento. Devuelve los pagos con medio, comprobante, lo reembolsado y lo que queda por devolver; por eso no lo ve el mesero.
+- `refundPayment`: exige `payment.refund`, motivo y el tope de D-34 del rol (cajero $ 50.000, administrador de sucursal $ 300.000, propietario sin tope) por solicitud. Dentro de la transacción se vuelve a comprobar el permiso, la sucursal y que el rol sea el mismo que se usó para el tope. El reembolso por plato cancela el plato sin exigir `order_item.cancel`: es parte del reembolso (D-37).
+
+## 8. Pendiente
+
+- Topes concretos de descuento por rol (los de reembolso, D-34, están implementados desde 4b).
 - Política de autenticación reforzada para propietarios (según capacidades verificadas de Firebase Auth).
 - Asignación de mesas a meseros: obligatoria u opcional.

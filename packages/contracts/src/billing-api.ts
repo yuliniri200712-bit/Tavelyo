@@ -13,6 +13,27 @@ export interface BillScope {
   readonly sessionId: string;
 }
 
+/** Lectura de la cuenta; `parts` pide además dividir lo pendiente en partes iguales (D-06). */
+export interface ReadBillRequest extends BillScope {
+  readonly parts?: number;
+}
+
+/** Partes de la división en partes iguales: de 2 a 20. */
+export const BILL_SPLIT_PARTS = { min: 2, max: 20 } as const;
+
+/**
+ * Topes de reembolso por rol en pesos (D-34): por cada solicitud, siempre con motivo. `null` es sin
+ * tope de rol. Los roles sin `payment.refund` no reembolsan.
+ */
+export const REFUND_LIMIT_PESOS: Readonly<Record<string, number | null>> = {
+  cashier: 50_000,
+  branch_admin: 300_000,
+  tenant_owner: null,
+};
+
+/** Motivo del reembolso: entre 3 y 200 caracteres. */
+export const REFUND_REASON = { min: 3, max: 200 } as const;
+
 export interface BillPartResponse {
   readonly totalMinor: string;
   readonly paidMinor: string;
@@ -34,6 +55,49 @@ export interface BillResponse extends BillPartResponse {
     readonly taxMinor: string;
   })[];
   readonly participants: readonly (BillPartResponse & { readonly participantId: string })[];
+  /** Suma de los reembolsos confirmados (por plato y generales). */
+  readonly refundedMinor: string;
+  /** Lo pendiente dividido en partes iguales en pesos enteros, si se pidió `parts`. */
+  readonly split: readonly string[] | null;
+}
+
+/** Pagos de la cuenta con lo reembolsado: solo para quien puede reembolsar (payment.refund). */
+export interface BillPaymentsResponse {
+  readonly sessionId: string;
+  readonly revision: string;
+  readonly payments: readonly {
+    readonly paymentId: string;
+    readonly method: RecordedPaymentMethod;
+    readonly amountMinor: string;
+    readonly tipMinor: string;
+    readonly receiptNumber: string | null;
+    readonly refundedMinor: string;
+    readonly refundableMinor: string;
+  }[];
+}
+
+/**
+ * Reembolso registrado (D-34, D-37). Por plato: `orderItemId`, se devuelve lo pagado de ese plato y
+ * el plato se cancela. General: `paymentId` y `amountMinor`; la cuenta no cambia.
+ */
+export interface RecordRefundRequest extends BillScope {
+  readonly revision: string;
+  readonly idempotencyKey: string;
+  readonly reason: string;
+  readonly orderItemId?: string;
+  readonly paymentId?: string;
+  readonly amountMinor?: string;
+}
+
+export interface RecordRefundResponse {
+  readonly kind: 'LINE' | 'GENERAL';
+  readonly totalMinor: string;
+  readonly orderItemId: string | null;
+  readonly refunds: readonly {
+    readonly refundId: string;
+    readonly paymentId: string;
+    readonly amountMinor: string;
+  }[];
 }
 
 export interface RecordPaymentRequest extends BillScope {

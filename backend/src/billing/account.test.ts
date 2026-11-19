@@ -25,6 +25,7 @@ const line: AccountLine = {
 const snapshot: AccountSnapshot = {
   currency: 'COP',
   open: true,
+  roleCode: 'cashier',
   bill: null,
   lines: [line],
   payments: [],
@@ -40,7 +41,11 @@ const input = {
   receivedMinor: '2000000',
 };
 function store(data = snapshot): BillingStore {
-  return { load: vi.fn(async () => ok(data)), record: vi.fn(async () => true) };
+  return {
+    load: vi.fn(async () => ok(data)),
+    record: vi.fn(async () => true),
+    refund: vi.fn(async () => true),
+  };
 }
 
 describe('cuenta y pagos registrados (4a)', () => {
