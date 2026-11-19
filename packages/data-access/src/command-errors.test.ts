@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mapCommandError } from './command-errors.ts';
+import { mapCommandError, mapStaffCallableError } from './command-errors.ts';
 
 /** Error con la forma de DataConnectOperationError del SDK web (firebase 12.19). */
 function operationError(message: string, code: string) {
@@ -85,5 +85,36 @@ describe('mapCommandError', () => {
     ).toEqual({ kind: 'unauthorized' });
     expect(mapCommandError(new TypeError('Failed to fetch'))).toEqual({ kind: 'network' });
     expect(mapCommandError(null)).toEqual({ kind: 'unknown' });
+  });
+});
+
+/** Error con la forma de FunctionsError del SDK web (firebase 12.19). */
+function callableError(code: string, message: string) {
+  return Object.assign(new Error(message), { code: `functions/${code}` });
+}
+
+describe('mapStaffCallableError', () => {
+  it('muestra el motivo que escribió el backend, sin el estado HTTP', () => {
+    expect(
+      mapStaffCallableError(
+        callableError(
+          'failed-precondition',
+          'No se puede cerrar la mesa. Falta cobrar $ 30.000. [400]',
+        ),
+      ),
+    ).toEqual({ kind: 'rejected', message: 'No se puede cerrar la mesa. Falta cobrar $ 30.000.' });
+  });
+  it('distingue sesión vencida, red caída y fallas inesperadas', () => {
+    expect(mapStaffCallableError(callableError('unauthenticated', 'x'))).toEqual({
+      kind: 'unauthorized',
+    });
+    expect(mapStaffCallableError(callableError('internal', 'internal'))).toEqual({
+      kind: 'network',
+    });
+    expect(mapStaffCallableError(callableError('unavailable', 'x'))).toEqual({ kind: 'network' });
+    expect(mapStaffCallableError(callableError('internal', 'detalle interno'))).toEqual({
+      kind: 'unknown',
+    });
+    expect(mapStaffCallableError(new Error('x'))).toEqual({ kind: 'unknown' });
   });
 });

@@ -172,5 +172,33 @@ export function createBillingStore(dc: DataConnect): BillingStore {
         throw error;
       }
     },
+    async close(actor, { scope, settle }) {
+      // Operaciones con nombre del conector: así las pantallas en vivo se refrescan (@refresh).
+      const base = {
+        tenantId: scope.tenantId,
+        branchId: scope.branchId,
+        sessionId: scope.sessionId,
+        authUid: actor.uid,
+      };
+      try {
+        if (settle)
+          await dc.executeMutation('ServerCloseSettledTableSession', {
+            ...base,
+            billId: settle.billId,
+            billVersion: settle.version,
+            totalMinor: settle.totalMinor,
+          });
+        else await dc.executeMutation('ServerCloseTableSession', base);
+        return 'closed';
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '';
+        if (/Sin membresía|Sin permiso/.test(message)) return 'denied';
+        if (
+          /La cuenta de la mesa cambió|La mesa ya cambió|could not serialize|deadlock/.test(message)
+        )
+          return 'changed';
+        throw error;
+      }
+    },
   };
 }

@@ -501,6 +501,18 @@ query PendingServiceRequests($tenantId: UUID!, $branchId: UUID!)
     operation: "CloseTableSession"
     condition: "request.variables.branchId == mutation.variables.branchId"
   }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerCloseTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerCloseSettledTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
 ) {
   membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
     @redact

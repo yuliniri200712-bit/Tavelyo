@@ -1357,6 +1357,30 @@ export function serverCreateServiceRequest(dcOrVars, vars) {
   return executeMutation(serverCreateServiceRequestRef(dcInstance, inputVars));
 }
 
+export const serverCloseTableSessionRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerCloseTableSession', inputVars);
+}
+serverCloseTableSessionRef.operationName = 'ServerCloseTableSession';
+
+export function serverCloseTableSession(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverCloseTableSessionRef(dcInstance, inputVars));
+}
+
+export const serverCloseSettledTableSessionRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerCloseSettledTableSession', inputVars);
+}
+serverCloseSettledTableSessionRef.operationName = 'ServerCloseSettledTableSession';
+
+export function serverCloseSettledTableSession(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverCloseSettledTableSessionRef(dcInstance, inputVars));
+}
+
 export const tenantBranchesRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();

@@ -22,6 +22,18 @@ query FloorView($tenantId: UUID!, $branchId: UUID!)
 )
 @refresh(
   onMutationExecuted: {
+    operation: "ServerCloseTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerCloseSettledTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
     operation: "ServerSendOrderToKitchen"
     condition: "request.variables.branchId == mutation.variables.branchId"
   }
@@ -280,15 +292,65 @@ mutation CloseTableSession($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!
       status @check(expr: "this == 'OPEN'", message: "La sesión ya está cerrada")
     }
   }
-  tableSession_update(
-    id: $sessionId
+  tableSession_updateMany(
+    where: {
+      id: { eq: $sessionId }
+      tenantId: { eq: $tenantId }
+      branchId: { eq: $branchId }
+      status: { eq: OPEN }
+    }
     data: {
       status: CLOSED
+      version_update: { inc: 1 }
       openTableId: null
       closedAt_expr: "request.time"
       closedBy_expr: "auth.uid"
     }
   )
+  # Tras tomar la fila de la sesión: ve los envíos a cocina ya confirmados por otra transacción.
+  afterLock: query @redact {
+    tableSession(id: $sessionId)
+      @check(expr: "response.tableSession_updateMany == 1", message: "La sesión ya está cerrada") {
+      id
+    }
+    # D-30 (Fase 4, parte 4c): este cierre directo solo vale para mesas sin consumo. Con consumo o
+    # cuenta se cierra desde el backend (closeTable), que exige saldo cero y todo entregado.
+    consumption: orderItems(
+      where: {
+        _and: [
+          { tenantId: { eq: $tenantId } }
+          { branchId: { eq: $branchId } }
+          { status: { ne: CANCELLED } }
+          { order: { sessionId: { eq: $sessionId } } }
+          {
+            _or: [
+              {
+                order: {
+                  sentToKitchenAt: { isNull: false }
+                  approval: { in: [NOT_REQUIRED, APPROVED] }
+                }
+              }
+              { order: { approval: { eq: PENDING } } }
+            ]
+          }
+        ]
+      }
+      limit: 1
+    )
+      @check(
+        expr: "this.size() == 0"
+        message: "La mesa tiene consumo: ciérrala desde la cuenta, con el saldo en cero y todo entregado"
+      ) {
+      id
+    }
+    bills(where: { sessionId: { eq: $sessionId } }, limit: 1)
+      @check(
+        expr: "this.size() == 0"
+        message: "La mesa tiene consumo: ciérrala desde la cuenta, con el saldo en cero y todo entregado"
+      ) {
+      id
+    }
+  }
   auditEvent_insert(
     data: {
       tenantId: $tenantId

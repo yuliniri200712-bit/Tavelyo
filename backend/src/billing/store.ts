@@ -67,7 +67,20 @@ export interface RefundWrite {
   readonly line: { readonly id: string; readonly version: number; readonly wasted: boolean } | null;
 }
 
-export type BillingPermission = 'bill.read' | 'payment.record' | 'payment.refund';
+export type BillingPermission = 'bill.read' | 'payment.record' | 'payment.refund' | 'session.close';
+
+/** Cierre de la mesa (D-30): con la cuenta en la versión leída y su total, o sin cuenta. */
+export interface CloseWrite {
+  readonly scope: BillScope;
+  readonly settle: {
+    readonly billId: string;
+    readonly version: number;
+    readonly totalMinor: string;
+  } | null;
+}
+
+/** Resultado del cierre: hecho, la mesa o la cuenta cambió, o quien cierra perdió el permiso. */
+export type CloseOutcome = 'closed' | 'changed' | 'denied';
 
 export interface BillingStore {
   load(
@@ -79,4 +92,6 @@ export interface BillingStore {
   record(actor: Actor, write: PaymentWrite): Promise<boolean>;
   /** Guarda reembolsos, la cancelación del plato (si la hay) y la auditoría juntos; false si cambió. */
   refund(actor: Actor, write: RefundWrite): Promise<boolean>;
+  /** Cierra la mesa y, si hay cuenta, la deja saldada, en una transacción. */
+  close(actor: Actor, write: CloseWrite): Promise<CloseOutcome>;
 }

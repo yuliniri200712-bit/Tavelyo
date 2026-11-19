@@ -119,6 +119,18 @@ query PendingApprovalOrders($tenantId: UUID!, $branchId: UUID!)
     operation: "CloseTableSession"
     condition: "request.variables.branchId == mutation.variables.branchId"
   }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerCloseTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerCloseSettledTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
 ) {
   membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
     @redact
@@ -229,6 +241,25 @@ mutation ApproveOrder($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!, $or
         ]
       }
     ) @check(expr: "this.size() == 1", message: "La mesa ya se cerró o la persona ya no está") {
+      id
+    }
+  }
+  # Bloquea la fila de la sesión (Fase 4, parte 4c): un cierre simultáneo espera o hace fallar esto.
+  sessionLock: tableSession_updateMany(
+    where: {
+      id: { eq: $sessionId }
+      tenantId: { eq: $tenantId }
+      branchId: { eq: $branchId }
+      status: { eq: OPEN }
+    }
+    data: { version_update: { inc: 1 } }
+  )
+  lockedSession: query @redact {
+    tableSession(id: $sessionId)
+      @check(
+        expr: "response.sessionLock == 1"
+        message: "La mesa ya se cerró o la persona ya no está"
+      ) {
       id
     }
   }

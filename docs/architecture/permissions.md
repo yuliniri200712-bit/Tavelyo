@@ -142,7 +142,13 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - `readBillPayments`: exige `payment.refund` y el mismo aislamiento. Devuelve los pagos con medio, comprobante, lo reembolsado y lo que queda por devolver; por eso no lo ve el mesero.
 - `refundPayment`: exige `payment.refund`, motivo y el tope de D-34 del rol (cajero $ 50.000, administrador de sucursal $ 300.000, propietario sin tope) por solicitud. Dentro de la transacción se vuelve a comprobar el permiso, la sucursal y que el rol sea el mismo que se usó para el tope. El reembolso por plato cancela el plato sin exigir `order_item.cancel`: es parte del reembolso (D-37).
 
-## 8. Pendiente
+## 8. Cierre de mesa (Fase 4, parte 4c, 2026-11-19)
+
+- `closeTable`: exige `session.close` (propietario, administrador de sucursal, mesero y cajero) y el mismo aislamiento que `readBill`. La operación de servidor vuelve a comprobar dentro de la transacción la membresía activa y el permiso de quien cierra (revocación).
+- `CloseTableSession` (cierre directo del conector): mismos permisos, solo para mesas sin consumo ni cuenta (D-39).
+- La pantalla «Salón» de `operations` usa `closeTable` y muestra el motivo si no se puede cerrar.
+
+## 9. Pendiente
 
 - Topes concretos de descuento por rol (los de reembolso, D-34, están implementados desde 4b).
 - Política de autenticación reforzada para propietarios (según capacidades verificadas de Firebase Auth).

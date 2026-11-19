@@ -58,6 +58,8 @@ type TableSession @table @unique(fields: ["id", "tenantId", "branchId"]) {
   openedBy: String!
   closedAt: Timestamp
   closedBy: String
+  "Sube con cada envío a cocina, aprobación o cierre: sirve de bloqueo de fila entre ellos (Fase 4, parte 4c)."
+  version: Int! @default(value: 1)
 }
 
 """

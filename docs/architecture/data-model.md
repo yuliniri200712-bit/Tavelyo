@@ -230,7 +230,12 @@ Se omiten las columnas comunes de la sección 1 salvo cuando aportan.
 - Lo reembolsable de un pago es consumo más propina menos los reembolsos no rechazados. Cada reembolso sube la versión de la cuenta: dos reembolsos simultáneos con la misma revisión no pasan los dos.
 - La división en partes iguales no guarda nada: `readBill` la calcula con `splitEvenly` (D-38).
 
-## 6. Pendiente de definir
+## 6. Cierre de mesa (Fase 4, parte 4c, 2026-11-19)
+
+- `TableSession.version` (aditivo, por defecto 1): sube con cada envío a cocina, petición o decisión de aprobación y cierre. Es el bloqueo de fila que ordena esas operaciones (D-39).
+- Al cerrar una mesa con cuenta, `Bill` pasa a `SETTLED` con `settledTotalMinor`, `settledAt` y `settledBy`, en la misma transacción que el cierre, con `AuditEvent` `table_session.close` y `bill.settle`. Una cuenta saldada no admite pagos nuevos; sí reembolsos generales.
+
+## 7. Pendiente de definir
 
 - Política de stock negativo y concurrencia de la última unidad (Fase 5).
 - Retención y anonimización de datos personales (D-10).

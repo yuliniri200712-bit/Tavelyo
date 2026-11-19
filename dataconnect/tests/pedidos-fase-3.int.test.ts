@@ -735,6 +735,13 @@ describe('mesa cerrada (caso 12)', () => {
     const dana = await join(table, 'f3p-dana');
     const sent = await sentOrder(table, dana, 1);
     const pendingOrder = await storeOrder(table, dana, 1);
+    // D-30 (Fase 4, parte 4c): el cierre directo exige una mesa sin consumo; se cancela el plato.
+    const [line] = sent.items;
+    if (!line) throw new Error('Falta la línea enviada');
+    expectOk(
+      await advance(waiter, 'CancelOrderItem', line, { reason: 'Cliente se fue' }),
+      'Cancelar',
+    );
     expectOk(
       await mutate(waiter, 'CloseTableSession', {
         ...scopeOf(fixture),

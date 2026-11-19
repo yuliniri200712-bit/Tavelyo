@@ -3,6 +3,7 @@ import {
   allocatePayment,
   buildBill,
   cashChange,
+  closeBlockers,
   err,
   formatMoney,
   Money,
@@ -18,6 +19,7 @@ import {
   REFUND_LIMIT_PESOS,
   type BillPaymentsResponse,
   type BillResponse,
+  type CloseTableResponse,
   type RecordedPaymentResponse,
   type RecordPaymentRequest,
   type RecordRefundRequest,
@@ -444,5 +446,60 @@ export function createRecordPayment(store: BillingStore) {
     const latest = await store.load(actor, input, 'payment.record');
     if (!latest.ok) return latest;
     return existingPayment(latest.value, input) ?? conflict();
+  };
+}
+
+/** Hay pedidos que esperan la decisión del mesero (D-32): impiden cerrar la mesa. */
+const hasPendingApprovals = (snapshot: AccountSnapshot) =>
+  snapshot.lines.some((l) => l.order.approval === 'PENDING' && l.status !== 'CANCELLED');
+
+/** Por qué no se puede cerrar la mesa, en palabras para el personal (D-30). */
+export function closeProblems(snapshot: AccountSnapshot, bill: BillSummary): string[] {
+  const problems: string[] = [];
+  for (const blocker of closeBlockers(bill)) {
+    if (blocker.kind === 'balance-due')
+      problems.push(`Falta cobrar ${formatCop(blocker.outstanding)}.`);
+    else
+      problems.push(
+        blocker.lineIds.length === 1
+          ? 'Hay 1 plato en cocina o sin entregar.'
+          : `Hay ${blocker.lineIds.length} platos en cocina o sin entregar.`,
+      );
+  }
+  if (hasPendingApprovals(snapshot))
+    problems.push('Hay pedidos esperando la aprobación del mesero.');
+  return problems;
+}
+
+export function createCloseTable(store: BillingStore) {
+  return async (actor: Actor, data: unknown): Promise<Outcome<CloseTableResponse>> => {
+    const input = parseBillScope(data);
+    if (!input.ok) return input;
+    const loaded = await store.load(actor, input.value, 'session.close');
+    if (!loaded.ok) return loaded;
+    const snapshot = loaded.value;
+    if (!snapshot.open) return err(failure('failed-precondition', 'La mesa ya está cerrada.'));
+    const summary = accountSummary(snapshot);
+    if (!summary.ok) return summary;
+    const problems = closeProblems(snapshot, summary.value);
+    if (problems.length > 0)
+      return err(
+        failure('failed-precondition', `No se puede cerrar la mesa. ${problems.join(' ')}`),
+      );
+    const settle = snapshot.bill
+      ? {
+          billId: snapshot.bill.id,
+          version: snapshot.bill.version,
+          totalMinor: summary.value.total.amountMinor.toString(),
+        }
+      : null;
+    const outcome = await store.close(actor, { scope: input.value, settle });
+    if (outcome === 'denied')
+      return err(failure('permission-denied', 'No tienes acceso a esta cuenta.'));
+    if (outcome === 'changed')
+      return err(
+        failure('failed-precondition', 'La mesa cambió mientras la cerrabas. Revísala de nuevo.'),
+      );
+    return ok({ sessionId: input.value.sessionId, settledTotalMinor: settle?.totalMinor ?? null });
   };
 }

@@ -5,7 +5,13 @@ import { expect, test, type Page } from '@playwright/test';
 import { APPS } from '../../playwright.config.ts';
 import { expectNotice } from '../support/notices.ts';
 import { FUNCTION_WAIT } from '../support/orders.ts';
-import { createUser, expectOk, mutate, query } from '../../dataconnect/tests/support/emulator.ts';
+import {
+  admin,
+  createUser,
+  expectOk,
+  mutate,
+  query,
+} from '../../dataconnect/tests/support/emulator.ts';
 import { buildFixture } from '../../dataconnect/tests/support/catalog-fixture.ts';
 import {
   createProfile,
@@ -110,6 +116,24 @@ test('el cliente pide desde el QR: mesa cerrada, precio cambiado y envío sin pa
   const sessionId =
     floor.sectors[0]?.diningTables_on_sector.find((t) => t.id === fixture.tableId)
       ?.tableSessions_on_table[0]?.id ?? '';
+  // D-30 (Fase 4, parte 4c): el cierre directo exige una mesa sin consumo; se cancela el plato.
+  const lines = expectOk(
+    await admin<{ orderItems: { id: string; version: number }[] }>(
+      'query ($s: UUID!) { orderItems(where: { order: { sessionId: { eq: $s } } }) { id version } }',
+      { s: sessionId },
+    ),
+    'Líneas de la mesa',
+  ).orderItems;
+  for (const line of lines)
+    expectOk(
+      await mutate(waiter, 'CancelOrderItem', {
+        ...scope,
+        itemId: line.id,
+        version: line.version,
+        reason: 'Cliente se fue',
+      }),
+      'Cancelar plato',
+    );
   expectOk(await mutate(waiter, 'CloseTableSession', { ...scope, sessionId }), 'Cerrar mesa');
   await page.getByRole('button', { name: 'Hacer otro pedido' }).click();
   await page.getByRole('link', { name: 'Volver a la carta' }).click();

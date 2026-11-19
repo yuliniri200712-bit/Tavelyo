@@ -21,7 +21,7 @@ export const EMULATOR_PORTS = { auth: 9099, dataConnect: 9399, functions: 5001 }
 export const FUNCTIONS_REGION = 'us-central1';
 
 /**
- * Funciones callable del backend, solo para la app que las usa (menu-web). Con emuladores apuntan
+ * Funciones callable del backend (menu-web y, desde la Fase 4, el cierre de mesa en operations). Con emuladores apuntan
  * al emulador de Cloud Functions de la máquina local.
  */
 export function createFunctionsClient(client: FirebaseClient, env: FirebaseEnvironment): Functions {

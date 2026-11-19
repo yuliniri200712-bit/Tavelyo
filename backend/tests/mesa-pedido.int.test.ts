@@ -844,6 +844,25 @@ describe('expulsión y cierre de la mesa', () => {
       'Antes',
     );
     if (quoted.outcome !== 'quoted') throw new Error('esperaba un resumen');
+    // D-30 (Fase 4, parte 4c): el cierre directo exige una mesa sin consumo. Las pruebas anteriores
+    // enviaron pedidos a esta mesa: se cancelan sus platos antes de cerrarla.
+    const lines = expectOk(
+      await admin<{ orderItems: { id: string; version: number }[] }>(
+        'query ($s: UUID!) { orderItems(where: { order: { sessionId: { eq: $s } }, status: { ne: CANCELLED } }) { id version } }',
+        { s: sessionA },
+      ),
+      'Platos de la mesa',
+    ).orderItems;
+    for (const line of lines)
+      expectOk(
+        await mutate(waiterA, 'CancelOrderItem', {
+          ...tenantBranch(a),
+          itemId: line.id,
+          version: line.version,
+          reason: 'Cierre de la prueba',
+        }),
+        'Cancelar plato',
+      );
     expectOk(
       await mutate(waiterA, 'CloseTableSession', { ...tenantBranch(a), sessionId: sessionA }),
       'Cerrar',

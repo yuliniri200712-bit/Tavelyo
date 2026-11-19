@@ -35,6 +35,7 @@ export type {
   BillPaymentsResponse,
   RecordRefundRequest,
   RecordRefundResponse,
+  CloseTableResponse,
 } from './billing-api.ts';
 export {
   RECEIPT_NUMBER_MAX_LENGTH,

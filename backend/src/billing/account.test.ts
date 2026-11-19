@@ -45,6 +45,7 @@ function store(data = snapshot): BillingStore {
     load: vi.fn(async () => ok(data)),
     record: vi.fn(async () => true),
     refund: vi.fn(async () => true),
+    close: vi.fn(async () => 'closed' as const),
   };
 }
 

@@ -2,6 +2,7 @@
 import { initializeApp } from 'firebase-admin/app';
 import { createBillingStore } from './data/billing.ts';
 import {
+  createCloseTable,
   createReadBill,
   createReadBillPayments,
   createRecordPayment,
@@ -48,6 +49,7 @@ const dataConnect = getDataConnect(
 );
 const limiter = createRateLimiter(dataConnect, () => systemClock.now());
 export const {
+  closeTable,
   readBill,
   readBillPayments,
   recordPayment,
@@ -60,6 +62,7 @@ export const {
   requestService,
 } = createCallables({
   readBill: createReadBill(createBillingStore(dataConnect)),
+  closeTable: createCloseTable(createBillingStore(dataConnect)),
   readBillPayments: createReadBillPayments(createBillingStore(dataConnect)),
   recordPayment: createRecordPayment(createBillingStore(dataConnect)),
   refundPayment: createRefundPayment(createBillingStore(dataConnect)),

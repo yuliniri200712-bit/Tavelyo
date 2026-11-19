@@ -111,3 +111,24 @@ Hallazgos durante la verificación:
 - **Regresión encontrada y corregida:** la primera ejecución completa del backend falló en 4 pruebas de 4a. Al añadir los reembolsos a los datos del pago, el reintento de un pago devolvía también el campo `refunds`. Ahora la respuesta del reintento se arma campo por campo, con una prueba unitaria nueva que lo vigila.
 - Docker Desktop estaba apagado al reanudar; se inició únicamente Docker Desktop y `tavelyo-emu`.
 - Limitación conocida: un reembolso por plato de una línea que sigue en cocina la cancela desde el backend, que no dispara el `@refresh` de las pantallas en vivo; la cocina lo ve en su siguiente lectura completa. Lo habitual es devolver platos ya entregados. Se revisa en el bloque 6.
+
+## 2026-11-19 — Parte 4c: cierre de mesa y concurrencia
+
+Alcance aprobado: cierre D-30 desde el servidor (`closeTable`, D-39) con la cuenta saldada, protección del cierre directo del salón y escenarios de concurrencia de cajeros y pedidos. La pantalla «Salón» de `operations` cierra ahora por `closeTable`.
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Calidad completa | `npm run check` | ✅ 928 pruebas unitarias en 70 archivos (nuevas: 13 del cierre en `backend/src/billing/close.test.ts` y 2 de errores de funciones del personal en `command-errors.test.ts`) |
+| SDK y esquema | `docker exec tavelyo-emu sh /scripts/gen-sdk.sh` y copia al paquete | ✅ Regenerado: `CloseTableSessionData` cambia a `tableSession_updateMany`, `ApproveOrderData` suma `sessionLock` y se añaden las dos operaciones `ServerClose*` |
+| Integración de 4c | `npx vitest run --config vitest.integration.config.ts backend/tests/cuenta-fase-4c.int.test.ts` con las variables del backend | ✅ 8 pruebas: mesa sin consumo (servidor y cierre directo); saldo y platos sin entregar bloquean, también el cierre directo; cuenta saldada con su total, auditoría y sin segundo cierre; pedido esperando al mesero; cocina y otra empresa sin permiso; **dos cajeros cobran a la vez** (uno solo, sin cobrar de más); **dos cierres a la vez**; **cobro y cierre a la vez** (nunca una mesa cerrada con saldo); **pedido y cierre a la vez**, tres rondas (nunca un pedido en una mesa cerrada) |
+| Regresión de conectores | `npx vitest run --config vitest.integration.config.ts dataconnect` | ✅ 117 pruebas |
+| Regresión del backend | `npx vitest run --config vitest.integration.config.ts backend/tests` con las variables del backend | ✅ 87 pruebas en 6 archivos (`mesa-pedido.int.test.ts` repetido aparte tras adaptarlo: 29) |
+| Recorridos en Chrome | `npx playwright test --config playwright.emulators.config.ts --project=chrome e2e/emulators/customer-order.spec.ts e2e/emulators/waiter-floor.spec.ts` | ✅ 3 recorridos, incluido el mesero que cierra la mesa desde «Salón» por el servidor. El resto de navegadores los corre la CI |
+| Secretos | `npm run check:secrets` | ✅ Sin secretos |
+| CI | Rama `fase-4-caja-pagos` | Pendiente del resultado tras subir el commit |
+
+Hallazgos durante la verificación:
+
+- **Carrera corregida en el diseño:** con PostgreSQL en READ COMMITTED, un envío a cocina y un cierre simultáneos podían pasar los dos y dejar un pedido en una mesa cerrada. El envío, la petición y la decisión de aprobación y los dos cierres toman ahora la fila de la sesión (`TableSession.version`), y los cierres comprueban después de tomarla. La prueba de tres rondas lo verifica.
+- Tres pruebas antiguas del caso 12 (`pedidos-fase-3.int.test.ts`, `mesa-pedido.int.test.ts` y `e2e/emulators/customer-order.spec.ts`) cerraban mesas con pedidos por la vía directa, que D-30 ya no permite. Ahora cancelan los platos antes de cerrar; siguen probando lo mismo (el cliente pierde el acceso al cerrar).
+- Un fallo de Prettier en un comando con *heredoc* dejó vacío `close.test.ts`; se reescribió y se volvió a verificar.

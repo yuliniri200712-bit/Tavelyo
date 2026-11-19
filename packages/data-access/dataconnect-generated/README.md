@@ -114,6 +114,8 @@ This README will guide you through the process of using the generated JavaScript
   - [*ServerConfirmQuote*](#serverconfirmquote)
   - [*ServerRequestOrderApproval*](#serverrequestorderapproval)
   - [*ServerCreateServiceRequest*](#servercreateservicerequest)
+  - [*ServerCloseTableSession*](#serverclosetablesession)
+  - [*ServerCloseSettledTableSession*](#serverclosesettledtablesession)
   - [*CreateBranch*](#createbranch)
   - [*UpdateBranch*](#updatebranch)
 
@@ -4862,6 +4864,7 @@ Recall that executing the `ApproveOrder` mutation returns a `MutationPromise` th
 The `data` property is an object of type `ApproveOrderData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
 ```typescript
 export interface ApproveOrderData {
+  sessionLock: number;
   order_updateMany: number;
   auditEvent_insert: AuditEvent_Key;
 }
@@ -4890,12 +4893,14 @@ const { data } = await approveOrder({ tenantId: ..., branchId: ..., sessionId: .
 const dataConnect = getDataConnect(connectorConfig);
 const { data } = await approveOrder(dataConnect, approveOrderVars);
 
+console.log(data.sessionLock);
 console.log(data.order_updateMany);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
 approveOrder(approveOrderVars).then((response) => {
   const data = response.data;
+  console.log(data.sessionLock);
   console.log(data.order_updateMany);
   console.log(data.auditEvent_insert);
 });
@@ -4928,12 +4933,14 @@ const ref = approveOrderRef(dataConnect, approveOrderVars);
 // You can use the `await` keyword to wait for the promise to resolve.
 const { data } = await executeMutation(ref);
 
+console.log(data.sessionLock);
 console.log(data.order_updateMany);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
 executeMutation(ref).then((response) => {
   const data = response.data;
+  console.log(data.sessionLock);
   console.log(data.order_updateMany);
   console.log(data.auditEvent_insert);
 });
@@ -12069,7 +12076,7 @@ Recall that executing the `CloseTableSession` mutation returns a `MutationPromis
 The `data` property is an object of type `CloseTableSessionData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
 ```typescript
 export interface CloseTableSessionData {
-  tableSession_update?: TableSession_Key | null;
+  tableSession_updateMany: number;
   auditEvent_insert: AuditEvent_Key;
 }
 ```
@@ -12096,13 +12103,13 @@ const { data } = await closeTableSession({ tenantId: ..., branchId: ..., session
 const dataConnect = getDataConnect(connectorConfig);
 const { data } = await closeTableSession(dataConnect, closeTableSessionVars);
 
-console.log(data.tableSession_update);
+console.log(data.tableSession_updateMany);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
 closeTableSession(closeTableSessionVars).then((response) => {
   const data = response.data;
-  console.log(data.tableSession_update);
+  console.log(data.tableSession_updateMany);
   console.log(data.auditEvent_insert);
 });
 ```
@@ -12133,13 +12140,13 @@ const ref = closeTableSessionRef(dataConnect, closeTableSessionVars);
 // You can use the `await` keyword to wait for the promise to resolve.
 const { data } = await executeMutation(ref);
 
-console.log(data.tableSession_update);
+console.log(data.tableSession_updateMany);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
 executeMutation(ref).then((response) => {
   const data = response.data;
-  console.log(data.tableSession_update);
+  console.log(data.tableSession_updateMany);
   console.log(data.auditEvent_insert);
 });
 ```
@@ -12788,6 +12795,7 @@ Recall that executing the `ServerSendOrderToKitchen` mutation returns a `Mutatio
 The `data` property is an object of type `ServerSendOrderToKitchenData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
 ```typescript
 export interface ServerSendOrderToKitchenData {
+  sessionLock: number;
   order_update?: Order_Key | null;
   auditEvent_insert: AuditEvent_Key;
 }
@@ -12817,12 +12825,14 @@ const { data } = await serverSendOrderToKitchen({ tenantId: ..., branchId: ..., 
 const dataConnect = getDataConnect(connectorConfig);
 const { data } = await serverSendOrderToKitchen(dataConnect, serverSendOrderToKitchenVars);
 
+console.log(data.sessionLock);
 console.log(data.order_update);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
 serverSendOrderToKitchen(serverSendOrderToKitchenVars).then((response) => {
   const data = response.data;
+  console.log(data.sessionLock);
   console.log(data.order_update);
   console.log(data.auditEvent_insert);
 });
@@ -12856,12 +12866,14 @@ const ref = serverSendOrderToKitchenRef(dataConnect, serverSendOrderToKitchenVar
 // You can use the `await` keyword to wait for the promise to resolve.
 const { data } = await executeMutation(ref);
 
+console.log(data.sessionLock);
 console.log(data.order_update);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
 executeMutation(ref).then((response) => {
   const data = response.data;
+  console.log(data.sessionLock);
   console.log(data.order_update);
   console.log(data.auditEvent_insert);
 });
@@ -13034,6 +13046,7 @@ Recall that executing the `ServerRequestOrderApproval` mutation returns a `Mutat
 The `data` property is an object of type `ServerRequestOrderApprovalData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
 ```typescript
 export interface ServerRequestOrderApprovalData {
+  sessionLock: number;
   order_updateMany: number;
   auditEvent_insert: AuditEvent_Key;
 }
@@ -13063,12 +13076,14 @@ const { data } = await serverRequestOrderApproval({ tenantId: ..., branchId: ...
 const dataConnect = getDataConnect(connectorConfig);
 const { data } = await serverRequestOrderApproval(dataConnect, serverRequestOrderApprovalVars);
 
+console.log(data.sessionLock);
 console.log(data.order_updateMany);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
 serverRequestOrderApproval(serverRequestOrderApprovalVars).then((response) => {
   const data = response.data;
+  console.log(data.sessionLock);
   console.log(data.order_updateMany);
   console.log(data.auditEvent_insert);
 });
@@ -13102,12 +13117,14 @@ const ref = serverRequestOrderApprovalRef(dataConnect, serverRequestOrderApprova
 // You can use the `await` keyword to wait for the promise to resolve.
 const { data } = await executeMutation(ref);
 
+console.log(data.sessionLock);
 console.log(data.order_updateMany);
 console.log(data.auditEvent_insert);
 
 // Or, you can use the `Promise` API.
 executeMutation(ref).then((response) => {
   const data = response.data;
+  console.log(data.sessionLock);
   console.log(data.order_updateMany);
   console.log(data.auditEvent_insert);
 });
@@ -13239,6 +13256,271 @@ executeMutation(ref).then((response) => {
   const data = response.data;
   console.log(data.serviceRequest_insert);
   console.log(data.auditEvent_insert);
+});
+```
+
+## ServerCloseTableSession
+You can execute the `ServerCloseTableSession` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+serverCloseTableSession(vars: ServerCloseTableSessionVariables): MutationPromise<ServerCloseTableSessionData, ServerCloseTableSessionVariables>;
+
+interface ServerCloseTableSessionRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerCloseTableSessionVariables): MutationRef<ServerCloseTableSessionData, ServerCloseTableSessionVariables>;
+}
+export const serverCloseTableSessionRef: ServerCloseTableSessionRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+serverCloseTableSession(dc: DataConnect, vars: ServerCloseTableSessionVariables): MutationPromise<ServerCloseTableSessionData, ServerCloseTableSessionVariables>;
+
+interface ServerCloseTableSessionRef {
+  ...
+  (dc: DataConnect, vars: ServerCloseTableSessionVariables): MutationRef<ServerCloseTableSessionData, ServerCloseTableSessionVariables>;
+}
+export const serverCloseTableSessionRef: ServerCloseTableSessionRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverCloseTableSessionRef:
+```typescript
+const name = serverCloseTableSessionRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `ServerCloseTableSession` mutation requires an argument of type `ServerCloseTableSessionVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface ServerCloseTableSessionVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  authUid: string;
+}
+```
+### Return Type
+Recall that executing the `ServerCloseTableSession` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `ServerCloseTableSessionData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface ServerCloseTableSessionData {
+  tableSession_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `ServerCloseTableSession`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, serverCloseTableSession, ServerCloseTableSessionVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerCloseTableSession` mutation requires an argument of type `ServerCloseTableSessionVariables`:
+const serverCloseTableSessionVars: ServerCloseTableSessionVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  authUid: ..., 
+};
+
+// Call the `serverCloseTableSession()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await serverCloseTableSession(serverCloseTableSessionVars);
+// Variables can be defined inline as well.
+const { data } = await serverCloseTableSession({ tenantId: ..., branchId: ..., sessionId: ..., authUid: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await serverCloseTableSession(dataConnect, serverCloseTableSessionVars);
+
+console.log(data.tableSession_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+serverCloseTableSession(serverCloseTableSessionVars).then((response) => {
+  const data = response.data;
+  console.log(data.tableSession_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `ServerCloseTableSession`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, serverCloseTableSessionRef, ServerCloseTableSessionVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerCloseTableSession` mutation requires an argument of type `ServerCloseTableSessionVariables`:
+const serverCloseTableSessionVars: ServerCloseTableSessionVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  authUid: ..., 
+};
+
+// Call the `serverCloseTableSessionRef()` function to get a reference to the mutation.
+const ref = serverCloseTableSessionRef(serverCloseTableSessionVars);
+// Variables can be defined inline as well.
+const ref = serverCloseTableSessionRef({ tenantId: ..., branchId: ..., sessionId: ..., authUid: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = serverCloseTableSessionRef(dataConnect, serverCloseTableSessionVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.tableSession_updateMany);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.tableSession_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## ServerCloseSettledTableSession
+You can execute the `ServerCloseSettledTableSession` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+serverCloseSettledTableSession(vars: ServerCloseSettledTableSessionVariables): MutationPromise<ServerCloseSettledTableSessionData, ServerCloseSettledTableSessionVariables>;
+
+interface ServerCloseSettledTableSessionRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerCloseSettledTableSessionVariables): MutationRef<ServerCloseSettledTableSessionData, ServerCloseSettledTableSessionVariables>;
+}
+export const serverCloseSettledTableSessionRef: ServerCloseSettledTableSessionRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+serverCloseSettledTableSession(dc: DataConnect, vars: ServerCloseSettledTableSessionVariables): MutationPromise<ServerCloseSettledTableSessionData, ServerCloseSettledTableSessionVariables>;
+
+interface ServerCloseSettledTableSessionRef {
+  ...
+  (dc: DataConnect, vars: ServerCloseSettledTableSessionVariables): MutationRef<ServerCloseSettledTableSessionData, ServerCloseSettledTableSessionVariables>;
+}
+export const serverCloseSettledTableSessionRef: ServerCloseSettledTableSessionRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverCloseSettledTableSessionRef:
+```typescript
+const name = serverCloseSettledTableSessionRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `ServerCloseSettledTableSession` mutation requires an argument of type `ServerCloseSettledTableSessionVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface ServerCloseSettledTableSessionVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  authUid: string;
+  billId: UUIDString;
+  billVersion: number;
+  totalMinor: Int64String;
+}
+```
+### Return Type
+Recall that executing the `ServerCloseSettledTableSession` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `ServerCloseSettledTableSessionData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface ServerCloseSettledTableSessionData {
+  tableSession_updateMany: number;
+  bill_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+  settleAudit: AuditEvent_Key;
+}
+```
+### Using `ServerCloseSettledTableSession`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, serverCloseSettledTableSession, ServerCloseSettledTableSessionVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerCloseSettledTableSession` mutation requires an argument of type `ServerCloseSettledTableSessionVariables`:
+const serverCloseSettledTableSessionVars: ServerCloseSettledTableSessionVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  authUid: ..., 
+  billId: ..., 
+  billVersion: ..., 
+  totalMinor: ..., 
+};
+
+// Call the `serverCloseSettledTableSession()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await serverCloseSettledTableSession(serverCloseSettledTableSessionVars);
+// Variables can be defined inline as well.
+const { data } = await serverCloseSettledTableSession({ tenantId: ..., branchId: ..., sessionId: ..., authUid: ..., billId: ..., billVersion: ..., totalMinor: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await serverCloseSettledTableSession(dataConnect, serverCloseSettledTableSessionVars);
+
+console.log(data.tableSession_updateMany);
+console.log(data.bill_updateMany);
+console.log(data.auditEvent_insert);
+console.log(data.settleAudit);
+
+// Or, you can use the `Promise` API.
+serverCloseSettledTableSession(serverCloseSettledTableSessionVars).then((response) => {
+  const data = response.data;
+  console.log(data.tableSession_updateMany);
+  console.log(data.bill_updateMany);
+  console.log(data.auditEvent_insert);
+  console.log(data.settleAudit);
+});
+```
+
+### Using `ServerCloseSettledTableSession`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, serverCloseSettledTableSessionRef, ServerCloseSettledTableSessionVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerCloseSettledTableSession` mutation requires an argument of type `ServerCloseSettledTableSessionVariables`:
+const serverCloseSettledTableSessionVars: ServerCloseSettledTableSessionVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  authUid: ..., 
+  billId: ..., 
+  billVersion: ..., 
+  totalMinor: ..., 
+};
+
+// Call the `serverCloseSettledTableSessionRef()` function to get a reference to the mutation.
+const ref = serverCloseSettledTableSessionRef(serverCloseSettledTableSessionVars);
+// Variables can be defined inline as well.
+const ref = serverCloseSettledTableSessionRef({ tenantId: ..., branchId: ..., sessionId: ..., authUid: ..., billId: ..., billVersion: ..., totalMinor: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = serverCloseSettledTableSessionRef(dataConnect, serverCloseSettledTableSessionVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.tableSession_updateMany);
+console.log(data.bill_updateMany);
+console.log(data.auditEvent_insert);
+console.log(data.settleAudit);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.tableSession_updateMany);
+  console.log(data.bill_updateMany);
+  console.log(data.auditEvent_insert);
+  console.log(data.settleAudit);
 });
 ```
 

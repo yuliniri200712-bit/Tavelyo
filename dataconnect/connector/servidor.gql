@@ -335,6 +335,25 @@ mutation ServerSendOrderToKitchen(
       id
     }
   }
+  # Bloquea la fila de la sesión (Fase 4, parte 4c): un cierre simultáneo espera o hace fallar esto.
+  sessionLock: tableSession_updateMany(
+    where: {
+      id: { eq: $sessionId }
+      tenantId: { eq: $tenantId }
+      branchId: { eq: $branchId }
+      status: { eq: OPEN }
+    }
+    data: { version_update: { inc: 1 } }
+  )
+  lockedSession: query @redact {
+    tableSession(id: $sessionId)
+      @check(
+        expr: "response.sessionLock == 1"
+        message: "La mesa o la participación ya no están vigentes"
+      ) {
+      id
+    }
+  }
   order_update(id: $orderId, data: { sentToKitchenAt_expr: "request.time" })
   auditEvent_insert(
     data: {
@@ -415,6 +434,25 @@ mutation ServerRequestOrderApproval(
       id
     }
   }
+  # Bloquea la fila de la sesión (Fase 4, parte 4c): un cierre simultáneo espera o hace fallar esto.
+  sessionLock: tableSession_updateMany(
+    where: {
+      id: { eq: $sessionId }
+      tenantId: { eq: $tenantId }
+      branchId: { eq: $branchId }
+      status: { eq: OPEN }
+    }
+    data: { version_update: { inc: 1 } }
+  )
+  lockedSession: query @redact {
+    tableSession(id: $sessionId)
+      @check(
+        expr: "response.sessionLock == 1"
+        message: "La mesa o la participación ya no están vigentes"
+      ) {
+      id
+    }
+  }
   order_updateMany(
     where: { id: { eq: $orderId }, approval: { eq: NOT_REQUIRED } }
     data: { approval: PENDING, approvalRequestedAt_expr: "request.time" }
@@ -483,6 +521,217 @@ mutation ServerCreateServiceRequest(
       operation: "service_request.create"
       resourceType: "service_request"
       resourceId_expr: "response.serviceRequest_insert.id"
+    }
+  )
+}
+
+# Cierre de mesa (D-30, Fase 4 parte 4c). El backend comprueba antes saldo cero, todo entregado y
+# ningún pedido por aprobar; estas operaciones lo repiten dentro de la transacción para que un pedido
+# o un pago simultáneo no se cuele. Se vuelve a comprobar el permiso de quien cierra (revocación).
+# Dos variantes fijas: sin cuenta (mesa sin consumo) y con la cuenta, que queda saldada.
+
+# Mesa sin cuenta: no puede tener nada que se cobre ni pedidos por aprobar.
+mutation ServerCloseTableSession(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sessionId: UUID!
+  $authUid: String!
+) @auth(level: NO_ACCESS) @transaction {
+  tableSession_updateMany(
+    where: {
+      id: { eq: $sessionId }
+      tenantId: { eq: $tenantId }
+      branchId: { eq: $branchId }
+      status: { eq: OPEN }
+    }
+    data: {
+      status: CLOSED
+      version_update: { inc: 1 }
+      openTableId: null
+      closedAt_expr: "request.time"
+      closedBy: $authUid
+    }
+  )
+  closed: query @redact {
+    tableSession(id: $sessionId)
+      @check(expr: "response.tableSession_updateMany == 1", message: "La mesa ya cambió") {
+      id
+    }
+  }
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId: $authUid })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      role {
+        rolePermissions_on_role(where: { permission: { code: { eq: "session.close" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: session.close") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    bills(where: { sessionId: { eq: $sessionId } }, limit: 1)
+      @check(expr: "this.size() == 0", message: "La cuenta de la mesa cambió") {
+      id
+    }
+    pending: orderItems(
+      where: {
+        _and: [
+          { tenantId: { eq: $tenantId } }
+          { branchId: { eq: $branchId } }
+          { status: { ne: CANCELLED } }
+          { order: { sessionId: { eq: $sessionId } } }
+          {
+            _or: [
+              {
+                order: {
+                  sentToKitchenAt: { isNull: false }
+                  approval: { in: [NOT_REQUIRED, APPROVED] }
+                }
+              }
+              { order: { approval: { eq: PENDING } } }
+            ]
+          }
+        ]
+      }
+      limit: 1
+    ) @check(expr: "this.size() == 0", message: "La cuenta de la mesa cambió") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "table_session.close"
+      resourceType: "table_session"
+      resourceId_expr: "vars.sessionId"
+    }
+  )
+}
+
+# Mesa con cuenta: la cuenta en la versión leída por el backend, sin líneas en cocina o por entregar
+# y sin pedidos por aprobar. La cuenta queda saldada con su total como instantánea.
+mutation ServerCloseSettledTableSession(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sessionId: UUID!
+  $authUid: String!
+  $billId: UUID!
+  $billVersion: Int!
+  $totalMinor: Int64!
+) @auth(level: NO_ACCESS) @transaction {
+  tableSession_updateMany(
+    where: {
+      id: { eq: $sessionId }
+      tenantId: { eq: $tenantId }
+      branchId: { eq: $branchId }
+      status: { eq: OPEN }
+    }
+    data: {
+      status: CLOSED
+      version_update: { inc: 1 }
+      openTableId: null
+      closedAt_expr: "request.time"
+      closedBy: $authUid
+    }
+  )
+  closed: query @redact {
+    tableSession(id: $sessionId)
+      @check(expr: "response.tableSession_updateMany == 1", message: "La mesa ya cambió") {
+      id
+    }
+  }
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId: $authUid })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      role {
+        rolePermissions_on_role(where: { permission: { code: { eq: "session.close" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: session.close") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    pending: orderItems(
+      where: {
+        _and: [
+          { tenantId: { eq: $tenantId } }
+          { branchId: { eq: $branchId } }
+          { status: { in: [RECEIVED, IN_PREPARATION, READY, PICKED_UP] } }
+          { order: { sessionId: { eq: $sessionId } } }
+          {
+            _or: [
+              {
+                order: {
+                  sentToKitchenAt: { isNull: false }
+                  approval: { in: [NOT_REQUIRED, APPROVED] }
+                }
+              }
+              { order: { approval: { eq: PENDING } } }
+            ]
+          }
+        ]
+      }
+      limit: 1
+    ) @check(expr: "this.size() == 0", message: "La cuenta de la mesa cambió") {
+      id
+    }
+    waiting: orders(
+      where: {
+        _and: [
+          { tenantId: { eq: $tenantId } }
+          { sessionId: { eq: $sessionId } }
+          { approval: { eq: PENDING } }
+        ]
+      }
+      limit: 1
+    ) @check(expr: "this.size() == 0", message: "La cuenta de la mesa cambió") {
+      id
+    }
+  }
+  bill_updateMany(
+    where: {
+      id: { eq: $billId }
+      tenantId: { eq: $tenantId }
+      branchId: { eq: $branchId }
+      sessionId: { eq: $sessionId }
+      version: { eq: $billVersion }
+      status: { eq: OPEN }
+    }
+    data: {
+      status: SETTLED
+      version_update: { inc: 1 }
+      settledTotalMinor: $totalMinor
+      settledAt_expr: "request.time"
+      settledBy: $authUid
+    }
+  )
+  settled: query @redact {
+    bill(id: $billId)
+      @check(expr: "response.bill_updateMany == 1", message: "La cuenta de la mesa cambió") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "table_session.close"
+      resourceType: "table_session"
+      resourceId_expr: "vars.sessionId"
+    }
+  )
+  settleAudit: auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "bill.settle"
+      resourceType: "bill"
+      resourceId_expr: "vars.billId"
     }
   )
 }

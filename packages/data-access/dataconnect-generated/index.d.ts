@@ -91,6 +91,7 @@ export interface AddMemberVariables {
 }
 
 export interface ApproveOrderData {
+  sessionLock: number;
   order_updateMany: number;
   auditEvent_insert: AuditEvent_Key;
 }
@@ -317,7 +318,7 @@ export interface ChangePriceVariables {
 }
 
 export interface CloseTableSessionData {
-  tableSession_update?: TableSession_Key | null;
+  tableSession_updateMany: number;
   auditEvent_insert: AuditEvent_Key;
 }
 
@@ -1053,6 +1054,35 @@ export interface ServerBeginPaymentOperationVariables {
   quoteId?: UUIDString | null;
 }
 
+export interface ServerCloseSettledTableSessionData {
+  tableSession_updateMany: number;
+  bill_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+  settleAudit: AuditEvent_Key;
+}
+
+export interface ServerCloseSettledTableSessionVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  authUid: string;
+  billId: UUIDString;
+  billVersion: number;
+  totalMinor: Int64String;
+}
+
+export interface ServerCloseTableSessionData {
+  tableSession_updateMany: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerCloseTableSessionVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  authUid: string;
+}
+
 export interface ServerCompleteOutboxEventData {
   outboxEvent_update?: OutboxEvent_Key | null;
 }
@@ -1531,6 +1561,7 @@ export interface ServerRenewParticipantVariables {
 }
 
 export interface ServerRequestOrderApprovalData {
+  sessionLock: number;
   order_updateMany: number;
   auditEvent_insert: AuditEvent_Key;
 }
@@ -1562,6 +1593,7 @@ export interface ServerRetryPaymentOperationVariables {
 }
 
 export interface ServerSendOrderToKitchenData {
+  sessionLock: number;
   order_update?: Order_Key | null;
   auditEvent_insert: AuditEvent_Key;
 }
@@ -3259,6 +3291,30 @@ export const serverCreateServiceRequestRef: ServerCreateServiceRequestRef;
 
 export function serverCreateServiceRequest(vars: ServerCreateServiceRequestVariables): MutationPromise<ServerCreateServiceRequestData, ServerCreateServiceRequestVariables>;
 export function serverCreateServiceRequest(dc: DataConnect, vars: ServerCreateServiceRequestVariables): MutationPromise<ServerCreateServiceRequestData, ServerCreateServiceRequestVariables>;
+
+interface ServerCloseTableSessionRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerCloseTableSessionVariables): MutationRef<ServerCloseTableSessionData, ServerCloseTableSessionVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerCloseTableSessionVariables): MutationRef<ServerCloseTableSessionData, ServerCloseTableSessionVariables>;
+  operationName: string;
+}
+export const serverCloseTableSessionRef: ServerCloseTableSessionRef;
+
+export function serverCloseTableSession(vars: ServerCloseTableSessionVariables): MutationPromise<ServerCloseTableSessionData, ServerCloseTableSessionVariables>;
+export function serverCloseTableSession(dc: DataConnect, vars: ServerCloseTableSessionVariables): MutationPromise<ServerCloseTableSessionData, ServerCloseTableSessionVariables>;
+
+interface ServerCloseSettledTableSessionRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerCloseSettledTableSessionVariables): MutationRef<ServerCloseSettledTableSessionData, ServerCloseSettledTableSessionVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerCloseSettledTableSessionVariables): MutationRef<ServerCloseSettledTableSessionData, ServerCloseSettledTableSessionVariables>;
+  operationName: string;
+}
+export const serverCloseSettledTableSessionRef: ServerCloseSettledTableSessionRef;
+
+export function serverCloseSettledTableSession(vars: ServerCloseSettledTableSessionVariables): MutationPromise<ServerCloseSettledTableSessionData, ServerCloseSettledTableSessionVariables>;
+export function serverCloseSettledTableSession(dc: DataConnect, vars: ServerCloseSettledTableSessionVariables): MutationPromise<ServerCloseSettledTableSessionData, ServerCloseSettledTableSessionVariables>;
 
 interface TenantBranchesRef {
   /* Allow users to create refs without passing in DataConnect */

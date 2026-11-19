@@ -122,3 +122,10 @@ export interface RecordedPaymentResponse {
   readonly changeMinor: string | null;
   readonly receiptNumber: string | null;
 }
+
+/** Cierre de mesa (D-30): solo con saldo cero, todo entregado y ningún pedido por aprobar. */
+export interface CloseTableResponse {
+  readonly sessionId: string;
+  /** Total de la cuenta saldada; null si la mesa no tuvo consumo. */
+  readonly settledTotalMinor: string | null;
+}

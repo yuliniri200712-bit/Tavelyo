@@ -1,7 +1,7 @@
 import type { DataConnect } from 'firebase/data-connect';
+import { httpsCallable, type Functions } from 'firebase/functions';
 import {
   branchLayout,
-  closeTableSession,
   createSector,
   createTable,
   floorView,
@@ -23,7 +23,7 @@ import type {
   FloorServiceGateway,
   TableActivity,
 } from '@tavelyo/floor/domain';
-import { mapCommandError } from './command-errors.ts';
+import { mapCommandError, mapStaffCallableError } from './command-errors.ts';
 import { readQuery, runCommand as command, SERVER_ONLY, watchQuery } from './live-query.ts';
 
 const DUPLICATE_TABLE = 'Ya existe una mesa con ese código en la sucursal.';
@@ -118,7 +118,10 @@ export function createFloorAdminGateway(dataConnect: DataConnect): FloorAdminGat
 }
 
 /** Salón para el personal en servicio: sin el qrPublicId ni la cuenta de los clientes. */
-export function createFloorServiceGateway(dataConnect: DataConnect): FloorServiceGateway {
+export function createFloorServiceGateway(
+  dataConnect: DataConnect,
+  functions: Functions,
+): FloorServiceGateway {
   return {
     floor: (scope) => readQuery(() => floorView(dataConnect, scope, SERVER_ONLY), toFloorSectors),
     watchFloor: (scope, observer) =>
@@ -145,8 +148,15 @@ export function createFloorServiceGateway(dataConnect: DataConnect): FloorServic
     // Dos personas abren la misma mesa a la vez: la unicidad de openTableId rechaza la segunda.
     openTable: (scope, tableId) =>
       command(() => openTableSession(dataConnect, { ...scope, tableId }), ALREADY_OPEN),
-    closeSession: (scope, sessionId) =>
-      command(() => closeTableSession(dataConnect, { ...scope, sessionId })),
+    // D-30: el backend cierra solo con saldo cero y todo entregado, y explica qué falta si no.
+    async closeSession(scope, sessionId) {
+      try {
+        await httpsCallable(functions, 'closeTable')({ ...scope, sessionId });
+        return ok(undefined);
+      } catch (error) {
+        return err(mapStaffCallableError(error));
+      }
+    },
     removeParticipant: (scope, participantId) =>
       command(() => removeParticipant(dataConnect, { ...scope, participantId })),
   };

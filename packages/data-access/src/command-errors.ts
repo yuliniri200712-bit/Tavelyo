@@ -59,3 +59,29 @@ export function mapCommandError(error: unknown, duplicateMessage?: string): Comm
   }
   return { kind: mapDataError(error) };
 }
+
+const STAFF_CALLABLE_REJECTIONS = new Set([
+  'invalid-argument',
+  'not-found',
+  'failed-precondition',
+  'permission-denied',
+  'resource-exhausted',
+]);
+
+/**
+ * Falla de una función callable del backend para el personal (firebase 12.19). Los mensajes de los
+ * rechazos los escribe el backend para la persona (CLAUDE.md §7); el resto se trata como conexión o
+ * falla inesperada, sin mostrar detalles internos.
+ */
+export function mapStaffCallableError(error: unknown): CommandError {
+  const rawCode =
+    typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : '';
+  const code = rawCode.replace(/^functions\//, '');
+  const message = (error instanceof Error ? error.message : '').replace(/\s*\[\d+\]$/, '').trim();
+  if (code === 'unauthenticated') return { kind: 'unauthorized' };
+  if (code === 'deadline-exceeded' || code === 'unavailable') return { kind: 'network' };
+  if (code === 'internal' && message === 'internal') return { kind: 'network' };
+  if (STAFF_CALLABLE_REJECTIONS.has(code) && message !== '' && message !== code)
+    return { kind: 'rejected', message };
+  return { kind: 'unknown' };
+}

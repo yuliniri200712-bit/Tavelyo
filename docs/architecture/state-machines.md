@@ -67,6 +67,8 @@ stateDiagram-v2
 
 Al cerrar, se invalidan las credenciales de los participantes; el QR de la mesa abre una sesión nueva.
 
+**Cierre (D-30, D-39; Fase 4, parte 4c):** `closeTable` del backend comprueba saldo cero, platos entregados o cancelados y ningún pedido esperando al mesero; después ejecuta `ServerCloseSettledTableSession` (mesa con cuenta: la deja `SETTLED` con `settledTotalMinor`) o `ServerCloseTableSession` (mesa sin consumo). Ambas toman primero la fila de la sesión (`version`) y repiten las comprobaciones dentro de la transacción. `ServerSendOrderToKitchen`, `ServerRequestOrderApproval` y `ApproveOrder` toman la misma fila antes de escribir: con PostgreSQL en READ COMMITTED, un pedido y un cierre simultáneos se ordenan y nunca queda un pedido en una mesa cerrada. El cierre directo `CloseTableSession` solo vale sin consumo ni cuenta.
+
 ## 3. Intento de pago (PaymentAttempt)
 
 ```mermaid

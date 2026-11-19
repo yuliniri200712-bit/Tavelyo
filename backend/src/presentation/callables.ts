@@ -6,6 +6,7 @@ import type {
   SubmitOrderResponse,
   BillResponse,
   BillPaymentsResponse,
+  CloseTableResponse,
   RecordedPaymentResponse,
   RecordRefundResponse,
 } from '@tavelyo/contracts';
@@ -17,6 +18,7 @@ type UseCase<T> = (actor: Actor, data: unknown) => Promise<Outcome<T>>;
 
 export interface UseCases {
   readonly readBill: UseCase<BillResponse>;
+  readonly closeTable: UseCase<CloseTableResponse>;
   readonly readBillPayments: UseCase<BillPaymentsResponse>;
   readonly recordPayment: UseCase<RecordedPaymentResponse>;
   readonly refundPayment: UseCase<RecordRefundResponse>;
@@ -61,6 +63,7 @@ const OPTIONS = { enforceAppCheck: false } as const;
 export function createCallables(useCases: UseCases) {
   return {
     readBill: onCall(OPTIONS, (request) => handle(request, useCases.readBill)),
+    closeTable: onCall(OPTIONS, (request) => handle(request, useCases.closeTable)),
     readBillPayments: onCall(OPTIONS, (request) => handle(request, useCases.readBillPayments)),
     recordPayment: onCall(OPTIONS, (request) => handle(request, useCases.recordPayment)),
     refundPayment: onCall(OPTIONS, (request) => handle(request, useCases.refundPayment)),
