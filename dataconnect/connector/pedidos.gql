@@ -454,6 +454,16 @@ mutation CancelOrderItem(
     }
   )
   applied: query @redact {
+    paymentAllocations(
+      where: { orderItemId: { eq: $itemId }, payment: { status: { eq: CONFIRMED } } }
+      limit: 1
+    )
+      @check(
+        expr: "this.size() == 0"
+        message: "La línea tiene pagos registrados; revisa el pago antes de cancelarla"
+      ) {
+      id
+    }
     orderItem(id: $itemId)
       @check(expr: "response.orderItem_updateMany == 1", message: "Esta línea ya cambió") {
       id

@@ -82,6 +82,10 @@ type PaymentAuthorization
 }
 
 enum PaymentMethod {
+  "Pago recibido en el datáfono propio del restaurante; solo número de comprobante."
+  TERMINAL
+  "Transferencia recibida por el restaurante; solo número de comprobante."
+  TRANSFER
   "Captura de una preautorización existente."
   CARD_CAPTURE
   "Cobro nuevo con tarjeta (propina o un pago que no cubre una preautorización)."
@@ -144,6 +148,10 @@ type BillPayment
   tipMinor: Int64!
   receivedMinor: Int64
   changeMinor: Int64
+  "Número de comprobante externo (D-33). Nunca datos de tarjeta, ni últimos dígitos."
+  receiptNumber: String
+  "Huella de la intención normalizada para rechazar claves reutilizadas con otro contenido."
+  requestFingerprint: String
   providerRef: String
   createdAt: Timestamp! @default(expr: "request.time")
   createdBy: String!

@@ -49,6 +49,7 @@ Leyenda: ✅ permitido · 🔸 permitido con tope, motivo o autenticación refor
 | `bill.discount` | ✅ | 🔸 | — | — | 🔸 tope | — |
 | `payment.authorize` (iniciar; sin uso en el restaurante desde ADR-0012) | — | — | — | — | ✅ | ✅ propia cuenta |
 | `payment.capture` | ✅ | ✅ | — | — | ✅ | — |
+| `payment.record` (efectivo, datáfono propio o transferencia) | ✅ | ✅ | — | — | ✅ | — |
 | `payment.void_authorization` | ✅ | ✅ | — | — | 🔸 | — |
 | `payment.refund` (registrado, D-34; siempre con motivo) | 🔸 sin tope | 🔸 hasta $ 300.000 | — | — | 🔸 hasta $ 50.000 | — |
 | `cash_session.open` / `close` | ✅ | ✅ | — | — | ✅ su caja | — |
@@ -129,8 +130,14 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - Cada cambio de estado comprueba en el servidor el estado y la versión que vio quien lo pide; si otra persona se adelantó, se rechaza con «Esta línea ya cambió» y no se escribe nada (caso 4).
 - El propietario no tiene `kitchen.advance`, `delivery.pickup` ni `delivery.deliver` (matriz §3): esas pantallas son del personal de cocina y del salón.
 
-## 6. Pendiente
+## 6. Cuenta y registro de pagos (Fase 4, parte 4a, 2026-11-19)
 
-- Topes concretos de descuento y reembolso por rol (configurables por empresa).
+- `readBill`: exige `bill.read`, membresía y empresa activas, sucursal activa y asignada (el propietario accede a todas las de su empresa) y pertenencia de la sesión. Devuelve consumo, impuesto, pagado y saldo por persona y mesa; no devuelve números de comprobante, cajero ni medios de pago al mesero.
+- `recordPayment`: exige el nuevo permiso aprobado `payment.record` (propietario, administrador de sucursal y cajero), el mismo aislamiento y una sesión abierta. Vuelve a validar el acceso en la transacción de escritura. No acepta identidades del actor ni campos de tarjeta del cliente; usa el uid verificado por Firebase Auth. Los cálculos y las asignaciones proceden del servidor.
+- El backend usa documentos GraphQL con variables mediante el Admin SDK, como para insertar las listas de líneas de pedido. No hay operación web que acepte totales o asignaciones de pago autoritativas. `payment.capture` permanece separado, en el módulo de pasarela desconectado.
+
+## 7. Pendiente
+
+- Topes concretos de descuento por rol; los de reembolso ya están decididos en D-34 y se implementarán en 4b.
 - Política de autenticación reforzada para propietarios (según capacidades verificadas de Firebase Auth).
 - Asignación de mesas a meseros: obligatoria u opcional.

@@ -24,6 +24,14 @@ export type {
   SubmitOrderResponse,
 } from './customer-api.ts';
 export { ORDER_LIMITS } from './customer-api.ts';
+export type {
+  BillScope,
+  BillResponse,
+  BillPartResponse,
+  RecordPaymentRequest,
+  RecordedPaymentMethod,
+  RecordedPaymentResponse,
+} from './billing-api.ts';
 export {
   PaymentKeyConflictError,
   PaymentTimeoutError,

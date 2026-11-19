@@ -55,3 +55,29 @@ Plan: [`plans/fase-4.md`](../plans/fase-4.md). Las pruebas unitarias se lanzan d
 | Interfaz (unitarias) | `npm run check` | ✅ 856 pruebas: «Enviar pedido» y «Pedido enviado al mesero», «Mis pedidos» con «Esperando al mesero», «Retirar pedido» y el aviso de la decisión del mesero; bandeja «Pedidos por aprobar» (aprobar, rechazar con motivo, aviso en texto de los nuevos); ajuste de la sucursal; traductores de datos |
 | Recorridos en navegador (Chrome) | `npx playwright test --config playwright.emulators.config.ts --project=chrome …` | ✅ 7 recorridos: el cliente envía con teclado y a 320 px con texto al 200 %; envía y sigue su pedido en vivo; mesa cerrada, precio cambiado y envío sin pasarela; QR inventado; **aprobación del mesero de punta a punta** (el propietario activa el modo, el cliente ve «Esperando al mesero», el mesero aprueba desde el salón y llega a cocina, rechaza con motivo que ve el cliente, y el cliente retira un pedido), con revisión axe sin fallos; servicio del mesero. El resto de navegadores los corre la CI |
 | Secretos | `npm run check:secrets` | ✅ Sin secretos |
+
+## 2026-11-19 — Parte 4a: cuenta y pagos registrados
+
+Alcance aprobado: `readBill` y `recordPayment`, permiso `payment.record`, efectivo sin turno hasta el bloque 5, datáfono propio y transferencia con número de comprobante. Sin pasarela, sin campos de tarjeta y sin cambios en las pantallas; división/reembolsos y cierre completo siguen en 4b/4c.
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Calidad completa | `npm run check` | ✅ Formato, ESLint, tipos y 875 pruebas unitarias en 68 archivos |
+| Cuenta, validación y permisos | `npx vitest run backend/src/billing/account.test.ts packages/contracts/src/authorization.test.ts` | ✅ 59 pruebas: solo pedidos enviados y no cancelados, cambio y propina, exceso, persona ajena, revisión antigua, comprobantes obligatorios y rechazo de campos extra de tarjeta; matriz de permisos sincronizada |
+| Backend compilado | `npm run build -w backend` | ✅ Compila; exporta `readBill` y `recordPayment`; la pasarela permanece desconectada |
+| SDK y esquema | `docker exec tavelyo-emu sh /scripts/gen-sdk.sh`, copiar salida al paquete y `git diff --exit-code -- packages/data-access/dataconnect-generated` | ✅ Generador real, sin diferencias con el SDK guardado; los campos nuevos no alteran las operaciones públicas generadas |
+| Integración inicial de 4a | `npx vitest run --config vitest.integration.config.ts backend/tests/cuenta-fase-4a.int.test.ts` con variables de emuladores | ✅ 9 pruebas: cuenta vacía y estados de aprobación, efectivo sin turno y auditoría única, datáfono/transferencia, pago parcial por persona, exceso, roles/empresas/sucursales, revocación, mesa cerrada, revisión antigua, campos no admitidos y doble envío |
+| Integración final y regresión (2026-11-19) | Conectores sin variables: `npx vitest run --config vitest.integration.config.ts dataconnect`; backend con las variables indicadas abajo: `npx vitest run --config vitest.integration.config.ts backend/tests` | ✅ Conectores: 117 pruebas en 7 archivos (243 s). Backend: 73 pruebas en 4 archivos (387 s), incluida `cuenta-fase-4a.int.test.ts` |
+| Calidad repetida (2026-11-19) | `npm run check` | ✅ 875 pruebas unitarias en 68 archivos |
+| Secretos | `npm run check:secrets` | ✅ Sin secretos en 488 archivos, con los archivos nuevos de 4a |
+| Recorridos en navegador | — | No aplica en 4a: no cambia pantallas. La CI corre la tanda completa |
+| CI | Rama `fase-4-caja-pagos` | Pendiente del resultado tras subir el commit de 4a |
+
+Variables del backend en PowerShell: `$env:FIREBASE_AUTH_EMULATOR_HOST='127.0.0.1:9099'; $env:DATA_CONNECT_EMULATOR_HOST='127.0.0.1:9399'; $env:GCLOUD_PROJECT='demo-tavelyo'`. No se pasan a la ejecución de conectores porque alteran las pruebas de pasarelas existentes.
+
+Hallazgos durante la verificación:
+
+- Docker estaba apagado al reanudar; se inició únicamente Docker Desktop y `tavelyo-emu`. La primera conexión llegó antes de terminar de arrancar SQL Connect; se repitió con los emuladores listos.
+- El recorrido de siete pedidos reales superó 30 segundos; solo esa prueba tiene ahora un límite de 60 segundos. Después pasó completa.
+- ESLint analizaba la copia temporal del SDK en `tools/emuladores-docker/salida`, ya ignorada por Git. Se excluye únicamente esa salida generada; las reglas sobre el código del proyecto se mantienen.
+- Una línea pagada no puede cancelarse directamente: el conector revierte la cancelación si encuentra asignaciones confirmadas. El flujo de revisión/reembolso corresponde a 4b.

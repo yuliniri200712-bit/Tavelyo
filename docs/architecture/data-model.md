@@ -213,7 +213,16 @@ Se omiten las columnas comunes de la sección 1 salvo cuando aportan.
 | IdempotencyRecord | `tenant_id`, `key`, `operation`, `request_hash`, `response`, `expires_at` | `UNIQUE (tenant_id, key)` |
 | OutboxEvent | `tenant_id`, `type`, `payload`, `status`, `attempts`, `next_attempt_at` | Entrega fiable hacia pasarela/FCM |
 
-## 4. Pendiente de definir
+## 4. Cuenta y pagos registrados (Fase 4, parte 4a, 2026-11-19)
+
+- Cuenta calculada desde `OrderItem` de pedidos con `sentToKitchenAt` y aprobación `NOT_REQUIRED` o `APPROVED`, excluyendo `CANCELLED`. No se cobra un resumen confirmado que todavía no llegó a cocina.
+- `Bill` nace con el primer pago; leer una cuenta vacía no escribe datos. Se mantiene `OPEN` aunque no quede saldo; el cierre se implementa en 4c.
+- `PaymentMethod` añade `TERMINAL` (datáfono propio) y `TRANSFER`. `BillPayment.receiptNumber` guarda solo el número de comprobante externo; `requestFingerprint` guarda la huella de la intención normalizada para detectar una clave reutilizada con otro contenido. Campos aditivos y opcionales para conservar registros históricos. No se añaden campos de tarjeta.
+- `CASH` conserva `receivedMinor` y `changeMinor`, calculado como recibido menos consumo y propina. Por aprobación expresa, `cashSessionId` queda vacío en 4a; el bloque 5 exigirá turno abierto para los pagos nuevos y conservará los anteriores sin turno.
+- Pago `CONFIRMED`, asignaciones por línea y `AuditEvent(payment.record)` se insertan en una transacción. La versión de la cuenta y las versiones de las líneas asignadas se incrementan de forma condicionada; un conflicto revierte todas las escrituras. La cancelación de una línea con asignaciones confirmadas se rechaza hasta su revisión con reembolsos (4b).
+- El backend rechaza calcular cuentas si una colección alcanza el límite de lectura de 1000 filas, para no calcular saldos truncados. La paginación de cuentas mayores queda pendiente.
+
+## 5. Pendiente de definir
 
 - Política de stock negativo y concurrencia de la última unidad (Fase 5).
 - Retención y anonimización de datos personales (D-10).

@@ -1,5 +1,7 @@
 // Raíz de composición del backend (ADR-0003). Cloud Functions descubre las funciones exportadas.
 import { initializeApp } from 'firebase-admin/app';
+import { createBillingStore } from './data/billing.ts';
+import { createReadBill, createRecordPayment } from './billing/account.ts';
 import { getAuth } from 'firebase-admin/auth';
 import { getDataConnect } from 'firebase-admin/data-connect';
 import { setGlobalOptions } from 'firebase-functions/options';
@@ -41,6 +43,8 @@ const dataConnect = getDataConnect(
 );
 const limiter = createRateLimiter(dataConnect, () => systemClock.now());
 export const {
+  readBill,
+  recordPayment,
   revokeMember,
   provisionTenant,
   joinTableSession,
@@ -48,6 +52,8 @@ export const {
   submitOrder,
   requestService,
 } = createCallables({
+  readBill: createReadBill(createBillingStore(dataConnect)),
+  recordPayment: createRecordPayment(createBillingStore(dataConnect)),
   revokeMember: createRevokeMember({
     memberships: createMembershipCommands(dataConnect),
     directory: createMembershipDirectory(dataConnect),

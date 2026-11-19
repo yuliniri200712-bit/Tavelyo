@@ -23,6 +23,14 @@ Estado: **plan y recomendaciones aprobados por el propietario el 2026-11-18** (D
 
 Las secciones siguientes se escribieron antes del cambio: donde hablan de preautorización, captura, liberación, QR de pago o pasarela real, aplica esta sección.
 
+### Bloque 4 por partes (autorización del 2026-11-19)
+
+Cada parte termina con sus pruebas, su commit, CI en verde y un resumen al propietario. La siguiente parte requiere autorización expresa; no se integra en `main`.
+
+- **4a — Cuenta y pagos (autorizada):** la cuenta incluye solo pedidos que llegaron a cocina, sin líneas canceladas. Pendientes de aprobación, rechazados y retirados no se cobran. El servidor calcula consumo, impuesto contenido, saldo por persona y mesa y propina sugerida; registra efectivo, datáfono propio (`TERMINAL`) o transferencia (`TRANSFER`). Los dos últimos exigen número de comprobante, nunca datos de tarjeta, ni últimos dígitos. Nuevo permiso aprobado `payment.record`: propietario, administrador de sucursal y cajero, con su ámbito de sucursal. `payment.capture` se conserva para la pasarela desconectada. Efectivo sin turno (`cashSessionId = null`) hasta el bloque 5, que exigirá caja abierta para registros nuevos sin reasignar los anteriores. Pago, asignaciones y auditoría se guardan juntos; clave idempotente con huella de intención. Las líneas con pagos confirmados no se cancelan directamente: deben revisarse con el flujo de reembolso de 4b.
+- **4b — División y reembolsos (pendiente de autorización):** división exacta y registro de reembolsos con motivo y D-34: cajero hasta $ 50.000, administrador de sucursal hasta $ 300.000 y propietario sin tope de rol, nunca más de lo pagado menos reembolsos previos.
+- **4c — Cierre y concurrencia (pendiente de autorización):** cierre D-30 y protección del cierre existente del salón, con los escenarios completos de dos cajeros y cambios simultáneos en pedidos. 4a no declara resuelto este cierre.
+
 ## 1. Objetivo
 
 Según PM §11: pasarela en entorno de pruebas, autorización, captura, división de la cuenta, reembolso y cierre.

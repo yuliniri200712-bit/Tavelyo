@@ -11,6 +11,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/dataconnect-generated/**',
       'dataconnect/.dataconnect/**',
+      'tools/emuladores-docker/salida/**',
       'spike/**',
     ],
   },

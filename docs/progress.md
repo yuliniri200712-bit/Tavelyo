@@ -1,10 +1,10 @@
 # Progreso del proyecto
 
-Última actualización: 2026-11-18
+Última actualización: 2026-11-19
 
 ## Fase actual
 
-**Fase 4 — Caja y pagos: autorizada** por el propietario el 2026-11-18, con el plan [`plans/fase-4.md`](plans/fase-4.md), las decisiones D-05, D-06, D-29, D-30 y D-31, y el contenedor de Docker de los emuladores (se borra al cerrar la fase). D-02 (pasarela) hace falta antes del bloque 8; si no la hay al terminar el bloque 7, la pasarela real pasa a la Fase 4B (D-31). Rama: `fase-4-caja-pagos`.
+**Fase 4 — Caja y pagos: autorizada** por el propietario el 2026-11-18, con el plan [`plans/fase-4.md`](plans/fase-4.md) y el cambio de alcance de ADR-0012: **la sección 0 del plan prevalece**. Se mantienen D-05, D-06 y D-30 (cierre sin retenciones que liberar); D-29 queda anulada y D-31 reemplazada. Aplican D-32 a D-35: envío de pedidos configurable por sucursal; pagos del comensal en efectivo, datáfono propio o transferencia registrados por el cajero, con número de comprobante para datáfono y transferencia y nunca datos de tarjeta; reembolsos siempre con motivo, sin superar lo pagado y con topes de $ 50.000 para el cajero, $ 300.000 para el administrador de sucursal y sin tope de rol para el propietario; pasarela exclusivamente para la futura fase «Suscripciones a Tavelyo». El bloque 3 se conserva desconectado y el bloque 8 sale de esta fase; D-02 ya no condiciona su cierre. Se mantiene autorizado el contenedor de Docker de los emuladores (se borra al cerrar la fase). Rama: `fase-4-caja-pagos`.
 
 | Bloque del plan | Estado |
 |---|---|
@@ -12,7 +12,7 @@
 | 2. Dinero de la cuenta | ✅ Lógica pura en `packages/core` con 30 pruebas nuevas: la cuenta y lo de cada persona (`bill.ts`), reparto de un pago por líneas, división exacta en pesos enteros y bloqueos para cerrar la mesa (D-30); propina sugerida en 10 % (`tip.ts`, D-05); cuánto capturar y liberar de cada preautorización y cuánto se puede reembolsar (`payment-settlement.ts`); cambio, efectivo esperado y conteo de cierre (`cash.ts`) |
 | 3. Pagos en el backend (simulado) | ✅ **Desconectado desde ADR-0012 y conservado para las suscripciones.** Captura, liberación, reembolso y consulta con idempotencia de punta a punta (operación guardada antes de llamar a la pasarela); `authorizeQuote` registra su operación y la `PaymentAuthorization`; avisos firmados (`paymentWebhook`) deduplicados y contrastados; conciliación cada 5 minutos (operaciones sin respuesta, autorizaciones perdidas, retenciones por liberar, outbox y vencimientos); adaptador simulado con fallos inyectables y capacidades declaradas. 58 pruebas unitarias y 14 de integración nuevas |
 | 3A. Ajuste: pasarela solo para suscripciones (ADR-0012) | ✅ Decisiones D-32 a D-35 y ADR-0012. «Enviar pedido» (`submitOrder`) sustituye a la preautorización: sin pasarela, el pedido va directo a cocina o espera al mesero según la sucursal (D-32). Ajuste por sucursal en «Ajustes de la sucursal» (`branch.settings`), bandeja «Pedidos por aprobar» en el salón (`order.approve`: aprobar o rechazar con motivo), estado «Esperando al mesero» y «Retirar pedido» en «Mis pedidos». El backend ya no crea el adaptador simulado: el restaurante se puede desplegar sin pasarela. El bloque 3 queda desconectado para las suscripciones |
-| 4. Cuenta y cierre | Pendiente |
+| 4. Cuenta y cierre | **4a en verificación:** cuenta del servidor solo con pedidos enviados a cocina y líneas no canceladas; registro de efectivo sin turno, datáfono propio y transferencia con comprobante; permiso nuevo `payment.record` para propietario, administrador de sucursal y cajero; propina voluntaria, cambio, idempotencia y auditoría. Pruebas en `testing/fase-4.md`. **4b (división y reembolsos) y 4c (cierre y concurrencia) pendientes de autorización**; no se avanza entre partes sin resumen, pruebas, commit, CI en verde y aprobación |
 | 5. Caja | Pendiente |
 | 6. Operaciones (caja y mesero) | Pendiente |
 | 7. Cliente («Mi cuenta») | Pendiente |
