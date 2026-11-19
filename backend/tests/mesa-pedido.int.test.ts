@@ -658,9 +658,7 @@ describe('aprobación del mesero (D-32)', () => {
       ),
       'Modo',
     ).branches;
-    expect(current).toEqual([
-      { id: a.branchId, name: 'Centro', orderApproval: 'WAITER_APPROVAL' },
-    ]);
+    expect(current).toEqual([{ id: a.branchId, name: 'Centro', orderApproval: 'WAITER_APPROVAL' }]);
     const audits = expectOk(
       await admin<{ auditEvents: Array<{ operation: string }> }>(
         `query ($b: String!) { auditEvents(where: { resourceId: { eq: $b }, operation: { eq: "branch.order_approval.waiter" } }) { operation } }`,

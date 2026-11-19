@@ -33,12 +33,74 @@ export function describeMyOrder(order: MyOrder): string {
   return ORDER_TEXT[deriveOrderStatus(order.items.map((item) => item.status))];
 }
 
-/** Resumen de los pedidos propios, p. ej. «2 pedidos enviados a cocina». */
+/**
+ * Resumen de los pedidos propios, p. ej. «2 pedidos enviados a cocina · 1 esperando al mesero».
+ */
 export function describeMyOrders(orders: readonly MyOrder[]): string {
-  if (orders.length === 0) return 'Todavía no enviaste pedidos a cocina desde este teléfono.';
-  return orders.length === 1
-    ? '1 pedido enviado a cocina'
-    : `${orders.length} pedidos enviados a cocina`;
+  const sent = orders.filter((order) => order.sentAt !== null).length;
+  const waiting = orders.filter((order) => order.approval === 'PENDING').length;
+  const parts: string[] = [];
+  if (sent > 0)
+    parts.push(sent === 1 ? '1 pedido enviado a cocina' : `${sent} pedidos enviados a cocina`);
+  if (waiting > 0)
+    parts.push(waiting === 1 ? '1 esperando al mesero' : `${waiting} esperando al mesero`);
+  return parts.length > 0
+    ? parts.join(' · ')
+    : 'Todavía no enviaste pedidos a cocina desde este teléfono.';
+}
+
+/** Estado de un pedido que no llegó a cocina (D-32), en texto. null si llegó a cocina. */
+export function describeApproval(order: MyOrder): {
+  readonly label: string;
+  readonly tone: StatusTone;
+  readonly detail: string;
+} | null {
+  if (order.sentAt !== null) return null;
+  switch (order.approval) {
+    case 'PENDING':
+      return {
+        label: 'Esperando al mesero',
+        tone: 'warning',
+        detail:
+          'El mesero revisará tu pedido antes de enviarlo a cocina. Mientras espera, puedes retirarlo.',
+      };
+    case 'REJECTED':
+      return {
+        label: 'No aprobado',
+        tone: 'warning',
+        detail: order.rejectionReason
+          ? `El mesero no aprobó este pedido. Motivo: ${order.rejectionReason}`
+          : 'El mesero no aprobó este pedido.',
+      };
+    case 'WITHDRAWN':
+      return {
+        label: 'Retirado',
+        tone: 'neutral',
+        detail: 'Retiraste este pedido: no llegó a cocina.',
+      };
+    case 'NOT_REQUIRED':
+    case 'APPROVED':
+      return null;
+  }
+}
+
+/** Aprobación de cada pedido propio, para avisar cuando el mesero decide. */
+export function approvalStates(orders: readonly MyOrder[]): Map<string, MyOrder['approval']> {
+  return new Map(orders.map((order) => [order.id, order.approval] as const));
+}
+
+/** Aviso en texto de las decisiones del mesero desde la lectura anterior. null si no hubo. */
+export function describeApprovalChanges(
+  previous: ReadonlyMap<string, MyOrder['approval']>,
+  orders: readonly MyOrder[],
+): string | null {
+  const texts = orders.flatMap((order) => {
+    if (previous.get(order.id) !== 'PENDING') return [];
+    if (order.approval === 'APPROVED') return ['El mesero aprobó tu pedido: ya está en cocina.'];
+    if (order.approval === 'REJECTED') return [describeApproval(order)?.detail ?? ''];
+    return [];
+  });
+  return texts.length > 0 ? texts.join(' ') : null;
 }
 
 /** Respuesta a «Llamar al mesero» o «Pedir la cuenta», en texto. */
@@ -59,7 +121,9 @@ export function serviceRequestText(
 /** Estado de cada línea propia, para detectar qué cambió desde la lectura anterior. */
 export function itemStatuses(orders: readonly MyOrder[]): Map<string, OrderItemStatus> {
   return new Map(
-    orders.flatMap((order) => order.items.map((item) => [item.id, item.status] as const)),
+    orders
+      .filter((order) => order.sentAt !== null)
+      .flatMap((order) => order.items.map((item) => [item.id, item.status] as const)),
   );
 }
 
@@ -71,9 +135,9 @@ export function describeStatusChanges(
   previous: ReadonlyMap<string, OrderItemStatus>,
   orders: readonly MyOrder[],
 ): string | null {
-  const changed = orders.flatMap((order) =>
-    order.items.filter((item) => previous.get(item.id) !== item.status),
-  );
+  const changed = orders
+    .filter((order) => order.sentAt !== null)
+    .flatMap((order) => order.items.filter((item) => previous.get(item.id) !== item.status));
   if (changed.length === 0) return null;
   return changed
     .map((item) => `${item.productName}: ${MY_ITEM_STATUS[item.status].label.toLowerCase()}.`)

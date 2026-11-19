@@ -94,7 +94,8 @@ export type QuoteOrderResponse =
       readonly quoteId: string;
       readonly fingerprint: string;
       readonly expiresAt: string;
-      readonly status: 'QUOTED' | 'AUTHORIZED' | 'DECLINED' | 'EXPIRED' | 'RELEASE_PENDING';
+      readonly status:
+        'QUOTED' | 'CONFIRMED' | 'AUTHORIZED' | 'DECLINED' | 'EXPIRED' | 'RELEASE_PENDING';
       readonly summary: QuoteSummary;
     }
   /** No se guardó nada: el resumen trae los importes actuales para confirmarlos y reenviar. */

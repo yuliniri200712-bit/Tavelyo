@@ -31,6 +31,7 @@ Datos de cada empresa y sucursal · cuentas y operaciones de pago · datos perso
 | T12 | Logs con tokens, datos de tarjeta o personales | I | Alto | Política de logs y revisión | Revisión de código |
 | T13 | Modificación del registro de auditoría por roles de negocio | R | Medio | Solo inserción; sin permisos de actualización o borrado | Fase 1 |
 | T14 | Dos cajeros capturan o cierran la misma cuenta a la vez | T | Alto | Versionado optimista / bloqueo de cuenta al cerrar | Caso 9 |
+| T15 | Un comensal pide sin preautorización y se va sin pagar (ADR-0012) | R | Medio (riesgo aceptado por el propietario) | Mesa abierta por el mesero, participación que vence, límite de personas, expulsión y, por sucursal, aprobación del mesero antes de cocina (D-32) | Integración del backend (bloque 3A) |
 
 **Implementado en la Fase 4, bloque 3 (con el adaptador simulado):**
 - **T4:** firma HMAC verificada sobre el cuerpo exacto, como máximo 5 minutos de antigüedad y cuerpos de hasta 64 KB. Además:

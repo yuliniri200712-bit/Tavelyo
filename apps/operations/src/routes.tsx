@@ -4,6 +4,7 @@ import { SignInPage } from '@tavelyo/identity';
 import {
   BranchesAdminRoute,
   BranchMenuRoute,
+  BranchSettingsRoute,
   CatalogAdminRoute,
   FloorServiceRoute,
   KitchenRoute,
@@ -104,6 +105,16 @@ export const routes: RouteObject[] = [
           <RequireStaffContext>
             <RequirePermission permissions={['catalog.manage']}>
               <StationsAdminRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/sucursal/ajustes',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['branch.settings']}>
+              <BranchSettingsRoute />
             </RequirePermission>
           </RequireStaffContext>
         ),

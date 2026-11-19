@@ -1,16 +1,22 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { formatLocalTime, type OrderItemStatus } from '@tavelyo/core';
 import {
+  ActionNotice,
+  ConfirmDialog,
   EmptyState,
   ErrorState,
   LiveStatus,
   LoadingState,
   StatusChip,
   StatusTimeline,
+  TavelyoButton,
   useLiveData,
   type LiveSubscriber,
 } from '@tavelyo/design-system';
 import {
+  approvalStates,
+  describeApproval,
+  describeApprovalChanges,
   describeMyOrder,
   describeMyOrders,
   describeStatusChanges,
@@ -100,7 +106,7 @@ function MyOrdersContent({ menu }: { readonly menu: PublicMenu }) {
   return (
     <EmptyState
       title="Todavía no tienes pedidos"
-      description="Cuando autorices un pedido, aquí verás cómo avanza en cocina."
+      description="Cuando envíes un pedido, aquí verás cómo avanza en cocina."
     />
   );
 }
@@ -117,10 +123,19 @@ function LiveOrders({ seat, menu }: { readonly seat: TableSeat; readonly menu: P
       gateway.watchMyOrders({ sessionId, branchId }, subscriber),
     [gateway, sessionId, branchId],
   );
-  const { state, refresh } = useLiveData(load, watch, { now });
+  const { state, notice, refresh, run } = useLiveData(load, watch, { now });
   const orders = state.data;
   const announcement = useStatusAnnouncement(orders);
   const formatTime = (date: Date) => formatLocalTime(date, menu.timezone);
+  const [withdrawing, setWithdrawing] = useState<MyOrder | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const withdraw = async (order: MyOrder) => {
+    setWithdrawing(null);
+    setBusyId(order.id);
+    await run(() => gateway.withdraw({ sessionId, branchId }, order.id), 'Retiraste el pedido.');
+    setBusyId(null);
+  };
 
   return (
     <section className="tv-page" aria-label="Estado de tus pedidos">
@@ -136,6 +151,7 @@ function LiveOrders({ seat, menu }: { readonly seat: TableSeat; readonly menu: P
       <div role="status" aria-live="polite">
         {announcement ? <p className="tv-list__meta">{announcement}</p> : null}
       </div>
+      <ActionNotice notice={notice} />
       {orders === null && state.problem === null ? (
         <LoadingState message="Cargando tus pedidos…" />
       ) : null}
@@ -148,8 +164,9 @@ function LiveOrders({ seat, menu }: { readonly seat: TableSeat; readonly menu: P
       ) : null}
       {orders ? <p className="tv-list__meta">{describeMyOrders(orders)}</p> : null}
       {orders?.map((order) => {
-        const sentAt = formatTime(order.sentAt);
-        const progress = orderProgress(order);
+        const sentAt = formatTime(order.placedAt);
+        const approval = describeApproval(order);
+        const progress = approval ? null : orderProgress(order);
         return (
           <article
             key={order.id}
@@ -157,8 +174,27 @@ function LiveOrders({ seat, menu }: { readonly seat: TableSeat; readonly menu: P
             aria-label={`Pedido de las ${sentAt}`}
           >
             <h2>
-              Pedido de las {sentAt} · {describeMyOrder(order)}
+              Pedido de las {sentAt} · {approval ? approval.label : describeMyOrder(order)}
             </h2>
+            {approval ? (
+              <>
+                <StatusChip tone={approval.tone} label={approval.label} />
+                <p>{approval.detail}</p>
+                {order.approval === 'PENDING' ? (
+                  <div className="tv-toolbar">
+                    <TavelyoButton
+                      variant="secondary"
+                      loading={busyId === order.id}
+                      loadingLabel="Retirando…"
+                      disabled={busyId !== null || state.connection === 'offline'}
+                      onClick={() => setWithdrawing(order)}
+                    >
+                      Retirar pedido
+                    </TavelyoButton>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
             {progress ? (
               <StatusTimeline
                 label={`Seguimiento del pedido de las ${sentAt}`}
@@ -176,7 +212,7 @@ function LiveOrders({ seat, menu }: { readonly seat: TableSeat; readonly menu: P
                       <span className="tv-list__title">
                         {item.quantity} × {item.productName}
                       </span>
-                      <StatusChip tone={status.tone} label={status.label} />
+                      {approval ? null : <StatusChip tone={status.tone} label={status.label} />}
                     </div>
                     {item.modifiers.length > 0 ? (
                       <p className="tv-list__meta">{item.modifiers.join(', ')}</p>
@@ -196,21 +232,45 @@ function LiveOrders({ seat, menu }: { readonly seat: TableSeat; readonly menu: P
           </article>
         );
       })}
+      <ConfirmDialog
+        open={withdrawing !== null}
+        title="¿Retirar este pedido?"
+        confirmLabel="Retirar pedido"
+        cancelLabel="Seguir esperando"
+        destructive
+        onConfirm={() => {
+          if (withdrawing) void withdraw(withdrawing);
+        }}
+        onCancel={() => setWithdrawing(null)}
+      >
+        <p>No llegará a cocina ni se sumará a tu cuenta. Puedes volver a pedir desde la carta.</p>
+      </ConfirmDialog>
     </section>
   );
 }
 
-/** Aviso en texto de cada línea que cambia de estado mientras la pantalla está abierta. */
+/**
+ * Aviso en texto de cada línea que cambia de estado, y de cada decisión del mesero (D-32), mientras
+ * la pantalla está abierta.
+ */
 function useStatusAnnouncement(orders: readonly MyOrder[] | null): string | null {
-  const previous = useRef<Map<string, OrderItemStatus> | null>(null);
+  const previous = useRef<{
+    readonly items: Map<string, OrderItemStatus>;
+    readonly approvals: Map<string, MyOrder['approval']>;
+  } | null>(null);
   const [announcement, setAnnouncement] = useState<string | null>(null);
   useEffect(() => {
     if (!orders) return;
     const before = previous.current;
-    previous.current = itemStatuses(orders);
+    previous.current = { items: itemStatuses(orders), approvals: approvalStates(orders) };
     // La primera lectura no es un cambio: es lo que ya había al abrir.
     if (!before) return;
-    const text = describeStatusChanges(before, orders);
+    const text = [
+      describeApprovalChanges(before.approvals, orders),
+      describeStatusChanges(before.items, orders),
+    ]
+      .filter(Boolean)
+      .join(' ');
     if (text) setAnnouncement(text);
   }, [orders]);
   return announcement;

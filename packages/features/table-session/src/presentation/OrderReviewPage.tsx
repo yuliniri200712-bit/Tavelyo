@@ -1,10 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { formatLocalTime, formatMoney } from '@tavelyo/core';
-import {
-  preauthorizationConsentText,
-  type QuoteSummary,
-  type SimulatedPaymentOutcome,
-} from '@tavelyo/contracts';
+import type { QuoteSummary } from '@tavelyo/contracts';
 import { CartLines, cartTotal } from '@tavelyo/cart';
 import {
   ActionBar,
@@ -12,7 +8,6 @@ import {
   Card,
   EmptyState,
   Icon,
-  SelectField,
   StatusChip,
   TavelyoButton,
 } from '@tavelyo/design-system';
@@ -26,23 +21,13 @@ export interface OrderReviewPageProps {
   readonly menuLink: ReactNode;
   /** Enlace a «Mis pedidos», con el texto dado. */
   readonly myOrdersLink: (label: string) => ReactNode;
-  /** Solo con emuladores: elegir el resultado del pago simulado para probar cada caso. */
-  readonly offerSimulatedOutcomes: boolean;
 }
 
-const SIMULATED_OUTCOMES: readonly { value: SimulatedPaymentOutcome; label: string }[] = [
-  { value: 'approved', label: 'Aprobado' },
-  { value: 'declined', label: 'Rechazado' },
-  { value: 'requires_action', label: 'Pide verificación adicional' },
-  { value: 'timeout', label: 'Sin respuesta a tiempo' },
-];
-
-/** Pedido de la persona: carrito, revisión con el servidor, autorización y envío a cocina. */
-export function OrderReviewPage({
-  menuLink,
-  myOrdersLink,
-  offerSimulatedOutcomes,
-}: OrderReviewPageProps) {
+/**
+ * Pedido de la persona: carrito, revisión con el servidor y envío (ADR-0012: sin pasarela; se paga
+ * al final en el restaurante). Según la sucursal, llega a cocina o espera al mesero (D-32).
+ */
+export function OrderReviewPage({ menuLink, myOrdersLink }: OrderReviewPageProps) {
   return (
     <MenuGate>
       {(menu) => (
@@ -56,11 +41,7 @@ export function OrderReviewPage({
             </div>
             <div className="tv-toolbar">{menuLink}</div>
           </header>
-          <ReviewContent
-            menu={menu}
-            myOrdersLink={myOrdersLink}
-            offerSimulatedOutcomes={offerSimulatedOutcomes}
-          />
+          <ReviewContent menu={menu} myOrdersLink={myOrdersLink} />
         </div>
       )}
     </MenuGate>
@@ -70,28 +51,34 @@ export function OrderReviewPage({
 function ReviewContent({
   menu,
   myOrdersLink,
-  offerSimulatedOutcomes,
 }: {
   readonly menu: PublicMenu;
   readonly myOrdersLink: OrderReviewPageProps['myOrdersLink'];
-  readonly offerSimulatedOutcomes: boolean;
 }) {
   const { cart, checkout } = useTableOrder();
   const { state, message } = checkout;
   const notice = message ? { tone: 'error' as const, text: message } : null;
 
   if (state.step === 'done') {
+    const waiting = state.outcome === 'pending_approval';
     return (
       <section className="tv-card" aria-labelledby="pedido-enviado">
         <div className="tv-success-head">
           <Icon name="check" size="large" />
-          <h2 id="pedido-enviado">Pedido enviado a cocina</h2>
+          <h2 id="pedido-enviado">
+            {waiting ? 'Pedido enviado al mesero' : 'Pedido enviado a cocina'}
+          </h2>
         </div>
-        <StatusChip tone="success" label="Pago autorizado (simulado)" />
+        <StatusChip
+          tone={waiting ? 'warning' : 'success'}
+          label={waiting ? 'Esperando al mesero' : 'En cocina'}
+        />
         <QuoteLines summary={state.quote.summary} />
         <p>
-          Tu pedido llegó a cocina. El pago se autorizó en modo de prueba: no se cobró dinero real.
-          En «Mis pedidos» ves cómo avanza cada producto.
+          {waiting
+            ? 'El mesero revisará tu pedido antes de enviarlo a cocina. En «Mis pedidos» ves si lo aprobó; mientras espera, puedes retirarlo.'
+            : 'Tu pedido llegó a cocina. En «Mis pedidos» ves cómo avanza cada producto.'}{' '}
+          {PAY_AT_THE_END}
         </p>
         <div className="tv-toolbar">
           {myOrdersLink('Ver mis pedidos')}
@@ -103,7 +90,7 @@ function ReviewContent({
     );
   }
 
-  if (state.step === 'quoted' || state.step === 'authorizing') {
+  if (state.step === 'quoted' || state.step === 'submitting') {
     return (
       <>
         <ActionNotice notice={notice} />
@@ -114,11 +101,10 @@ function ReviewContent({
             {formatLocalTime(new Date(state.quote.expiresAt), menu.timezone)}.
           </p>
         </Card>
-        <PaymentCard
+        <SubmitCard
           total={formatMinor(state.quote.summary.totalMinor, state.quote.summary.currency)}
-          busy={state.step === 'authorizing'}
-          offerSimulatedOutcomes={offerSimulatedOutcomes}
-          onAuthorize={checkout.authorize}
+          busy={state.step === 'submitting'}
+          onSubmit={checkout.submit}
           onEdit={checkout.editOrder}
         />
       </>
@@ -128,7 +114,7 @@ function ReviewContent({
   if (state.step === 'changed') {
     return (
       <Card title="Algunos importes cambiaron" headingLevel={2}>
-        <p>Antes de seguir, revisa los importes actuales. No se cobra nada sin tu confirmación.</p>
+        <p>Antes de seguir, revisa los importes actuales. No se envía nada sin tu confirmación.</p>
         <ul className="tv-list" aria-label="Cambios en tu pedido">
           {state.changes.map((change, index) => (
             <li key={index} className="tv-list__item">
@@ -243,58 +229,33 @@ function QuoteLines({ summary }: { readonly summary: QuoteSummary }) {
   );
 }
 
-function PaymentCard({
+/** Cómo se paga (ADR-0012, D-33): al final, en el restaurante. */
+const PAY_AT_THE_END =
+  'Pagas al final, con el mesero o en caja: en efectivo, con datáfono o por transferencia.';
+
+function SubmitCard({
   total,
   busy,
-  offerSimulatedOutcomes,
-  onAuthorize,
+  onSubmit,
   onEdit,
 }: {
   readonly total: string;
   readonly busy: boolean;
-  readonly offerSimulatedOutcomes: boolean;
-  readonly onAuthorize: (outcome?: SimulatedPaymentOutcome) => void;
+  readonly onSubmit: () => void;
   readonly onEdit: () => void;
 }) {
-  const [outcome, setOutcome] = useState<SimulatedPaymentOutcome>('approved');
   return (
-    <Card title="Autorizar el pago y enviar a cocina" headingLevel={2}>
+    <Card title="Enviar tu pedido" headingLevel={2}>
       <div className="tv-callout">
-        <Icon name="lock" />
+        <Icon name="info" />
         <div className="tv-callout__body">
-          <p className="tv-callout__title">Preautorización de pago</p>
-          <p>{preauthorizationConsentText(total)}</p>
-          <p>
-            Al autorizar, el restaurante recibe tu pedido en cocina. Sin autorización no se envía.
-          </p>
+          <p className="tv-callout__title">Se suma a la cuenta de tu mesa</p>
+          <p>{PAY_AT_THE_END} Aquí no se piden datos de tarjeta.</p>
         </div>
       </div>
-      <p>
-        Esta versión de prueba no cobra dinero real: el pago se simula y no se piden datos de
-        tarjeta.
-      </p>
-      {offerSimulatedOutcomes ? (
-        <SelectField
-          label="Resultado del pago simulado"
-          hint="Solo en el entorno de pruebas, para revisar cada caso."
-          value={outcome}
-          onChange={(event) => setOutcome(event.target.value as SimulatedPaymentOutcome)}
-        >
-          {SIMULATED_OUTCOMES.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </SelectField>
-      ) : null}
       <div className="tv-toolbar">
-        <TavelyoButton
-          loading={busy}
-          loadingLabel="Autorizando y enviando…"
-          onClick={() => onAuthorize(offerSimulatedOutcomes ? outcome : undefined)}
-        >
-          <Icon name="lock" />
-          Autorizar y enviar a cocina · {total}
+        <TavelyoButton loading={busy} loadingLabel="Enviando…" onClick={onSubmit}>
+          Enviar pedido · {total}
         </TavelyoButton>
         <TavelyoButton variant="secondary" disabled={busy} onClick={onEdit}>
           Cambiar el pedido

@@ -71,9 +71,9 @@ test('cliente: carta, pedido, pago y «Mis pedidos»', async ({ page, browser },
   await expect(
     page.getByRole('heading', { name: 'Resumen confirmado por el restaurante' }),
   ).toBeVisible({ timeout: FUNCTION_WAIT });
-  await capture(page, testInfo, '05-resumen-y-pago');
+  await capture(page, testInfo, '05-resumen-y-envio');
 
-  await page.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 32.000') }).click();
+  await page.getByRole('button', { name: named('Enviar pedido · $ 32.000') }).click();
   await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible({
     timeout: FUNCTION_WAIT,
   });

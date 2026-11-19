@@ -36,6 +36,21 @@ stateDiagram-v2
 - Estado derivado del pedido: `RECEIVED`, `IN_PREPARATION` (alguna empezó y ninguna salió de cocina), `PARTIALLY_READY` (unas salieron de cocina y otras no), `READY` (todas salieron de cocina y falta entregar alguna), `DELIVERED` y `CANCELLED` (sin líneas activas). Una línea «salió de cocina» si está lista, recogida o entregada.
 - Los permisos los comprueban los conectores (bloque 2); `core` solo decide si la transición existe. Cada cambio se aplica en el servidor solo si el estado y la `version` siguen siendo los que vio quien lo pide (caso 4).
 
+### Aprobación del pedido (D-32, ADR-0012; Fase 4, bloque 3A)
+
+```mermaid
+stateDiagram-v2
+  [*] --> NOT_REQUIRED: el comensal confirma (sucursal directa) o lo toma el personal
+  [*] --> PENDING: el comensal confirma (sucursal con aprobación)
+  PENDING --> APPROVED: el mesero aprueba (llega a cocina en la misma transacción)
+  PENDING --> REJECTED: el mesero rechaza con motivo
+  PENDING --> WITHDRAWN: el comensal lo retira
+```
+
+- Solo se avanza desde `PENDING` (`_updateMany` condicionado): dos decisiones simultáneas no pasan las dos.
+- Rechazado o retirado, el pedido no llega a cocina ni a la cuenta.
+- El resumen pasa de `QUOTED` a `CONFIRMED` al enviarlo. `AUTHORIZED`, `DECLINED` y `RELEASE_PENDING` son de antes de ADR-0012.
+
 ## 2. Sesión de mesa (TableSession)
 
 ```mermaid
@@ -90,6 +105,8 @@ stateDiagram-v2
 `abierta → en_cierre (conteo) → cerrada`. Una diferencia distinta de cero exige motivo. En el esquema, `CashSessionStatus` es `OPEN` o `CLOSED`: el conteo (`CashCount`) y el cierre se guardan en la misma transacción, así que no hace falta un estado intermedio.
 
 ## 6. Flujo crítico: pedido con preautorización
+
+> **Reemplazado por ADR-0012 (2026-11-18):** el pedido del comensal ya no pasa por la pasarela. Ver «Aprobación del pedido» en la sección 1. Se conserva como referencia para la fase de suscripciones.
 
 ```mermaid
 sequenceDiagram

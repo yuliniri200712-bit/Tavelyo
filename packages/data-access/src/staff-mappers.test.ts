@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  OrderApprovalMode,
   OrderItemStatus,
   ServiceRequestKind,
   type FloorViewData,
+  type PendingApprovalOrdersData,
   type PendingServiceRequestsData,
   type PickupQueueData,
   type SessionOrdersData,
 } from '@tavelyo/dataconnect-sdk';
 import { toFloorSectors } from './floor-gateway.ts';
+import { toApprovalMode, toPendingApprovals } from './order-approval-gateway.ts';
 import { toPickupItems, toSessionOrders } from './orders-gateway.ts';
 import { toPendingRequests } from './service-requests-gateway.ts';
 
@@ -164,5 +167,65 @@ describe('mapeo de las lecturas del personal del salón', () => {
       ],
     });
     expect(sector?.tables[1]?.session).toBeNull();
+  });
+});
+
+describe('aprobación de pedidos (D-32)', () => {
+  it('traduce los pedidos por aprobar con sus líneas y descarta los que no tienen hora', () => {
+    const data: PendingApprovalOrdersData = {
+      orders: [
+        {
+          id: 'o1',
+          approvalRequestedAt: '2026-11-18T00:55:00Z',
+          session: { id: 's1', table: { code: 'M1' } },
+          quote: { currency: 'COP', totalMinor: '3200000' },
+          orderItems_on_order: [
+            {
+              id: 'l1',
+              quantity: 1,
+              productNameSnapshot: 'Bandeja paisa',
+              note: null,
+              allergensSnapshot: null,
+              orderItemModifiers_on_item: [{ nameSnapshot: 'Bien asada' }],
+            },
+          ],
+        },
+        {
+          id: 'o2',
+          approvalRequestedAt: null,
+          session: { id: 's1', table: { code: 'M1' } },
+          quote: { currency: 'COP', totalMinor: '1' },
+          orderItems_on_order: [],
+        },
+      ],
+    };
+    expect(toPendingApprovals(data)).toEqual([
+      {
+        id: 'o1',
+        sessionId: 's1',
+        tableCode: 'M1',
+        requestedAt: new Date('2026-11-18T00:55:00Z'),
+        currency: 'COP',
+        totalMinor: '3200000',
+        lines: [
+          {
+            quantity: 1,
+            productName: 'Bandeja paisa',
+            modifiers: ['Bien asada'],
+            note: null,
+            allergens: [],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('traduce el modo de la sucursal; sin sucursal visible, null', () => {
+    expect(
+      toApprovalMode({
+        branches: [{ id: 'b1', name: 'Centro', orderApproval: OrderApprovalMode.WAITER_APPROVAL }],
+      }),
+    ).toBe('WAITER_APPROVAL');
+    expect(toApprovalMode({ branches: [] })).toBeNull();
   });
 });

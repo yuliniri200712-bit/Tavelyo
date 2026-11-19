@@ -19,6 +19,7 @@ export {
 export { mapCommandError, type CommandError } from './command-errors.ts';
 export { createFloorAdminGateway, createFloorServiceGateway } from './floor-gateway.ts';
 export { createKitchenGateway } from './kitchen-gateway.ts';
+export { createOrderApprovalGateway } from './order-approval-gateway.ts';
 export { createStaffOrdersGateway } from './orders-gateway.ts';
 export { createServiceRequestsGateway } from './service-requests-gateway.ts';
 export { createCatalogAdminGateway } from './catalog-gateway.ts';

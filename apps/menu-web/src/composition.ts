@@ -13,7 +13,6 @@ export interface Services {
   readonly customer: CustomerGateway;
   /** Carrito local de cada persona (D-06): el almacenamiento del navegador. */
   readonly cartStorage: CartStorage;
-  readonly usesEmulators: boolean;
 }
 
 export type Composition =
@@ -58,7 +57,6 @@ export function compose(env: RawEnvironment): Composition {
         functions,
       }),
       cartStorage: browserStorage(),
-      usesEmulators: environment.value.useEmulators,
     },
   };
 }

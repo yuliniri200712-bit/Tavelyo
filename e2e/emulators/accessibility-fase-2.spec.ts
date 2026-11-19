@@ -51,7 +51,7 @@ async function openMenu(page: Page, fixture: Fixture) {
   });
 }
 
-test('el cliente pide y paga en simulado usando solo el teclado', async ({
+test('el cliente pide y envía su pedido usando solo el teclado', async ({
   page,
   browserName,
 }, testInfo) => {
@@ -78,10 +78,10 @@ test('el cliente pide y paga en simulado usando solo el teclado', async ({
   await expect(page.getByRole('heading', { level: 1, name: 'Tu pedido' })).toBeVisible();
   await tabTo(page, page.getByRole('button', { name: 'Revisar pedido' }));
   await page.keyboard.press('Enter');
-  const pay = page.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 32.000') });
+  const send = page.getByRole('button', { name: named('Enviar pedido · $ 32.000') });
   // La primera llamada al backend puede tardar (arranque en frío de las funciones).
-  await expect(pay).toBeVisible({ timeout: 30_000 });
-  await tabTo(page, pay);
+  await expect(send).toBeVisible({ timeout: 30_000 });
+  await tabTo(page, send);
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible({
     timeout: FUNCTION_WAIT,

@@ -1,13 +1,9 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { err, ok } from '@tavelyo/core';
-import {
-  PREAUTHORIZATION_CONSENT_VERSION,
-  type QuoteOrderResponse,
-  type QuoteSummary,
-} from '@tavelyo/contracts';
+import type { QuoteOrderResponse, QuoteSummary } from '@tavelyo/contracts';
 import type { CartStorage } from '@tavelyo/cart';
 import type {
   CustomerGateway,
@@ -107,9 +103,15 @@ const seated = {
   expiresAt: '2026-11-16T05:00:00Z',
 };
 
-const myOrder = (status: MyOrder['items'][number]['status']): MyOrder => ({
+const myOrder = (
+  status: MyOrder['items'][number]['status'],
+  extra: Partial<MyOrder> = {},
+): MyOrder => ({
   id: 'o1',
+  placedAt: new Date('2026-11-16T00:50:00Z'),
   sentAt: new Date('2026-11-16T00:50:00Z'),
+  approval: 'NOT_REQUIRED',
+  rejectionReason: null,
   currency: 'COP',
   totalMinor: '3740000',
   items: [
@@ -123,6 +125,17 @@ const myOrder = (status: MyOrder['items'][number]['status']): MyOrder => ({
       lineTotalMinor: '3740000',
     },
   ],
+  ...extra,
+});
+
+beforeAll(() => {
+  // jsdom no implementa <dialog>: basta con alternar `open` (el foco real se prueba en Playwright).
+  HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+    this.open = true;
+  };
+  HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+    this.open = false;
+  };
 });
 
 let ordersObserver: MyOrdersObserver | null = null;
@@ -139,9 +152,8 @@ function fakeGateway(overrides: Partial<CustomerGateway> = {}): CustomerGateway 
     }),
     requestService: vi.fn(async () => ok({ status: 'sent' as const })),
     quote: vi.fn(async () => ok(quoted())),
-    authorize: vi.fn(async () =>
-      ok({ quoteId: 'q1', status: 'authorized' as const, orderId: 'o1', simulated: true }),
-    ),
+    submit: vi.fn(async () => ok({ quoteId: 'q1', status: 'sent' as const, orderId: 'o1' })),
+    withdraw: vi.fn(async () => ok(undefined)),
     ...overrides,
   };
 }
@@ -179,7 +191,6 @@ function Harness({ gateway, storage }: { gateway: CustomerGateway; storage: Cart
       ) : null}
       {page === 'order' ? (
         <OrderReviewPage
-          offerSimulatedOutcomes
           myOrdersLink={(label) => <button onClick={() => setPage('mine')}>{label}</button>}
           menuLink={<button onClick={() => setPage('menu')}>Volver a la carta</button>}
         />
@@ -263,18 +274,13 @@ describe('carta y pedido del cliente', () => {
     });
     expect(screen.getByText('Impuestos incluidos')).toBeTruthy();
     expect(screen.getByText(/Este resumen vale hasta las 20:15/)).toBeTruthy();
-    expect(screen.getByText(/no cobra dinero real/)).toBeTruthy();
-
-    expect(screen.getByText(/Sin autorización no se envía/)).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 37.400') }),
-    );
+    // Sin pasarela (ADR-0012): se suma a la cuenta y se paga al final en el restaurante.
+    expect(screen.getByText('Se suma a la cuenta de tu mesa')).toBeTruthy();
+    expect(screen.getByText(/Aquí no se piden datos de tarjeta/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: named('Enviar pedido · $ 37.400') }));
     expect(await screen.findByText('Pedido enviado a cocina')).toBeTruthy();
-    expect(gateway.authorize).toHaveBeenCalledWith({
-      quoteId: 'q1',
-      consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
-      simulatedOutcome: 'approved',
-    });
+    expect(gateway.submit).toHaveBeenCalledWith({ quoteId: 'q1' });
+    expect(screen.getByText('En cocina')).toBeTruthy();
     expect(screen.getByText(/Tu pedido llegó a cocina/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Hacer otro pedido' }));
     expect(screen.getByText('Tu pedido está vacío')).toBeTruthy();
@@ -317,7 +323,7 @@ describe('carta y pedido del cliente', () => {
       screen.getByText('Hamburguesa: antes $ 37.400, ahora $ 39.400 por unidad.'),
     ).toBeTruthy();
     expect(screen.getByText('El total cambió: antes $ 37.400, ahora $ 39.400.')).toBeTruthy();
-    expect(gateway.authorize).not.toHaveBeenCalled();
+    expect(gateway.submit).not.toHaveBeenCalled();
     // La carta en pantalla se vuelve a leer para que lo siguiente tenga el precio actual.
     await waitFor(() => expect(gateway.menu).toHaveBeenCalledTimes(2));
 
@@ -398,26 +404,42 @@ describe('carta y pedido del cliente', () => {
     expect(quote.mock.calls[1]?.[0].idempotencyKey).toBe(quote.mock.calls[0]?.[0].idempotencyKey);
   });
 
-  it('un pago simulado rechazado vuelve al pedido para revisarlo de nuevo', async () => {
-    const authorize = vi.fn(async () =>
-      ok({ quoteId: 'q1', status: 'declined' as const, simulated: true }),
+  it('con aprobación del mesero (D-32), queda esperando y se puede retirar desde «Mis pedidos»', async () => {
+    const pending = myOrder('RECEIVED', { sentAt: null, approval: 'PENDING' });
+    const submit = vi.fn(async () =>
+      ok({ quoteId: 'q1', status: 'pending_approval' as const, orderId: 'o1' }),
     );
-    const { gateway } = renderFlow(fakeGateway({ authorize }));
+    const { gateway } = renderFlow(
+      fakeGateway({ submit, myOrders: vi.fn(async () => ok([pending])) }),
+    );
     await addBurger();
     await openOrder();
     fireEvent.click(screen.getByRole('button', { name: 'Revisar pedido' }));
     await screen.findByText('Resumen confirmado por el restaurante');
-    fireEvent.change(screen.getByLabelText('Resultado del pago simulado'), {
-      target: { value: 'declined' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /Autorizar y enviar a cocina/ }));
-    expect(await screen.findByText(/El pago simulado fue rechazado/)).toBeTruthy();
-    expect(gateway.authorize).toHaveBeenCalledWith({
-      quoteId: 'q1',
-      consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
-      simulatedOutcome: 'declined',
-    });
-    expect(screen.getByRole('button', { name: 'Revisar pedido' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: named('Enviar pedido · $ 37.400') }));
+    expect(await screen.findByText('Pedido enviado al mesero')).toBeTruthy();
+    expect(screen.getByText('Esperando al mesero')).toBeTruthy();
+    expect(screen.getByText(/El mesero revisará tu pedido/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver mis pedidos' }));
+    expect(await screen.findByText(/1 esperando al mesero/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Retirar pedido' }));
+    const dialog = await screen.findByRole('dialog', { name: '¿Retirar este pedido?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Retirar pedido' }));
+    await waitFor(() =>
+      expect(gateway.withdraw).toHaveBeenCalledWith({ sessionId: 's1', branchId: 'b1' }, 'o1'),
+    );
+    expect(await screen.findByText('Retiraste el pedido.')).toBeTruthy();
+
+    // El mesero decide mientras la pantalla está abierta: se anuncia en texto.
+    act(() =>
+      ordersObserver?.onData([
+        myOrder('RECEIVED', { approval: 'REJECTED', sentAt: null, rejectionReason: 'Se agotó' }),
+      ]),
+    );
+    expect(
+      (await screen.findAllByText('El mesero no aprobó este pedido. Motivo: Se agotó')).length,
+    ).toBeGreaterThan(0);
   });
 
   it('el carrito sigue en el teléfono al recargar la carta', async () => {

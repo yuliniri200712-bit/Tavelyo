@@ -7,7 +7,7 @@ import {
   type Page,
   type TestInfo,
 } from '@playwright/test';
-import { PREAUTHORIZATION_CONSENT_VERSION, type QuoteOrderResponse } from '@tavelyo/contracts';
+import type { QuoteOrderResponse } from '@tavelyo/contracts';
 import { APPS } from '../../playwright.config.ts';
 import { callFunction } from '../../backend/tests/support/functions.ts';
 import {
@@ -40,7 +40,7 @@ export interface SeatedCustomer {
   readonly sessionId: string;
 }
 
-/** Un cliente se une a la mesa, revisa y autoriza: el backend envía el pedido a cocina. */
+/** Un cliente se une a la mesa, revisa y envía: el backend lleva el pedido a cocina (ADR-0012). */
 export async function customerOrders(
   fixture: Fixture,
   owner: TestUser,
@@ -79,11 +79,8 @@ export async function customerOrders(
   if (!quoted.ok || quoted.result.outcome !== 'quoted') {
     throw new Error(`Revisar: ${quoted.ok ? quoted.result.outcome : quoted.message}`);
   }
-  const paid = await callFunction(customer, 'authorizeQuote', {
-    quoteId: quoted.result.quoteId,
-    consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
-  });
-  if (!paid.ok) throw new Error(`Autorizar: ${paid.message}`);
+  const sent = await callFunction(customer, 'submitOrder', { quoteId: quoted.result.quoteId });
+  if (!sent.ok) throw new Error(`Enviar: ${sent.message}`);
   return { user: customer, sessionId: joined.result.sessionId };
 }
 
@@ -117,7 +114,7 @@ export async function openStaffPage(
 export const named = (text: string) =>
   new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s')}$`);
 
-/** El cliente pide una bandeja bien asada desde la carta, autoriza y la envía a cocina. */
+/** El cliente pide una bandeja bien asada desde la carta y la envía a cocina. */
 export async function orderFromMenu(page: Page, fixture: Fixture): Promise<void> {
   await page.goto(`${APPS.menuWeb}/mesa/${fixture.qrPublicId}`);
   await page.getByRole('button', { name: 'Agregar Bandeja paisa' }).click({ timeout: 15_000 });
@@ -126,9 +123,9 @@ export async function orderFromMenu(page: Page, fixture: Fixture): Promise<void>
   await form.getByRole('button', { name: named('Agregar al pedido · $ 32.000') }).click();
   await page.getByRole('link', { name: named('Ver mi pedido · 1 producto · $ 32.000') }).click();
   await page.getByRole('button', { name: 'Revisar pedido' }).click();
-  const pay = page.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 32.000') });
+  const send = page.getByRole('button', { name: named('Enviar pedido · $ 32.000') });
   // La primera llamada al backend puede tardar (arranque en frío de las funciones).
-  await pay.click({ timeout: FUNCTION_WAIT });
+  await send.click({ timeout: FUNCTION_WAIT });
   await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible({
     timeout: FUNCTION_WAIT,
   });

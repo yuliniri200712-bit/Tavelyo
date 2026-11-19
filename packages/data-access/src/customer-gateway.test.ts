@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FunctionsError } from 'firebase/functions';
-import { OrderItemStatus } from '@tavelyo/dataconnect-sdk';
+import { OrderApproval, OrderItemStatus } from '@tavelyo/dataconnect-sdk';
 import { mapCallableError, toMyOrders } from './customer-gateway.ts';
 
 // Errores tal como los construye el SDK de funciones (firebase 12.19, _errorForResponse).
@@ -57,6 +57,7 @@ describe('«Mis pedidos»', () => {
           {
             id: 'o1',
             sentToKitchenAt: '2026-11-16T18:00:00Z',
+            approval: OrderApproval.NOT_REQUIRED,
             quote: { currency: 'COP', totalMinor: '3740000' },
             orderItems_on_order: [
               {
@@ -73,6 +74,16 @@ describe('«Mis pedidos»', () => {
           {
             id: 'o2',
             sentToKitchenAt: null,
+            approval: OrderApproval.NOT_REQUIRED,
+            quote: { currency: 'COP', totalMinor: '100' },
+            orderItems_on_order: [],
+          },
+          {
+            id: 'o3',
+            sentToKitchenAt: null,
+            approval: OrderApproval.REJECTED,
+            approvalRequestedAt: '2026-11-16T18:05:00Z',
+            rejectionReason: 'Se agotó',
             quote: { currency: 'COP', totalMinor: '100' },
             orderItems_on_order: [],
           },
@@ -81,7 +92,10 @@ describe('«Mis pedidos»', () => {
     ).toEqual([
       {
         id: 'o1',
+        placedAt: new Date('2026-11-16T18:00:00Z'),
         sentAt: new Date('2026-11-16T18:00:00Z'),
+        approval: 'NOT_REQUIRED',
+        rejectionReason: null,
         currency: 'COP',
         totalMinor: '3740000',
         items: [
@@ -95,6 +109,16 @@ describe('«Mis pedidos»', () => {
             lineTotalMinor: '3740000',
           },
         ],
+      },
+      {
+        id: 'o3',
+        placedAt: new Date('2026-11-16T18:05:00Z'),
+        sentAt: null,
+        approval: 'REJECTED',
+        rejectionReason: 'Se agotó',
+        currency: 'COP',
+        totalMinor: '100',
+        items: [],
       },
     ]);
   });

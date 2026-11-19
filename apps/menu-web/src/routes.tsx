@@ -57,10 +57,8 @@ function MyOrdersRoute() {
 }
 
 function OrderRoute() {
-  const services = useServices();
   return (
     <OrderReviewPage
-      offerSimulatedOutcomes={services.usesEmulators}
       myOrdersLink={(label) => (
         <Link className="tv-link-button tv-link-button--primary" to="../mis-pedidos">
           {label}

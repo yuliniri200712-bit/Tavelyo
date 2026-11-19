@@ -77,3 +77,47 @@ export interface StaffOrdersGateway {
   /** Cancela con motivo (order_item.cancel); si ya se empezó, queda como merma. */
   cancel(scope: BranchScope, item: ItemRef, reason: string): OrdersResult<void>;
 }
+
+/** Cómo llegan a cocina los pedidos del comensal en la sucursal (D-32, ADR-0012). */
+export type OrderApprovalMode = 'DIRECT' | 'WAITER_APPROVAL';
+
+/** Línea de un pedido que espera aprobación: lo que necesita el mesero para decidir. */
+export interface ApprovalLine {
+  readonly quantity: number;
+  readonly productName: string;
+  readonly modifiers: readonly string[];
+  readonly note: string | null;
+  readonly allergens: readonly string[];
+}
+
+/** Pedido de un comensal que espera la aprobación del mesero. Sin datos de quien lo pidió. */
+export interface PendingApproval {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly tableCode: string;
+  /** Desde cuándo espera: el mesero ve cuánto lleva. */
+  readonly requestedAt: Date;
+  readonly currency: string;
+  readonly totalMinor: string;
+  readonly lines: readonly ApprovalLine[];
+}
+
+export type PendingApprovalsObserver = LiveObserver<readonly PendingApproval[], OrdersError>;
+
+/** Contrato que implementa la capa de datos (conector aprobacion.gql). */
+export interface OrderApprovalGateway {
+  /** «Pedidos por aprobar» (order.approve). */
+  pending(scope: BranchScope): OrdersResult<readonly PendingApproval[]>;
+  watchPending(scope: BranchScope, observer: PendingApprovalsObserver): () => void;
+  /** Aprobar: el pedido llega a cocina. */
+  approve(scope: BranchScope, order: Pick<PendingApproval, 'id' | 'sessionId'>): OrdersResult<void>;
+  /** Rechazar con motivo: no llega a cocina; su comensal ve el motivo. */
+  reject(
+    scope: BranchScope,
+    order: Pick<PendingApproval, 'id' | 'sessionId'>,
+    reason: string,
+  ): OrdersResult<void>;
+  /** Modo de la sucursal (branch.settings). */
+  mode(scope: BranchScope): OrdersResult<OrderApprovalMode>;
+  setMode(scope: BranchScope, mode: OrderApprovalMode): OrdersResult<void>;
+}

@@ -24,7 +24,8 @@ const customer: CustomerGateway = {
   ),
   join: vi.fn(),
   quote: vi.fn(),
-  authorize: vi.fn(),
+  submit: vi.fn(),
+  withdraw: vi.fn(),
   resume: vi.fn(async () => ok(null)),
   myOrders: vi.fn(),
   watchMyOrders: vi.fn(() => () => undefined),
@@ -40,7 +41,6 @@ function renderAt(path: string) {
       setItem: (key, value) => void data.set(key, value),
       removeItem: (key) => void data.delete(key),
     },
-    usesEmulators: true,
   };
   render(
     <AppContext.Provider value={services}>

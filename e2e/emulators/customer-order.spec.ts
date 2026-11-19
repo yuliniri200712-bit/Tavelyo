@@ -40,7 +40,7 @@ interface FloorData {
   }>;
 }
 
-test('el cliente pide desde el QR: mesa cerrada, precio cambiado, pago rechazado y aprobado', async ({
+test('el cliente pide desde el QR: mesa cerrada, precio cambiado y envío sin pasarela', async ({
   page,
 }, testInfo) => {
   await seedAuthorizationCatalog();
@@ -97,21 +97,13 @@ test('el cliente pide desde el QR: mesa cerrada, precio cambiado, pago rechazado
   await expect(page.getByText('Impuestos incluidos')).toBeVisible();
   await expectNoAxeViolations(page);
 
-  // Pago simulado rechazado: hay que revisar otra vez; luego aprobado.
-  await page.getByLabel('Resultado del pago simulado').selectOption('declined');
-  await page.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 35.000') }).click();
-  await expectNotice(
-    page,
-    'El pago simulado fue rechazado y el pedido no se envió a cocina. Revisa el pedido para intentarlo de nuevo.',
-    FUNCTION_WAIT,
-  );
-  await page.getByRole('button', { name: 'Revisar pedido' }).click();
-  await page.getByLabel('Resultado del pago simulado').selectOption('approved');
-  await page.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 35.000') }).click();
+  // Enviar (sin pasarela, ADR-0012): se paga al final en el restaurante.
+  await expect(page.getByText(/Pagas al final, con el mesero o en caja/)).toBeVisible();
+  await page.getByRole('button', { name: named('Enviar pedido · $ 35.000') }).click();
   await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible({
     timeout: FUNCTION_WAIT,
   });
-  await expect(page.getByText('Pago autorizado (simulado)')).toBeVisible();
+  await expect(page.getByText('En cocina', { exact: true })).toBeVisible();
 
   // Caso 12: al cerrar la mesa, el cliente pierde el acceso; la sesión siguiente exige reabrirla.
   const floor = expectOk(await query<FloorData>(waiter, 'FloorView', scope), 'FloorView');

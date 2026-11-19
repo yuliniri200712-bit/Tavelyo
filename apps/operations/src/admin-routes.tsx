@@ -5,7 +5,12 @@ import { EmptyState, type IconName } from '@tavelyo/design-system';
 import { FloorServicePage, LayoutAdminPage, PrintQrPage } from '@tavelyo/floor';
 import { useInactivityHold } from '@tavelyo/identity';
 import { KitchenPage } from '@tavelyo/kitchen';
-import { PickupPage, SessionOrdersPanel } from '@tavelyo/orders';
+import {
+  OrderApprovalPanel,
+  OrderApprovalSettings,
+  PickupPage,
+  SessionOrdersPanel,
+} from '@tavelyo/orders';
 import { ServiceRequestsPanel } from '@tavelyo/service-requests';
 import { BranchesAdminPage, useTenancy } from '@tavelyo/tenancy';
 import { useAppContext } from './app-context.tsx';
@@ -78,6 +83,14 @@ export const STAFF_MODULES: readonly StaffModule[] = [
     description: 'Crear, editar y archivar las sucursales de la empresa.',
     permissions: ['tenant.settings'],
   },
+  {
+    path: '/sucursal/ajustes',
+    icon: 'settings',
+    title: 'Ajustes de la sucursal',
+    description:
+      'Si los pedidos del teléfono del cliente van directo a cocina o los aprueba el mesero.',
+    permissions: ['branch.settings'],
+  },
 ];
 
 /** Sucursal activa y permisos de la persona; los permisos solo orientan la interfaz. */
@@ -135,13 +148,22 @@ export function FloorServiceRoute() {
       timezone={timezone}
       canClose={can('session.close')}
       requestsPanel={
-        can('service_request.handle') ? (
-          <ServiceRequestsPanel
-            gateway={services.serviceRequests}
-            scope={scope}
-            timezone={timezone}
-          />
-        ) : null
+        <>
+          {can('order.approve') ? (
+            <OrderApprovalPanel
+              gateway={services.orderApproval}
+              scope={scope}
+              timezone={timezone}
+            />
+          ) : null}
+          {can('service_request.handle') ? (
+            <ServiceRequestsPanel
+              gateway={services.serviceRequests}
+              scope={scope}
+              timezone={timezone}
+            />
+          ) : null}
+        </>
       }
       renderOrders={(session, tableCode) => (
         <SessionOrdersPanel
@@ -292,5 +314,26 @@ export function BranchesAdminRoute() {
       currentBranchId={scope.branchId}
       defaultTimezone={timezone}
     />
+  );
+}
+
+/** Ajustes de la sucursal activa (branch.settings): por ahora, el modo de envío a cocina (D-32). */
+export function BranchSettingsRoute() {
+  const { services } = useAppContext();
+  const { scope, branchName } = useStaffContext();
+  return (
+    <div className="tv-page">
+      <header className="tv-page__header">
+        <div>
+          <h1>Ajustes de la sucursal</h1>
+          <p className="tv-list__meta">{branchName}</p>
+        </div>
+      </header>
+      <OrderApprovalSettings
+        gateway={services.orderApproval}
+        scope={scope}
+        branchName={branchName}
+      />
+    </div>
   );
 }

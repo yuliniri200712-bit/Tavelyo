@@ -1,12 +1,12 @@
 import type { LiveObserver, OrderItemStatus, Result, WeeklySchedule } from '@tavelyo/core';
 import type {
-  AuthorizeQuoteRequest,
-  AuthorizeQuoteResponse,
   JoinTableSessionResponse,
   QuoteOrderRequest,
   QuoteOrderResponse,
   RequestServiceRequest,
   RequestServiceResponse,
+  SubmitOrderRequest,
+  SubmitOrderResponse,
 } from '@tavelyo/contracts';
 import type { CartProduct } from '@tavelyo/cart/domain';
 
@@ -65,10 +65,19 @@ export interface MyOrderItem {
   readonly lineTotalMinor: string;
 }
 
-/** Pedido propio ya enviado a cocina. */
+/** Aprobación del mesero de un pedido propio (D-32). */
+export type MyOrderApproval = 'NOT_REQUIRED' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
+
+/** Pedido propio: enviado a cocina o que pasó por la aprobación del mesero (D-32). */
 export interface MyOrder {
   readonly id: string;
-  readonly sentAt: Date;
+  /** Cuándo se envió: a cocina o, con aprobación, al mesero. */
+  readonly placedAt: Date;
+  /** Cuándo llegó a cocina; null si espera al mesero, o si lo rechazó o se retiró. */
+  readonly sentAt: Date | null;
+  readonly approval: MyOrderApproval;
+  /** Motivo del mesero si no lo aprobó. */
+  readonly rejectionReason: string | null;
   readonly currency: string;
   readonly totalMinor: string;
   readonly items: readonly MyOrderItem[];
@@ -83,13 +92,16 @@ export interface CustomerGateway {
   /** Inicia la sesión anónima si hace falta y se une a la mesa abierta. */
   join(qrPublicId: string): CustomerResult<JoinTableSessionResponse>;
   quote(request: QuoteOrderRequest): CustomerResult<QuoteOrderResponse>;
-  authorize(request: AuthorizeQuoteRequest): CustomerResult<AuthorizeQuoteResponse>;
+  /** «Enviar pedido» (ADR-0012): sin pasarela; según la sucursal, a cocina o al mesero (D-32). */
+  submit(request: SubmitOrderRequest): CustomerResult<SubmitOrderResponse>;
+  /** Retira un pedido propio mientras espera al mesero (D-32). */
+  withdraw(seat: TableSeat, orderId: string): CustomerResult<void>;
   /**
    * Vuelve a la mesa sin crear una sesión anónima: null si en este teléfono nunca se inició
    * (nadie pidió ni llamó al mesero). Si ya existía, es igual que unirse (idempotente).
    */
   resume(qrPublicId: string): CustomerResult<JoinTableSessionResponse | null>;
-  /** Pedidos propios enviados a cocina, con el estado de cada línea. */
+  /** Pedidos propios (enviados a cocina o pasados por el mesero), con el estado de cada línea. */
   myOrders(seat: TableSeat): CustomerResult<readonly MyOrder[]>;
   /** Suscripción en tiempo real (ADR-0007); devuelve la función que la cancela. */
   watchMyOrders(seat: TableSeat, observer: MyOrdersObserver): () => void;

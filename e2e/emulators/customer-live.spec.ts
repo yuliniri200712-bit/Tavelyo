@@ -1,5 +1,5 @@
 // Cliente en tiempo real en navegador contra los emuladores y el backend (Fase 3, bloque 6).
-// «Autorizar y enviar a cocina», «Mis pedidos» en vivo (también tras recargar y sin conexión) y
+// «Enviar pedido» (sin pasarela, ADR-0012), «Mis pedidos» en vivo (también tras recargar y sin conexión) y
 // «Llamar al mesero» / «Pedir la cuenta».
 // Se ejecuta con `npm run test:e2e:emulators`, que compila el backend y arranca los emuladores.
 import AxeBuilder from '@axe-core/playwright';
@@ -46,7 +46,7 @@ interface PendingData {
   serviceRequests: Array<{ kind: string; session: { table: { code: string } } }>;
 }
 
-test('el cliente autoriza y envía a cocina, sigue su pedido en vivo y llama al mesero', async ({
+test('el cliente envía su pedido a cocina, lo sigue en vivo y llama al mesero', async ({
   page,
   context,
 }, testInfo) => {
@@ -85,7 +85,7 @@ test('el cliente autoriza y envía a cocina, sigue su pedido en vivo y llama al 
     );
   };
 
-  // Autorizar y enviar a cocina.
+  // Enviar el pedido a cocina.
   await page.goto(`${APPS.menuWeb}/mesa/${fixture.qrPublicId}`);
   await page.getByRole('button', { name: 'Agregar Bandeja paisa' }).click();
   const form = page.getByRole('form', { name: 'Elegir Bandeja paisa' });
@@ -93,11 +93,11 @@ test('el cliente autoriza y envía a cocina, sigue su pedido en vivo y llama al 
   await form.getByRole('button', { name: named('Agregar al pedido · $ 32.000') }).click();
   await page.getByRole('link', { name: named('Ver mi pedido · 1 producto · $ 32.000') }).click();
   await page.getByRole('button', { name: 'Revisar pedido' }).click();
-  const pay = page.getByRole('button', { name: named('Autorizar y enviar a cocina · $ 32.000') });
+  const send = page.getByRole('button', { name: named('Enviar pedido · $ 32.000') });
   // La primera llamada al backend puede tardar (arranque en frío de las funciones).
-  await expect(pay).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText(/Sin autorización no se envía/)).toBeVisible();
-  await pay.click();
+  await expect(send).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Se suma a la cuenta de tu mesa')).toBeVisible();
+  await send.click();
   await expect(page.getByRole('heading', { name: 'Pedido enviado a cocina' })).toBeVisible({
     timeout: FUNCTION_WAIT,
   });

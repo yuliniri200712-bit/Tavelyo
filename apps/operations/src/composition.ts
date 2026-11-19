@@ -7,6 +7,7 @@ import {
   createFirebaseClient,
   createKitchenGateway,
   createProfileGateway,
+  createOrderApprovalGateway,
   createServiceRequestsGateway,
   createStaffOrdersGateway,
   createTenancyGateway,
@@ -17,7 +18,7 @@ import type { CatalogAdminGateway } from '@tavelyo/catalog';
 import type { FloorAdminGateway, FloorServiceGateway } from '@tavelyo/floor';
 import type { AuthGateway, ProfileGateway } from '@tavelyo/identity';
 import type { KitchenGateway } from '@tavelyo/kitchen';
-import type { StaffOrdersGateway } from '@tavelyo/orders';
+import type { OrderApprovalGateway, StaffOrdersGateway } from '@tavelyo/orders';
 import type { ServiceRequestsGateway } from '@tavelyo/service-requests';
 import type { BranchAdminGateway, TenancyGateway } from '@tavelyo/tenancy';
 
@@ -33,6 +34,7 @@ export interface Services {
   readonly kitchen: KitchenGateway;
   readonly orders: StaffOrdersGateway;
   readonly serviceRequests: ServiceRequestsGateway;
+  readonly orderApproval: OrderApprovalGateway;
   /** Dirección pública de menu-web: la del QR de cada mesa. */
   readonly menuWebUrl: string;
   readonly usesEmulators: boolean;
@@ -89,6 +91,7 @@ export function compose(env: RawEnvironment): Composition {
       kitchen: createKitchenGateway(client.dataConnect),
       orders: createStaffOrdersGateway(client.dataConnect),
       serviceRequests: createServiceRequestsGateway(client.dataConnect),
+      orderApproval: createOrderApprovalGateway(client.dataConnect),
       menuWebUrl,
       usesEmulators: environment.value.useEmulators,
     },

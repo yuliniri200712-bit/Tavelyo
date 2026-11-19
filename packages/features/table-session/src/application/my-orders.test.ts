@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { MyOrder, MyOrderItem } from '../domain/index.ts';
 import {
+  approvalStates,
+  describeApproval,
+  describeApprovalChanges,
   describeMyOrder,
   describeMyOrders,
   describeStatusChanges,
@@ -19,12 +22,63 @@ const item = (id: string, status: MyOrderItem['status'], productName = 'Ajiaco')
   lineTotalMinor: '2500000',
 });
 
-const order = (items: MyOrderItem[]): MyOrder => ({
+const order = (items: MyOrderItem[], extra: Partial<MyOrder> = {}): MyOrder => ({
   id: 'o1',
+  placedAt: new Date('2026-11-16T18:00:00Z'),
   sentAt: new Date('2026-11-16T18:00:00Z'),
+  approval: 'NOT_REQUIRED',
+  rejectionReason: null,
   currency: 'COP',
   totalMinor: '5000000',
   items,
+  ...extra,
+});
+
+const waiting = (
+  id: string,
+  approval: MyOrder['approval'] = 'PENDING',
+  reason: string | null = null,
+) => order([item(`${id}-l`, 'RECEIVED')], { id, sentAt: null, approval, rejectionReason: reason });
+
+describe('aprobación del mesero (D-32)', () => {
+  it('describe los pedidos que no llegaron a cocina; los enviados no', () => {
+    expect(describeApproval(waiting('p'))).toMatchObject({
+      label: 'Esperando al mesero',
+      tone: 'warning',
+      detail: expect.stringMatching(/puedes retirarlo/),
+    });
+    expect(describeApproval(waiting('r', 'REJECTED', 'Se agotó'))?.detail).toBe(
+      'El mesero no aprobó este pedido. Motivo: Se agotó',
+    );
+    expect(describeApproval(waiting('w', 'WITHDRAWN'))?.label).toBe('Retirado');
+    expect(describeApproval(order([item('l1', 'RECEIVED')], { approval: 'APPROVED' }))).toBeNull();
+    expect(describeApproval(order([item('l1', 'RECEIVED')]))).toBeNull();
+  });
+
+  it('cuenta los enviados y los que esperan', () => {
+    expect(describeMyOrders([order([item('l1', 'RECEIVED')]), waiting('p')])).toBe(
+      '1 pedido enviado a cocina · 1 esperando al mesero',
+    );
+    expect(describeMyOrders([waiting('p'), waiting('q')])).toBe('2 esperando al mesero');
+    expect(describeMyOrders([waiting('r', 'REJECTED')])).toBe(
+      'Todavía no enviaste pedidos a cocina desde este teléfono.',
+    );
+  });
+
+  it('avisa cuando el mesero aprueba o rechaza; las líneas sin enviar no cuentan como cambios', () => {
+    const before = [waiting('a'), waiting('b')];
+    const previous = approvalStates(before);
+    const after = [
+      order([item('a-l', 'RECEIVED')], { id: 'a', approval: 'APPROVED' }),
+      waiting('b', 'REJECTED', 'Sin existencias'),
+    ];
+    expect(describeApprovalChanges(previous, after)).toBe(
+      'El mesero aprobó tu pedido: ya está en cocina. El mesero no aprobó este pedido. Motivo: Sin existencias',
+    );
+    expect(describeApprovalChanges(approvalStates(after), after)).toBeNull();
+    expect([...itemStatuses(before).keys()]).toEqual([]);
+    expect(describeStatusChanges(itemStatuses(before), after)).toBe('Ajiaco: recibido en cocina.');
+  });
 });
 
 describe('«Mis pedidos» en texto', () => {

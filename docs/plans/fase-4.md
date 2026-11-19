@@ -11,7 +11,7 @@ Estado: **plan y recomendaciones aprobados por el propietario el 2026-11-18** (D
 | 1. Esquema | ✅ | Se conserva. Las tablas de la preautorización quedan sin uso |
 | 2. Dinero de la cuenta | ✅ | Igual. `planSettlement` queda para las suscripciones |
 | 3. Pagos en el backend | ✅ | **Se conserva desconectado** para la fase de suscripciones (D-35): no se exporta ni se usa en el restaurante |
-| **3A. Ajuste (nuevo)** | — | Quitar la preautorización del pedido del comensal: «Enviar pedido» en lugar de «Autorizar pago». Modo de envío por sucursal (D-32): ajuste en administración, bandeja «Pedidos por aprobar» del mesero, estado «esperando al mesero» y retiro del pedido por el comensal. Permisos nuevos `order.approve` y `branch.settings`. El backend ya no crea el adaptador simulado al arrancar |
+| **3A. Ajuste (nuevo)** | ✅ Hecho (2026-11-18) | Quitar la preautorización del pedido del comensal: «Enviar pedido» en lugar de «Autorizar pago». Modo de envío por sucursal (D-32): ajuste en administración, bandeja «Pedidos por aprobar» del mesero, estado «esperando al mesero» y retiro del pedido por el comensal. Permisos nuevos `order.approve` y `branch.settings`. El backend ya no crea el adaptador simulado al arrancar |
 | 4. Cuenta y cierre | Captura y liberación | El cajero **registra** efectivo, datáfono o transferencia con su comprobante (D-33); división; cierre (D-30, sin retenciones que liberar); reembolsos registrados con permiso, motivo y tope (D-34); concurrencia de dos cajeros |
 | 5. Caja | — | Igual |
 | 6. Operaciones | Caja, QR de pago y traslado | Caja y comprobante; el mesero toma pedidos que van directo a cocina (sin QR, D-29 anulada); traslado de mesa |

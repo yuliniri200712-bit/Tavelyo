@@ -34,7 +34,8 @@ export interface QuoteContext {
   readonly operating: boolean;
 }
 
-export type QuoteStatus = 'QUOTED' | 'AUTHORIZED' | 'DECLINED' | 'EXPIRED' | 'RELEASE_PENDING';
+export type QuoteStatus =
+  'QUOTED' | 'CONFIRMED' | 'AUTHORIZED' | 'DECLINED' | 'EXPIRED' | 'RELEASE_PENDING';
 
 export interface StoredQuote {
   readonly id: string;

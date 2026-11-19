@@ -4,27 +4,31 @@ import { httpsCallable, type Functions } from 'firebase/functions';
 import {
   myOrders,
   myOrdersRef,
+  OrderApproval,
   publicMenu,
+  withdrawMyOrder,
   type MyOrdersData,
   type PublicMenuData,
 } from '@tavelyo/dataconnect-sdk';
 import { err, ok, type Result } from '@tavelyo/core';
 import type {
-  AuthorizeQuoteRequest,
-  AuthorizeQuoteResponse,
   JoinTableSessionRequest,
   JoinTableSessionResponse,
   QuoteOrderRequest,
   QuoteOrderResponse,
   RequestServiceRequest,
   RequestServiceResponse,
+  SubmitOrderRequest,
+  SubmitOrderResponse,
 } from '@tavelyo/contracts';
 import type {
   CustomerError,
   CustomerGateway,
   MenuProduct,
   MyOrder,
+  MyOrderApproval,
 } from '@tavelyo/table-session/domain';
+import { mapCommandError } from './command-errors.ts';
 import { ITEM_STATUS } from './item-status.ts';
 import { readQuery, watchQuery } from './live-query.ts';
 import { mapDataError } from './sql-connect-gateways.ts';
@@ -74,14 +78,29 @@ function mapCustomerDataError(error: unknown): CustomerError {
   return { kind: mapDataError(error) === 'network' ? 'network' : 'unknown' };
 }
 
-/** «Mis pedidos»: solo los propios y ya enviados a cocina (lo filtra el conector, D-06). */
+const APPROVAL: Readonly<Record<OrderApproval, MyOrderApproval>> = {
+  [OrderApproval.NOT_REQUIRED]: 'NOT_REQUIRED',
+  [OrderApproval.PENDING]: 'PENDING',
+  [OrderApproval.APPROVED]: 'APPROVED',
+  [OrderApproval.REJECTED]: 'REJECTED',
+  [OrderApproval.WITHDRAWN]: 'WITHDRAWN',
+};
+
+/**
+ * «Mis pedidos»: solo los propios (lo filtra el conector, D-06), enviados a cocina o que pasaron
+ * por la aprobación del mesero (D-32).
+ */
 export function toMyOrders(data: MyOrdersData): MyOrder[] {
   return data.orders.flatMap((order) => {
-    if (!order.sentToKitchenAt) return [];
+    const placed = order.approvalRequestedAt ?? order.sentToKitchenAt;
+    if (!placed) return [];
     return [
       {
         id: order.id,
-        sentAt: new Date(order.sentToKitchenAt),
+        placedAt: new Date(placed),
+        sentAt: order.sentToKitchenAt ? new Date(order.sentToKitchenAt) : null,
+        approval: APPROVAL[order.approval],
+        rejectionReason: order.rejectionReason ?? null,
         currency: order.quote.currency,
         totalMinor: String(order.quote.totalMinor),
         items: order.orderItems_on_order.map((item) => ({
@@ -212,8 +231,19 @@ export function createCustomerGateway({
     join: (qrPublicId) =>
       call<JoinTableSessionRequest, JoinTableSessionResponse>('joinTableSession', { qrPublicId }),
     quote: (request) => call<QuoteOrderRequest, QuoteOrderResponse>('quoteOrder', request),
-    authorize: (request) =>
-      call<AuthorizeQuoteRequest, AuthorizeQuoteResponse>('authorizeQuote', request),
+    submit: (request) => call<SubmitOrderRequest, SubmitOrderResponse>('submitOrder', request),
+    async withdraw(seat, orderId) {
+      try {
+        await withdrawMyOrder(dataConnect, { ...seat, orderId });
+        return ok(undefined);
+      } catch (error) {
+        const mapped = mapCommandError(error);
+        if (mapped.kind === 'rejected') {
+          return err({ kind: 'rejected', reason: 'other', message: mapped.message });
+        }
+        return err({ kind: mapped.kind === 'network' ? 'network' : 'unknown' });
+      }
+    },
     async resume(qrPublicId) {
       try {
         await auth.authStateReady();

@@ -7,7 +7,7 @@ import { SessionProvider, type AuthGateway, type StaffUser } from '@tavelyo/iden
 import type { CatalogAdminGateway } from '@tavelyo/catalog';
 import type { FloorAdminGateway, FloorServiceGateway } from '@tavelyo/floor';
 import type { KitchenGateway } from '@tavelyo/kitchen';
-import type { StaffOrdersGateway } from '@tavelyo/orders';
+import type { OrderApprovalGateway, StaffOrdersGateway } from '@tavelyo/orders';
 import type { ServiceRequestsGateway } from '@tavelyo/service-requests';
 import type { BranchAdminGateway, TenancyGateway } from '@tavelyo/tenancy';
 import { AppContext } from './app-context.tsx';
@@ -166,6 +166,15 @@ const serviceRequests: ServiceRequestsGateway = {
   attend: done,
 };
 
+const orderApproval: OrderApprovalGateway = {
+  pending: vi.fn(async () => ok([])),
+  watchPending: vi.fn(() => () => undefined),
+  approve: vi.fn(async () => ok(undefined)),
+  reject: vi.fn(async () => ok(undefined)),
+  mode: vi.fn(async () => ok('DIRECT' as const)),
+  setMode: vi.fn(async () => ok(undefined)),
+};
+
 function renderAt(path: string, user: StaffUser | null) {
   const auth = fakeAuth(user);
   const services = {
@@ -179,6 +188,7 @@ function renderAt(path: string, user: StaffUser | null) {
     kitchen,
     orders,
     serviceRequests,
+    orderApproval,
     menuWebUrl: 'https://carta.example',
     usesEmulators: true,
   };

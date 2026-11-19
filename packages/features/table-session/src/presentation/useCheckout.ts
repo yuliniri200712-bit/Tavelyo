@@ -1,11 +1,10 @@
 import { useRef, useState } from 'react';
-import {
-  PREAUTHORIZATION_CONSENT_VERSION,
-  type QuoteChange,
-  type QuoteOrderResponse,
-  type QuoteProblem,
-  type QuoteSummary,
-  type SimulatedPaymentOutcome,
+import type {
+  QuoteChange,
+  QuoteOrderResponse,
+  QuoteProblem,
+  QuoteSummary,
+  SubmitOrderResponse,
 } from '@tavelyo/contracts';
 import type { ServerError } from '@tavelyo/design-system';
 import { acceptServerPrices, cartTotal, toQuoteLines, type CartLine } from '@tavelyo/cart';
@@ -16,12 +15,12 @@ import type { TableSeatState } from './useTableSeat.ts';
 
 export type QuotedOrder = Extract<QuoteOrderResponse, { outcome: 'quoted' }>;
 
-/** Paso de «Revisar pedido» y del pago simulado. */
+/** Paso de «Revisar pedido» y «Enviar pedido» (ADR-0012: sin pasarela). */
 export type CheckoutState =
   | { readonly step: 'editing' }
   | { readonly step: 'reviewing' }
   | { readonly step: 'quoted'; readonly quote: QuotedOrder }
-  | { readonly step: 'authorizing'; readonly quote: QuotedOrder }
+  | { readonly step: 'submitting'; readonly quote: QuotedOrder }
   | {
       readonly step: 'changed';
       readonly changes: readonly QuoteChange[];
@@ -33,7 +32,12 @@ export type CheckoutState =
       readonly problems: readonly QuoteProblem[];
       readonly lines: readonly CartLine[];
     }
-  | { readonly step: 'done'; readonly quote: QuotedOrder };
+  | {
+      readonly step: 'done';
+      readonly quote: QuotedOrder;
+      /** sent: llegó a cocina; pending_approval: espera al mesero (D-32). */
+      readonly outcome: SubmitOrderResponse['status'];
+    };
 
 const FAILURE_TEXT = {
   network: 'No hay conexión con el restaurante. Revisa tu red e inténtalo de nuevo.',
@@ -47,10 +51,7 @@ export function customerErrorText(error: CustomerError | ServerError): string {
 }
 
 const EXPIRED = 'El resumen del pedido venció. Revisa el pedido otra vez.';
-const DECLINED =
-  'El pago simulado fue rechazado y el pedido no se envió a cocina. Revisa el pedido para intentarlo de nuevo.';
-const REQUIRES_ACTION =
-  'El pago pide una verificación adicional (simulada). Inténtalo de nuevo; no se cobrará dos veces.';
+const NO_LONGER = 'Este pedido ya no se puede enviar. Revisa el pedido otra vez.';
 
 export interface CheckoutDeps {
   readonly gateway: CustomerGateway;
@@ -67,10 +68,11 @@ export interface CheckoutDeps {
 }
 
 /**
- * «Revisar pedido» y «Autorizar y enviar a cocina» (pago simulado). El servidor es la autoridad:
- * el total del teléfono solo sirve para detectar si algo cambió, y solo con la autorización
- * confirmada el backend envía el pedido a cocina (D-04). Cada intento tiene su clave de
- * idempotencia; un reintento del mismo carrito reutiliza la clave y recibe el mismo resumen (caso 3).
+ * «Revisar pedido» y «Enviar pedido» (ADR-0012). El servidor es la autoridad: el total del teléfono
+ * solo sirve para detectar si algo cambió. Al enviar, el pedido se suma a la cuenta de la mesa y,
+ * según la sucursal, llega a cocina o espera al mesero (D-32); se paga al final en el restaurante.
+ * Cada intento tiene su clave de idempotencia; un reintento del mismo carrito reutiliza la clave y
+ * recibe el mismo resumen, y enviar dos veces el mismo resumen no crea dos pedidos (caso 3).
  */
 export function useCheckout({
   gateway,
@@ -95,10 +97,10 @@ export function useCheckout({
     attempt.current = null;
   };
 
-  const finish = (quote: QuotedOrder) => {
+  const finish = (quote: QuotedOrder, outcome: SubmitOrderResponse['status']) => {
     consumeKey();
     cart.clear();
-    setState({ step: 'done', quote });
+    setState({ step: 'done', quote, outcome });
   };
 
   const backToEditing = (text: string) => {
@@ -147,25 +149,21 @@ export function useCheckout({
         return setState({ step: 'rejected', problems: response.problems, lines });
       }
       if (response.status === 'QUOTED') return setState({ step: 'quoted', quote: response });
-      if (response.status === 'AUTHORIZED') return finish(response);
+      // Ya enviado antes (reintento tras perder la respuesta): se completa sin duplicar nada.
+      if (response.status === 'CONFIRMED' || response.status === 'AUTHORIZED') {
+        return submitQuote(response);
+      }
       consumeKey();
-      return backToEditing(response.status === 'EXPIRED' ? EXPIRED : DECLINED);
+      return backToEditing(response.status === 'EXPIRED' ? EXPIRED : NO_LONGER);
     }
   };
 
-  const authorize = async (simulatedOutcome?: SimulatedPaymentOutcome) => {
-    if (state.step !== 'quoted') return;
-    const { quote } = state;
+  async function submitQuote(quote: QuotedOrder) {
     setMessage(null);
-    setState({ step: 'authorizing', quote });
-    const result = await gateway.authorize({
-      quoteId: quote.quoteId,
-      // La persona aceptó el texto que muestra la tarjeta de pago (RF-PA-02).
-      consentTextVersion: PREAUTHORIZATION_CONSENT_VERSION,
-      ...(simulatedOutcome ? { simulatedOutcome } : {}),
-    });
+    setState({ step: 'submitting', quote });
+    const result = await gateway.submit({ quoteId: quote.quoteId });
     if (!result.ok) {
-      // Sin respuesta segura se puede reintentar el mismo resumen: no autoriza dos veces.
+      // Sin respuesta segura se puede reintentar el mismo resumen: no crea dos pedidos.
       const retry = result.error.kind !== 'rejected' || result.error.reason === 'retry';
       if (retry) {
         setState({ step: 'quoted', quote });
@@ -174,20 +172,19 @@ export function useCheckout({
       consumeKey();
       return backToEditing(customerErrorText(result.error));
     }
-    if (result.value.status === 'authorized') return finish(quote);
-    if (result.value.status === 'declined') {
-      consumeKey();
-      return backToEditing(DECLINED);
-    }
-    setState({ step: 'quoted', quote });
-    setMessage(REQUIRES_ACTION);
+    finish(quote, result.value.status);
+  }
+
+  const submit = async () => {
+    if (state.step !== 'quoted') return;
+    await submitQuote(state.quote);
   };
 
   return {
     state,
     message,
     review: (lines: readonly CartLine[]) => void review(lines),
-    authorize: (simulatedOutcome?: SimulatedPaymentOutcome) => void authorize(simulatedOutcome),
+    submit: () => void submit(),
     /** Acepta los importes actuales del servidor y vuelve a revisar con ellos. */
     acceptChanges: () => {
       if (state.step !== 'changed') return;
