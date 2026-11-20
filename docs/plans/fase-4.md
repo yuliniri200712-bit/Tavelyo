@@ -33,7 +33,7 @@ Cada parte termina con sus pruebas, su commit, CI en verde y un resumen al propi
 
 ### Bloque 5: caja (autorizado el 2026-11-19)
 
-Solo servidor y conectores; la pantalla de caja es del bloque 6. Reglas propuestas en D-40, pendientes de aprobación del propietario:
+Solo servidor y conectores; la pantalla de caja es del bloque 6. Reglas de D-40, aprobadas por el propietario el 2026-11-20 junto con el bloque:
 
 - cajas de la sucursal (`cajas.gql`): crear, renombrar y archivar con `branch.settings`;
 - turno: apertura con fondo, entradas y salidas con motivo, efectivo esperado, conteo y cierre con diferencia y motivo (RF-PA-07), en `openCashSession`, `readCashSession`, `recordCashMovement` y `closeCashSession`;

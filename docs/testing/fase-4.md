@@ -135,7 +135,7 @@ Hallazgos durante la verificación:
 
 ## 2026-11-20 — Bloque 5: caja
 
-Alcance autorizado: cajas de la sucursal, turno de caja (apertura con fondo, entradas y salidas con motivo, efectivo esperado, conteo y cierre con diferencia) y efectivo de cobros y reembolsos a través de la caja abierta de quien lo registra. Reglas propuestas en D-40, pendientes de aprobación. Sin pantalla (bloque 6).
+Alcance autorizado: cajas de la sucursal, turno de caja (apertura con fondo, entradas y salidas con motivo, efectivo esperado, conteo y cierre con diferencia) y efectivo de cobros y reembolsos a través de la caja abierta de quien lo registra. Reglas de D-40, aprobadas por el propietario el 2026-11-20 junto con el bloque. Sin pantalla (bloque 6).
 
 | Comprobación | Comando | Resultado |
 |---|---|---|
@@ -147,7 +147,7 @@ Alcance autorizado: cajas de la sucursal, turno de caja (apertura con fondo, ent
 | Regresión del backend | `npx vitest run --config vitest.integration.config.ts backend/tests` con las variables del backend | ✅ 94 pruebas en 7 archivos |
 | Recorridos en Chrome | `npx playwright test --config playwright.emulators.config.ts --project=chrome e2e/emulators/customer-order.spec.ts e2e/emulators/waiter-floor.spec.ts` | ✅ 3 recorridos. El resto de navegadores los corre la CI |
 | Secretos | `npm run check:secrets` | ✅ Sin secretos en 499 archivos |
-| CI | Rama `fase-4-caja-pagos` | Pendiente del resultado tras subir el commit |
+| CI | Rama `fase-4-caja-pagos` | ✅ CI #70 en verde (commit `2f7a3cb`) |
 
 Hallazgos durante la verificación:
 
