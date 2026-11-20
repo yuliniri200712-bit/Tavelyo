@@ -172,6 +172,49 @@ exports.withdrawMyOrder = function withdrawMyOrder(dcOrVars, vars) {
 }
 ;
 
+const branchRegistersRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'BranchRegisters', inputVars);
+}
+branchRegistersRef.operationName = 'BranchRegisters';
+exports.branchRegistersRef = branchRegistersRef;
+
+exports.branchRegisters = function branchRegisters(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(branchRegistersRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const createRegisterRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'CreateRegister', inputVars);
+}
+createRegisterRef.operationName = 'CreateRegister';
+exports.createRegisterRef = createRegisterRef;
+
+exports.createRegister = function createRegister(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(createRegisterRef(dcInstance, inputVars));
+}
+;
+
+const updateRegisterRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'UpdateRegister', inputVars);
+}
+updateRegisterRef.operationName = 'UpdateRegister';
+exports.updateRegisterRef = updateRegisterRef;
+
+exports.updateRegister = function updateRegister(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(updateRegisterRef(dcInstance, inputVars));
+}
+;
+
 const catalogAdminRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();

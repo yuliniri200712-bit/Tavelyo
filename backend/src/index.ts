@@ -1,6 +1,13 @@
 // Raíz de composición del backend (ADR-0003). Cloud Functions descubre las funciones exportadas.
 import { initializeApp } from 'firebase-admin/app';
 import { createBillingStore } from './data/billing.ts';
+import { createCashStore } from './data/cash.ts';
+import {
+  createCloseCashSession,
+  createOpenCashSession,
+  createReadCashSession,
+  createRecordCashMovement,
+} from './cash/cash.ts';
 import {
   createCloseTable,
   createReadBill,
@@ -49,8 +56,12 @@ const dataConnect = getDataConnect(
 );
 const limiter = createRateLimiter(dataConnect, () => systemClock.now());
 export const {
+  closeCashSession,
   closeTable,
+  openCashSession,
   readBill,
+  readCashSession,
+  recordCashMovement,
   readBillPayments,
   recordPayment,
   refundPayment,
@@ -62,7 +73,11 @@ export const {
   requestService,
 } = createCallables({
   readBill: createReadBill(createBillingStore(dataConnect)),
+  closeCashSession: createCloseCashSession(createCashStore(dataConnect)),
   closeTable: createCloseTable(createBillingStore(dataConnect)),
+  openCashSession: createOpenCashSession(createCashStore(dataConnect)),
+  readCashSession: createReadCashSession(createCashStore(dataConnect)),
+  recordCashMovement: createRecordCashMovement(createCashStore(dataConnect)),
   readBillPayments: createReadBillPayments(createBillingStore(dataConnect)),
   recordPayment: createRecordPayment(createBillingStore(dataConnect)),
   refundPayment: createRefundPayment(createBillingStore(dataConnect)),

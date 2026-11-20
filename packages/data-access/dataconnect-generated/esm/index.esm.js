@@ -148,6 +148,43 @@ export function withdrawMyOrder(dcOrVars, vars) {
   return executeMutation(withdrawMyOrderRef(dcInstance, inputVars));
 }
 
+export const branchRegistersRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'BranchRegisters', inputVars);
+}
+branchRegistersRef.operationName = 'BranchRegisters';
+
+export function branchRegisters(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(branchRegistersRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+
+export const createRegisterRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'CreateRegister', inputVars);
+}
+createRegisterRef.operationName = 'CreateRegister';
+
+export function createRegister(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(createRegisterRef(dcInstance, inputVars));
+}
+
+export const updateRegisterRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'UpdateRegister', inputVars);
+}
+updateRegisterRef.operationName = 'UpdateRegister';
+
+export function updateRegister(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(updateRegisterRef(dcInstance, inputVars));
+}
+
 export const catalogAdminRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();

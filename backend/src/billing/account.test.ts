@@ -29,6 +29,7 @@ const snapshot: AccountSnapshot = {
   bill: null,
   lines: [line],
   payments: [],
+  cashSession: { id: id(70), version: 1, openingFloatMinor: '0', movements: [] },
 };
 const input = {
   ...scope,

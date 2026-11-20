@@ -4,6 +4,7 @@ import {
   buildBill,
   cashChange,
   closeBlockers,
+  expectedCash,
   err,
   formatMoney,
   Money,
@@ -31,6 +32,21 @@ import { parseBillScope, parseReadBill, parseRecordPayment, parseRefund } from '
 import type { AccountPayment, AccountSnapshot, BillingStore } from './store.ts';
 
 const formatCop = (money: Money) => formatMoney(money);
+
+/** El efectivo pasa por la caja abierta de quien lo registra (D-40). */
+const noCashSession = () =>
+  err(failure('failed-precondition', 'Abre tu caja para registrar efectivo.'));
+
+/** Efectivo que hay en la caja de quien llama: fondo inicial y movimientos (D-40). */
+function cashAvailable(session: NonNullable<AccountSnapshot['cashSession']>): Money {
+  return expectedCash(
+    Money.ofMinor(BigInt(session.openingFloatMinor), 'COP'),
+    session.movements.map((m) => ({
+      kind: m.kind,
+      amount: Money.ofMinor(BigInt(m.amountMinor), 'COP'),
+    })),
+  );
+}
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const conflict = () =>
@@ -319,6 +335,26 @@ export function createRefundPayment(store: BillingStore) {
           `El reembolso supera tu tope de ${formatCop(limit)}. Pídelo a un rol con un tope mayor.`,
         ),
       );
+    const methods = new Map(snapshot.payments.map((p) => [p.paymentId, p.method]));
+    const cashIndexes = plan.value.refunds.flatMap((r, i) =>
+      methods.get(r.paymentId) === 'CASH' ? [i] : [],
+    );
+    const cashSession = snapshot.cashSession;
+    if (cashIndexes.length > 0) {
+      if (!cashSession) return noCashSession();
+      const cashOut = cashIndexes.reduce(
+        (sum, i) => sum + BigInt(plan.value.refunds[i]?.amountMinor ?? '0'),
+        0n,
+      );
+      const available = cashAvailable(cashSession);
+      if (cashOut > available.amountMinor)
+        return err(
+          failure(
+            'failed-precondition',
+            `En tu caja no hay efectivo suficiente para devolver (hay ${formatCop(available)}).`,
+          ),
+        );
+    }
     if (
       await store.refund(actor, {
         scope: input,
@@ -328,6 +364,14 @@ export function createRefundPayment(store: BillingStore) {
         reason: input.reason,
         refunds: plan.value.refunds,
         line: plan.value.line,
+        cash:
+          cashIndexes.length > 0 && cashSession
+            ? {
+                sessionId: cashSession.id,
+                version: cashSession.version,
+                refundIndexes: cashIndexes,
+              }
+            : null,
       })
     )
       return ok({
@@ -386,6 +430,7 @@ export function createRecordPayment(store: BillingStore) {
       accountRevision(snapshot) !== input.revision
     )
       return conflict();
+    if (input.method === 'CASH' && !snapshot.cashSession) return noCashSession();
     const summary = accountSummary(snapshot);
     if (!summary.ok) return summary;
     const amount = Money.ofMinor(BigInt(input.amountMinor), 'COP');
@@ -440,6 +485,15 @@ export function createRecordPayment(store: BillingStore) {
           orderItemId: a.orderItemId,
           amountMinor: a.amount.amountMinor.toString(),
         })),
+        // En la caja queda lo cobrado: consumo más propina (lo recibido menos el cambio).
+        cash:
+          input.method === 'CASH' && snapshot.cashSession
+            ? {
+                sessionId: snapshot.cashSession.id,
+                version: snapshot.cashSession.version,
+                saleMinor: amount.plus(tip).amountMinor.toString(),
+              }
+            : null,
       })
     )
       return ok(payment);

@@ -1,6 +1,11 @@
 import type { DataConnect } from 'firebase-admin/data-connect';
 import { err, ok } from '@tavelyo/core';
-import type { AccountLine, AccountPayment, BillingStore } from '../billing/store.ts';
+import type {
+  AccountLine,
+  AccountPayment,
+  AccountSnapshot,
+  BillingStore,
+} from '../billing/store.ts';
 import { newId } from '../shared/clock.ts';
 import { failure } from '../shared/outcome.ts';
 import { READ_BILL, recordPaymentDocument, refundDocument } from './billing-documents.ts';
@@ -20,6 +25,14 @@ interface AccountData {
   tableSession: { status: string };
   branch: { currency: string };
   orderItems: AccountLine[];
+  cashSessions: Array<{
+    id: string;
+    version: number;
+    openingFloatMinor: string;
+    cashMovements_on_cashSession: NonNullable<
+      AccountSnapshot['cashSession']
+    >['movements'][number][];
+  }>;
   bills: Array<{
     id: string;
     version: number;
@@ -57,10 +70,12 @@ export function createBillingStore(dc: DataConnect): BillingStore {
           return err(failure('permission-denied', 'No tienes acceso a esta cuenta.'));
         }
         const bill = data.bills[0];
+        const cash = data.cashSessions[0];
         // Nunca calcular un saldo sobre una respuesta truncada. Las cuentas mayores requieren paginación.
         if (
           data.orderItems.length >= 1000 ||
           (bill?.billPayments_on_bill.length ?? 0) >= 1000 ||
+          (cash?.cashMovements_on_cashSession.length ?? 0) >= 1000 ||
           bill?.billPayments_on_bill.some(
             (p) =>
               p.paymentAllocations_on_payment.length >= 1000 || p.refunds_on_payment.length >= 1000,
@@ -87,6 +102,14 @@ export function createBillingStore(dc: DataConnect): BillingStore {
               refunds: refunds_on_payment,
             }),
           ),
+          cashSession: cash
+            ? {
+                id: cash.id,
+                version: cash.version,
+                openingFloatMinor: cash.openingFloatMinor,
+                movements: cash.cashMovements_on_cashSession,
+              }
+            : null,
         });
       } catch (error) {
         if (error instanceof Error && error.message.includes('CUENTA_SIN_ACCESO'))
@@ -117,6 +140,13 @@ export function createBillingStore(dc: DataConnect): BillingStore {
         receivedMinor: payment.receivedMinor,
         changeMinor: payment.changeMinor,
         receiptNumber: payment.receiptNumber,
+        ...(write.cash
+          ? {
+              cashSessionId: write.cash.sessionId,
+              cashVersion: write.cash.version,
+              saleMinor: write.cash.saleMinor,
+            }
+          : {}),
         allocations: allocations.map((a) => ({ ...scope, paymentId: payment.paymentId, ...a })),
         ...Object.fromEntries(
           allocations.flatMap((a, i) => {
@@ -130,9 +160,12 @@ export function createBillingStore(dc: DataConnect): BillingStore {
         ),
       };
       try {
-        await dc.executeGraphql(recordPaymentDocument(!snapshot.bill, allocations.length), {
-          variables,
-        });
+        await dc.executeGraphql(
+          recordPaymentDocument(!snapshot.bill, allocations.length, write.cash !== null),
+          {
+            variables,
+          },
+        );
         return true;
       } catch (error) {
         if (isLostRace(error)) return false;
@@ -156,6 +189,15 @@ export function createBillingStore(dc: DataConnect): BillingStore {
         billRef: snapshot.bill.id,
         lineId: line?.id ?? null,
         ...(line ? { lineRef: line.id, lineVersion: line.version, wasted: line.wasted } : {}),
+        ...(write.cash
+          ? {
+              cashSessionId: write.cash.sessionId,
+              cashVersion: write.cash.version,
+              ...Object.fromEntries(
+                write.cash.refundIndexes.map((i) => [`refundRef${i}`, refunds[i]?.refundId]),
+              ),
+            }
+          : {}),
         ...Object.fromEntries(
           refunds.flatMap((r, i) => [
             [`refund${i}`, r.refundId],
@@ -165,7 +207,10 @@ export function createBillingStore(dc: DataConnect): BillingStore {
         ),
       };
       try {
-        await dc.executeGraphql(refundDocument(refunds.length, line !== null), { variables });
+        await dc.executeGraphql(
+          refundDocument(refunds.length, line !== null, write.cash?.refundIndexes ?? []),
+          { variables },
+        );
         return true;
       } catch (error) {
         if (isLostRace(error)) return false;

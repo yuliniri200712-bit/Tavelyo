@@ -30,6 +30,7 @@ import {
   seedAuthorizationCatalog,
 } from '../../dataconnect/tests/support/provisioning.ts';
 import { callFunction, type CallResult } from './support/functions.ts';
+import { openTill } from './support/cash.ts';
 
 function result<T>(r: CallResult<T>): T {
   if (!r.ok) throw new Error(`${r.status}: ${r.message}`);
@@ -50,6 +51,7 @@ let f: Fixture;
 let otherBranch: string;
 let otherTenant: string;
 let priceId: string;
+let tillId: string;
 let sequence = 0;
 const scope = () => ({ tenantId: f.tenantId, branchId: f.branchId });
 const realStore = createBillingStore(
@@ -179,6 +181,8 @@ beforeAll(async () => {
       'Carta',
     ).productBranches[0],
   ).currentPrice.id;
+  // D-40: el efectivo pasa por la caja abierta de quien cobra.
+  tillId = (await openTill(owner, scope(), cashier)).cashSessionId;
 });
 
 describe('4a: cuenta y registro real en emuladores', () => {
@@ -225,10 +229,16 @@ describe('4a: cuenta y registro real en emuladores', () => {
     expectOk(await mutate(waiter, 'ApproveOrder', { ...s, orderId: approved.orderId }), 'Aprobar');
     expect((await bill(s)).totalMinor).toBe('6400000');
   }, 60_000);
-  it('efectivo sin turno, cambio, propina elegida, asignación y auditoría atómicos; reintento único', async () => {
+  it('efectivo en la caja de quien cobra, cambio, propina elegida, asignación, venta y auditoría atómicos; reintento único', async () => {
     const s = await table();
     const item = await order(s);
     const input = await paymentInput(s, { tipMinor: '320000' });
+    // Sin caja abierta no se cobra en efectivo (D-40).
+    expect(await pay(input, branchAdmin)).toMatchObject({
+      ok: false,
+      status: 'FAILED_PRECONDITION',
+      message: 'Abre tu caja para registrar efectivo.',
+    });
     const first = result(await pay(input));
     expect(first).toMatchObject({
       method: 'CASH',
@@ -251,15 +261,20 @@ describe('4a: cuenta y registro real en emuladores', () => {
           confirmedAt: string;
           paymentAllocations_on_payment: { orderItemId: string; amountMinor: string }[];
         };
+        cashMovements: { kind: string; amountMinor: string; cashSessionId: string }[];
         auditEvents: unknown[];
       }>(
-        'query ($id: UUID!, $ref: String!) { billPayment(id: $id) { cashSessionId createdBy confirmedAt paymentAllocations_on_payment { orderItemId amountMinor } } auditEvents(where: { operation: { eq: "payment.record" }, resourceId: { eq: $ref } }) { id } }',
+        'query ($id: UUID!, $ref: String!) { billPayment(id: $id) { cashSessionId createdBy confirmedAt paymentAllocations_on_payment { orderItemId amountMinor } } cashMovements(where: { paymentId: { eq: $id } }) { kind amountMinor cashSessionId } auditEvents(where: { operation: { eq: "payment.record" }, resourceId: { eq: $ref } }) { id } }',
         { id: first.paymentId, ref: first.paymentId },
       ),
       'Pago guardado',
     );
+    // La venta entra a la caja una sola vez: consumo más propina.
+    expect(row.cashMovements).toEqual([
+      { kind: 'SALE', amountMinor: '3520000', cashSessionId: tillId },
+    ]);
     expect(row.billPayment).toMatchObject({
-      cashSessionId: null,
+      cashSessionId: tillId,
       createdBy: cashier.uid,
       confirmedAt: expect.any(String),
       paymentAllocations_on_payment: [{ orderItemId: item.id, amountMinor: '3200000' }],
@@ -465,6 +480,8 @@ describe('4a: cuenta y registro real en emuladores', () => {
           orderItemId: l.id,
           amountMinor: l.lineTotalMinor,
         })),
+        // Escritura directa al almacén para probar la reversión: sin movimiento de caja.
+        cash: null,
       }),
     ).toBe(false);
     const persisted = expectOk(

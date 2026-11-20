@@ -28,6 +28,7 @@ import {
   seedAuthorizationCatalog,
 } from '../../dataconnect/tests/support/provisioning.ts';
 import { callFunction, type CallResult } from './support/functions.ts';
+import { openTill } from './support/cash.ts';
 
 // Parte 4b con las funciones reales: división en partes iguales (D-06) y reembolsos por plato y
 // generales con topes por rol (D-34, D-37). Cada pedido de la carta de prueba vale $ 32.000.
@@ -51,6 +52,7 @@ let unassigned: TestUser;
 let f: Fixture;
 let priceId: string;
 let sequence = 0;
+const tills: Record<string, string> = {};
 const scope = () => ({ tenantId: f.tenantId, branchId: f.branchId });
 
 async function table(): Promise<BillScope> {
@@ -136,6 +138,15 @@ async function refundInput(s: BillScope, extra: Record<string, unknown>) {
     ...extra,
   };
 }
+async function refundMovements(paymentId: string) {
+  return expectOk(
+    await admin<{ cashMovements: { kind: string; amountMinor: string; cashSessionId: string }[] }>(
+      'query ($p: UUID!) { cashMovements(where: { refund: { paymentId: { eq: $p } } }) { kind amountMinor cashSessionId } }',
+      { p: paymentId },
+    ),
+    'Movimientos de caja',
+  ).cashMovements;
+}
 const refund = (input: Record<string, unknown>, user = cashier) =>
   callFunction<RecordRefundResponse>(user, 'refundPayment', input);
 
@@ -170,6 +181,11 @@ beforeAll(async () => {
       'Carta',
     ).productBranches[0],
   ).currentPrice.id;
+  // D-40: quien cobra o devuelve efectivo lo hace desde su caja abierta. El cajero cobra; el
+  // administrador y el propietario devuelven con el fondo de su propia caja.
+  tills.cashier = (await openTill(owner, scope(), cashier)).cashSessionId;
+  tills.admin = (await openTill(owner, scope(), branchAdmin, pesos(500_000))).cashSessionId;
+  tills.owner = (await openTill(owner, scope(), owner, pesos(500_000))).cashSessionId;
 });
 
 describe('4b: división y reembolsos en emuladores', () => {
@@ -222,6 +238,10 @@ describe('4b: división y reembolsos en emuladores', () => {
     );
     expect(rows.refunds).toEqual([{ requestedBy: cashier.uid, reason: 'El plato salió frío' }]);
     expect(rows.auditEvents).toHaveLength(1);
+    // El efectivo devuelto sale de la caja de quien reembolsa, una sola vez.
+    expect(await refundMovements(paid.paymentId)).toEqual([
+      { kind: 'REFUND', amountMinor: pesos(10_000), cashSessionId: tills.cashier },
+    ]);
   }, 60_000);
 
   it('topes D-34: el cajero no pasa de $ 50.000; el administrador sí; nunca más de lo pagado', async () => {
@@ -240,6 +260,9 @@ describe('4b: división y reembolsos en emuladores', () => {
         ),
       ),
     ).toMatchObject({ totalMinor: pesos(60_000) });
+    expect(await refundMovements(paid.paymentId)).toEqual([
+      { kind: 'REFUND', amountMinor: pesos(60_000), cashSessionId: tills.admin },
+    ]);
     expect(
       await refund(
         await refundInput(s, { paymentId: paid.paymentId, amountMinor: pesos(4_001) }),

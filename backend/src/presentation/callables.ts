@@ -6,6 +6,9 @@ import type {
   SubmitOrderResponse,
   BillResponse,
   BillPaymentsResponse,
+  CashSessionResponse,
+  CloseCashSessionResponse,
+  ReadCashSessionResponse,
   CloseTableResponse,
   RecordedPaymentResponse,
   RecordRefundResponse,
@@ -18,7 +21,11 @@ type UseCase<T> = (actor: Actor, data: unknown) => Promise<Outcome<T>>;
 
 export interface UseCases {
   readonly readBill: UseCase<BillResponse>;
+  readonly closeCashSession: UseCase<CloseCashSessionResponse>;
   readonly closeTable: UseCase<CloseTableResponse>;
+  readonly openCashSession: UseCase<CashSessionResponse>;
+  readonly readCashSession: UseCase<ReadCashSessionResponse>;
+  readonly recordCashMovement: UseCase<CashSessionResponse>;
   readonly readBillPayments: UseCase<BillPaymentsResponse>;
   readonly recordPayment: UseCase<RecordedPaymentResponse>;
   readonly refundPayment: UseCase<RecordRefundResponse>;
@@ -63,6 +70,10 @@ const OPTIONS = { enforceAppCheck: false } as const;
 export function createCallables(useCases: UseCases) {
   return {
     readBill: onCall(OPTIONS, (request) => handle(request, useCases.readBill)),
+    closeCashSession: onCall(OPTIONS, (request) => handle(request, useCases.closeCashSession)),
+    openCashSession: onCall(OPTIONS, (request) => handle(request, useCases.openCashSession)),
+    readCashSession: onCall(OPTIONS, (request) => handle(request, useCases.readCashSession)),
+    recordCashMovement: onCall(OPTIONS, (request) => handle(request, useCases.recordCashMovement)),
     closeTable: onCall(OPTIONS, (request) => handle(request, useCases.closeTable)),
     readBillPayments: onCall(OPTIONS, (request) => handle(request, useCases.readBillPayments)),
     recordPayment: onCall(OPTIONS, (request) => handle(request, useCases.recordPayment)),

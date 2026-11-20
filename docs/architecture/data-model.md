@@ -13,7 +13,7 @@ Estado: **«Organización» implementado en la Fase 1** (`dataconnect/schema/sch
 - **Asignación:** `PaymentAllocation` asigna parte de una línea a un pago (única por pago y línea), en lugar de asignar por origen. Así se divide la cuenta y una línea no se cobra dos veces.
 - **Reembolso:** `Refund` cuelga del pago (no de la captura), con motivo, estado y clave de idempotencia única por pago.
 - **Avisos y tareas:** `ProviderEvent` guarda la huella del cuerpo, no el cuerpo, y es único por proveedor e id externo (caso 8); `tenantId` queda vacío hasta relacionarlo. `OutboxEvent` guarda las tareas que deben terminarse aunque fallen la primera vez.
-- **Caja:** `Register` (nombre único por sucursal), `CashSession` con `openRegisterId` único (una sola abierta por caja, el mismo recurso que `openTableId`), `CashMovement` (entrada, salida, venta o reembolso, siempre positivo) y `CashCount` (uno por turno).
+- **Caja:** `Register` (nombre único por sucursal), `CashSession` con `openRegisterId` único (una sola abierta por caja, el mismo recurso que `openTableId`), `CashMovement` (entrada, salida, venta o reembolso, siempre positivo) y `CashCount` (uno por turno). El bloque 5 suma columnas (ver §7).
 - **Invariantes que comprueba el backend en la misma transacción**, porque SQL Connect no ofrece `CHECK` entre filas: lo capturado no supera lo autorizado, lo asignado a una línea no supera su importe y los reembolsos no superan lo pagado.
 - Verificado en el emulador (`dataconnect/tests/capacidades-fase-4.int.test.ts`, 17 pruebas): unicidades, FK compuestas entre empresas y sucursales, y el cambio condicionado por versión de la cuenta.
 
@@ -235,7 +235,15 @@ Se omiten las columnas comunes de la sección 1 salvo cuando aportan.
 - `TableSession.version` (aditivo, por defecto 1): sube con cada envío a cocina, petición o decisión de aprobación y cierre. Es el bloqueo de fila que ordena esas operaciones (D-39).
 - Al cerrar una mesa con cuenta, `Bill` pasa a `SETTLED` con `settledTotalMinor`, `settledAt` y `settledBy`, en la misma transacción que el cierre, con `AuditEvent` `table_session.close` y `bill.settle`. Una cuenta saldada no admite pagos nuevos; sí reembolsos generales.
 
-## 7. Pendiente de definir
+## 7. Turno de caja (Fase 4, bloque 5, 2026-11-20)
+
+- `CashSession.openOperatorKey` (aditivo, único, `«empresa:uid»` mientras el turno está abierto): una sola caja abierta por persona en la empresa, igual que `openRegisterId` impide dos turnos en la misma caja. Los dos vuelven a null al cerrar, en la misma transacción que el `CashCount`.
+- `CashMovement.idempotencyKey` (aditivo, único por turno): una entrada o salida repetida no se duplica. La venta usa la referencia del pago y el reembolso la del reembolso.
+- Un pago `CASH` nuevo guarda `cashSessionId` (la caja abierta de quien cobra) e inserta un `CashMovement` `SALE` por consumo más propina; un reembolso de un pago en efectivo inserta un `CashMovement` `REFUND` en la caja de quien devuelve. Ambos toman la fila del turno (`version` y `status OPEN`), así una venta y un cierre simultáneos nunca dejan una venta en un turno cerrado (D-40).
+- Los pagos en efectivo anteriores al bloque 5 conservan `cashSessionId = null`; no se reasignan.
+- Efectivo esperado = fondo inicial + entradas + ventas − salidas − reembolsos (`expectedCash` de `packages/core`).
+
+## 8. Pendiente de definir
 
 - Política de stock negativo y concurrencia de la última unidad (Fase 5).
 - Retención y anonimización de datos personales (D-10).

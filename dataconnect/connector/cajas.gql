@@ -1,0 +1,168 @@
+# Cajas de la sucursal (Fase 4, bloque 5, D-40). Mismo patrón que el resto (ADR-0008): membresía
+# activa, empresa activa, permiso, sucursal asignada (salvo propietario), pertenencia de los recursos
+# y AuditEvent en la misma transacción. Los turnos, los movimientos y el conteo los escribe el
+# backend (cash), porque llevan dinero y se cruzan con los cobros.
+# Toda variable usada en un filtro es obligatoria: una variable omitida anula su filtro.
+
+# Cajas de la sucursal con su turno abierto, si lo hay. La ven quienes abren caja y quienes la
+# configuran; no incluye importes.
+query BranchRegisters($tenantId: UUID!, $branchId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(
+        where: { permission: { code: { in: ["cash_session.open", "branch.settings"] } } }
+      ) @check(expr: "this.size() > 0", message: "Sin permiso: cash_session.open") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  registers(
+    where: { tenantId: { eq: $tenantId }, branchId: { eq: $branchId } }
+    orderBy: [{ name: ASC }]
+  ) {
+    id
+    name
+    archivedAt
+    cashSessions_on_register(where: { status: { eq: OPEN } }, limit: 1) {
+      id
+      openedBy
+      openedAt
+    }
+  }
+}
+
+mutation CreateRegister($tenantId: UUID!, $branchId: UUID!, $name: String!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 40"
+        message: "Escribe el nombre de la caja (hasta 40 caracteres)"
+      ) {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "branch.settings" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: branch.settings") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    branch(id: $branchId) @check(expr: "this != null", message: "Sucursal inexistente") {
+      tenantId
+        @check(expr: "this == vars.tenantId", message: "La sucursal no pertenece a la empresa")
+      status @check(expr: "this == 'ACTIVE'", message: "La sucursal no está activa")
+    }
+  }
+  register_insert(data: { tenantId: $tenantId, branchId: $branchId, name: $name })
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "register.create"
+      resourceType: "register"
+      resourceId_expr: "response.register_insert.id"
+    }
+  )
+}
+
+# Renombra, archiva o restaura una caja. Una caja con el turno abierto no se archiva.
+mutation UpdateRegister(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $registerId: UUID!
+  $name: String!
+  $archived: Boolean!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "branch.settings" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: branch.settings") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    register(id: $registerId)
+      @check(expr: "this != null", message: "Caja inexistente")
+      @check(
+        expr: "size(vars.name.trim()) >= 1 && size(vars.name) <= 40"
+        message: "Escribe el nombre de la caja (hasta 40 caracteres)"
+      ) {
+      tenantId @check(expr: "this == vars.tenantId", message: "La caja no pertenece a la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "La caja no pertenece a la sucursal")
+      cashSessions_on_register(where: { status: { eq: OPEN } }, limit: 1)
+        @check(
+          expr: "this.size() == 0 || !vars.archived"
+          message: "Cierra el turno antes de archivar la caja"
+        ) {
+        id
+      }
+    }
+  }
+  register_update(
+    id: $registerId
+    data: { name: $name, archivedAt_expr: "vars.archived ? request.time : null" }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation_expr: "vars.archived ? 'register.archive' : 'register.update'"
+      resourceType: "register"
+      resourceId_expr: "vars.registerId"
+    }
+  )
+}

@@ -59,6 +59,7 @@ const settled: AccountSnapshot = {
   bill: { id: id(50), version: 4, status: 'OPEN' },
   lines: [line(10), line(11)],
   payments: [paid([10, 11])],
+  cashSession: null,
 };
 
 function store(data: AccountSnapshot, outcome: CloseOutcome = 'closed'): BillingStore {

@@ -34,6 +34,8 @@ type CashSession @table @unique(fields: ["id", "tenantId", "branchId"]) {
   register: Register!
     @ref(fields: ["registerId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
   openRegisterId: UUID @unique
+  "«<empresa>:<uid>» mientras está abierta y null al cerrarla: una sola caja abierta por persona en la empresa (D-40)."
+  openOperatorKey: String @unique
   status: CashSessionStatus!
   currency: String! @col(dataType: "char(3)")
   openingFloatMinor: Int64!
@@ -63,6 +65,7 @@ motivo. El efectivo esperado es el fondo inicial más entradas y ventas menos sa
 type CashMovement
   @table
   @unique(fields: ["id", "tenantId", "branchId"])
+  @unique(fields: ["cashSessionId", "idempotencyKey"])
   @index(fields: ["cashSessionId", "createdAt"]) {
   id: UUID! @default(expr: "uuidV4()")
   tenantId: UUID!
@@ -76,6 +79,8 @@ type CashMovement
   kind: CashMovementKind!
   amountMinor: Int64!
   reason: String
+  "Clave idempotente: la del pedido de entrada o salida, o el id del pago o reembolso (D-40)."
+  idempotencyKey: String
   paymentId: UUID
   payment: BillPayment
     @ref(fields: ["paymentId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])

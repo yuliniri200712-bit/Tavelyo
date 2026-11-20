@@ -148,7 +148,17 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - `CloseTableSession` (cierre directo del conector): mismos permisos, solo para mesas sin consumo ni cuenta (D-39).
 - La pantalla «Salón» de `operations` usa `closeTable` y muestra el motivo si no se puede cerrar.
 
-## 9. Pendiente
+## 9. Caja (Fase 4, bloque 5, 2026-11-20; D-40)
+
+- Conector `cajas.gql`: `BranchRegisters` (cajas de la sucursal con su turno abierto, sin importes; `cash_session.open` o `branch.settings`), `CreateRegister` y `UpdateRegister` (`branch.settings`, con `AuditEvent`; una caja con turno abierto no se archiva). Membresía y empresa activas, sucursal asignada salvo el propietario y pertenencia de la caja.
+- `openCashSession`: `cash_session.open` (propietario, administrador de sucursal y cajero). La caja debe ser de la sucursal y no estar archivada; una caja abierta por persona y un turno por caja.
+- `readCashSession`: `cash_session.open`. Sin `cashSessionId` devuelve el turno abierto propio; con él, el cajero solo ve el suyo y propietario y administrador cualquiera de la sucursal. Un turno de otra sucursal o empresa responde «no existe».
+- `recordCashMovement`: `cash_session.open`, mismas reglas de dueño. Motivo obligatorio, revisión del turno y clave idempotente.
+- `closeCashSession`: `cash_session.close`, mismas reglas de dueño.
+- Las escrituras vuelven a comprobar en la transacción la membresía activa, el permiso, la sucursal y el estado del turno.
+- `recordPayment` y `refundPayment` en efectivo usan la caja abierta de quien llama (D-40).
+
+## 10. Pendiente
 
 - Topes concretos de descuento por rol (los de reembolso, D-34, están implementados desde 4b).
 - Política de autenticación reforzada para propietarios (según capacidades verificadas de Firebase Auth).

@@ -60,3 +60,16 @@ export {
   type WebhookRejection,
   type WebhookVerification,
 } from './payments.ts';
+export type {
+  CashScope,
+  OpenCashSessionRequest,
+  CashMovementKindCode,
+  CashMovementResponse,
+  CashSessionResponse,
+  ReadCashSessionRequest,
+  ReadCashSessionResponse,
+  RecordCashMovementRequest,
+  CloseCashSessionRequest,
+  CloseCashSessionResponse,
+} from './cash-api.ts';
+export { CASH_REASON } from './cash-api.ts';

@@ -71,6 +71,7 @@ const base: AccountSnapshot = {
       [11, 60_000],
     ]),
   ],
+  cashSession: { id: id(70), version: 1, openingFloatMinor: pesos(1_000_000), movements: [] },
 };
 
 function store(data: AccountSnapshot = base, writes = true): BillingStore {
@@ -450,5 +451,105 @@ describe('idempotencia, revisión y entrada', () => {
       },
     });
     expect(db.load).toHaveBeenCalledWith(actor, expect.anything(), 'payment.refund');
+  });
+});
+
+describe('efectivo y caja (bloque 5, D-40)', () => {
+  it('un pago en efectivo exige la caja abierta de quien cobra y deja la venta en ella', async () => {
+    const empty: AccountSnapshot = { ...base, payments: [], bill: null, cashSession: null };
+    const input = {
+      ...scope,
+      revision: accountRevision(empty),
+      idempotencyKey: 'pago-efectivo-1',
+      method: 'CASH',
+      currency: 'COP',
+      amountMinor: pesos(40_000),
+      tipMinor: pesos(4_000),
+      receivedMinor: pesos(50_000),
+    };
+    expect(await createRecordPayment(store(empty))(actor, input)).toMatchObject({
+      ok: false,
+      error: { message: 'Abre tu caja para registrar efectivo.' },
+    });
+    const open = { ...empty, cashSession: base.cashSession };
+    const db = store(open);
+    expect(
+      (await createRecordPayment(db)(actor, { ...input, revision: accountRevision(open) })).ok,
+    ).toBe(true);
+    expect(db.record).toHaveBeenCalledWith(
+      actor,
+      expect.objectContaining({
+        cash: { sessionId: id(70), version: 1, saleMinor: pesos(44_000) },
+      }),
+    );
+  });
+  it('un pago con datáfono no necesita caja', async () => {
+    const empty: AccountSnapshot = { ...base, payments: [], bill: null, cashSession: null };
+    const db = store(empty);
+    const result = await createRecordPayment(db)(actor, {
+      ...scope,
+      revision: accountRevision(empty),
+      idempotencyKey: 'pago-datafono-1',
+      method: 'TERMINAL',
+      currency: 'COP',
+      amountMinor: pesos(40_000),
+      tipMinor: '0',
+      receiptNumber: 'DAT-001',
+    });
+    expect(result.ok).toBe(true);
+    expect(db.record).toHaveBeenCalledWith(actor, expect.objectContaining({ cash: null }));
+  });
+  it('el reembolso de un pago en efectivo sale de la caja y no supera lo que hay', async () => {
+    const thin: AccountSnapshot = {
+      ...base,
+      cashSession: { id: id(70), version: 2, openingFloatMinor: pesos(5_000), movements: [] },
+    };
+    expect(
+      await createRefundPayment(store(thin))(
+        actor,
+        request(thin, { paymentId: id(20), amountMinor: pesos(5_001) }),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { message: expect.stringMatching(/no hay efectivo suficiente/) },
+    });
+    const db = store(thin);
+    expect(
+      (
+        await createRefundPayment(db)(
+          actor,
+          request(thin, { paymentId: id(20), amountMinor: pesos(5_000) }),
+        )
+      ).ok,
+    ).toBe(true);
+    expect(db.refund).toHaveBeenCalledWith(
+      actor,
+      expect.objectContaining({ cash: { sessionId: id(70), version: 2, refundIndexes: [0] } }),
+    );
+    expect(
+      await createRefundPayment(store({ ...base, cashSession: null }))(
+        actor,
+        request(base, { paymentId: id(20), amountMinor: pesos(1_000) }),
+      ),
+    ).toMatchObject({ ok: false, error: { message: 'Abre tu caja para registrar efectivo.' } });
+  });
+  it('el reembolso de un pago con datáfono no toca la caja', async () => {
+    const card: AccountSnapshot = {
+      ...base,
+      cashSession: null,
+      payments: [
+        { ...(base.payments[0] as AccountPayment), method: 'TERMINAL', receiptNumber: 'DAT-9' },
+      ],
+    };
+    const db = store(card);
+    expect(
+      (
+        await createRefundPayment(db)(
+          actor,
+          request(card, { paymentId: id(20), amountMinor: pesos(1_000) }),
+        )
+      ).ok,
+    ).toBe(true);
+    expect(db.refund).toHaveBeenCalledWith(actor, expect.objectContaining({ cash: null }));
   });
 });

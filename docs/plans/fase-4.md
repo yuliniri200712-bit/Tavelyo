@@ -31,6 +31,16 @@ Cada parte termina con sus pruebas, su commit, CI en verde y un resumen al propi
 - **4b — División y reembolsos (autorizada el 2026-11-19, con D-37 y D-38):** división exacta y registro de reembolsos con motivo y D-34: cajero hasta $ 50.000, administrador de sucursal hasta $ 300.000 y propietario sin tope de rol, nunca más de lo pagado menos reembolsos previos.
 - **4c — Cierre y concurrencia (autorizada el 2026-11-19, con D-39):** cierre D-30 y protección del cierre existente del salón, con los escenarios completos de dos cajeros y cambios simultáneos en pedidos. 4a no declara resuelto este cierre.
 
+### Bloque 5: caja (autorizado el 2026-11-19)
+
+Solo servidor y conectores; la pantalla de caja es del bloque 6. Reglas propuestas en D-40, pendientes de aprobación del propietario:
+
+- cajas de la sucursal (`cajas.gql`): crear, renombrar y archivar con `branch.settings`;
+- turno: apertura con fondo, entradas y salidas con motivo, efectivo esperado, conteo y cierre con diferencia y motivo (RF-PA-07), en `openCashSession`, `readCashSession`, `recordCashMovement` y `closeCashSession`;
+- una caja abierta por persona y un turno por caja; el cajero opera solo la suya, propietario y administrador cualquiera de su sucursal;
+- el efectivo de `recordPayment` y `refundPayment` pasa por la caja abierta de quien lo registra (venta y reembolso como movimientos), con bloqueo del turno frente a un cierre simultáneo;
+- los cobros en efectivo anteriores, sin turno, se conservan.
+
 ## 1. Objetivo
 
 Según PM §11: pasarela en entorno de pruebas, autorización, captura, división de la cuenta, reembolso y cierre.

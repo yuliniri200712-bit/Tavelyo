@@ -196,6 +196,24 @@ export interface BranchOrderApprovalVariables {
   branchId: UUIDString;
 }
 
+export interface BranchRegistersData {
+  registers: ({
+    id: UUIDString;
+    name: string;
+    archivedAt?: TimestampString | null;
+    cashSessions_on_register: ({
+      id: UUIDString;
+      openedBy: string;
+      openedAt: TimestampString;
+    } & CashSession_Key)[];
+  } & Register_Key)[];
+}
+
+export interface BranchRegistersVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+
 export interface BranchStationsData {
   stations: ({
     id: UUIDString;
@@ -392,6 +410,17 @@ export interface CreateProductVariables {
   description?: string | null;
   allergensDeclared?: string[] | null;
   sort: number;
+}
+
+export interface CreateRegisterData {
+  register_insert: Register_Key;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface CreateRegisterVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  name: string;
 }
 
 export interface CreateSectorData {
@@ -1965,6 +1994,19 @@ export interface UpdateProductVariables {
   archived: boolean;
 }
 
+export interface UpdateRegisterData {
+  register_update?: Register_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface UpdateRegisterVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  registerId: UUIDString;
+  name: string;
+  archived: boolean;
+}
+
 export interface UpdateSectorData {
   sector_update?: Sector_Key | null;
   auditEvent_insert: AuditEvent_Key;
@@ -2115,6 +2157,42 @@ export const withdrawMyOrderRef: WithdrawMyOrderRef;
 
 export function withdrawMyOrder(vars: WithdrawMyOrderVariables): MutationPromise<WithdrawMyOrderData, WithdrawMyOrderVariables>;
 export function withdrawMyOrder(dc: DataConnect, vars: WithdrawMyOrderVariables): MutationPromise<WithdrawMyOrderData, WithdrawMyOrderVariables>;
+
+interface BranchRegistersRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: BranchRegistersVariables): QueryRef<BranchRegistersData, BranchRegistersVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: BranchRegistersVariables): QueryRef<BranchRegistersData, BranchRegistersVariables>;
+  operationName: string;
+}
+export const branchRegistersRef: BranchRegistersRef;
+
+export function branchRegisters(vars: BranchRegistersVariables, options?: ExecuteQueryOptions): QueryPromise<BranchRegistersData, BranchRegistersVariables>;
+export function branchRegisters(dc: DataConnect, vars: BranchRegistersVariables, options?: ExecuteQueryOptions): QueryPromise<BranchRegistersData, BranchRegistersVariables>;
+
+interface CreateRegisterRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: CreateRegisterVariables): MutationRef<CreateRegisterData, CreateRegisterVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: CreateRegisterVariables): MutationRef<CreateRegisterData, CreateRegisterVariables>;
+  operationName: string;
+}
+export const createRegisterRef: CreateRegisterRef;
+
+export function createRegister(vars: CreateRegisterVariables): MutationPromise<CreateRegisterData, CreateRegisterVariables>;
+export function createRegister(dc: DataConnect, vars: CreateRegisterVariables): MutationPromise<CreateRegisterData, CreateRegisterVariables>;
+
+interface UpdateRegisterRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: UpdateRegisterVariables): MutationRef<UpdateRegisterData, UpdateRegisterVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: UpdateRegisterVariables): MutationRef<UpdateRegisterData, UpdateRegisterVariables>;
+  operationName: string;
+}
+export const updateRegisterRef: UpdateRegisterRef;
+
+export function updateRegister(vars: UpdateRegisterVariables): MutationPromise<UpdateRegisterData, UpdateRegisterVariables>;
+export function updateRegister(dc: DataConnect, vars: UpdateRegisterVariables): MutationPromise<UpdateRegisterData, UpdateRegisterVariables>;
 
 interface CatalogAdminRef {
   /* Allow users to create refs without passing in DataConnect */

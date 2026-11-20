@@ -27,6 +27,7 @@ import {
   seedAuthorizationCatalog,
 } from '../../dataconnect/tests/support/provisioning.ts';
 import { callFunction, type CallResult } from './support/functions.ts';
+import { openTill } from './support/cash.ts';
 
 // Parte 4c con las funciones reales: cierre de mesa (D-30) y concurrencia de cajeros y pedidos.
 // Cada pedido de la carta de prueba vale $ 32.000.
@@ -208,6 +209,9 @@ beforeAll(async () => {
     ).productBranches[0],
   ).currentPrice.id;
   await setApproval('DIRECT');
+  // D-40: el cajero y el administrador cobran en efectivo, cada uno en su caja.
+  await openTill(owner, scope(), cashier);
+  await openTill(owner, scope(), branchAdmin);
 });
 
 describe('4c: cierre de mesa (D-30) en emuladores', () => {
@@ -300,6 +304,15 @@ describe('4c: concurrencia (casos 4 y 9)', () => {
     ]);
     expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
     expect(await bill(s)).toMatchObject({ paidMinor: '3200000', outstandingMinor: '0' });
+    // Solo una venta entra a una de las dos cajas.
+    const sales = expectOk(
+      await admin<{ cashMovements: { amountMinor: string }[] }>(
+        'query ($s: UUID!) { cashMovements(where: { kind: { eq: SALE }, payment: { bill: { sessionId: { eq: $s } } } }) { amountMinor } }',
+        { s: s.sessionId },
+      ),
+      'Ventas',
+    ).cashMovements;
+    expect(sales).toEqual([{ amountMinor: '3200000' }]);
   }, 60_000);
 
   it('dos cierres a la vez: uno cierra y salda, el otro se rechaza', async () => {

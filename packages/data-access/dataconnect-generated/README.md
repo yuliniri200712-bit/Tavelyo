@@ -10,6 +10,7 @@ This README will guide you through the process of using the generated JavaScript
 - [**Queries**](#queries)
   - [*BranchOrderApproval*](#branchorderapproval)
   - [*PendingApprovalOrders*](#pendingapprovalorders)
+  - [*BranchRegisters*](#branchregisters)
   - [*CatalogAdmin*](#catalogadmin)
   - [*BranchCatalog*](#branchcatalog)
   - [*PublicMenu*](#publicmenu)
@@ -49,6 +50,8 @@ This README will guide you through the process of using the generated JavaScript
   - [*ApproveOrder*](#approveorder)
   - [*RejectOrder*](#rejectorder)
   - [*WithdrawMyOrder*](#withdrawmyorder)
+  - [*CreateRegister*](#createregister)
+  - [*UpdateRegister*](#updateregister)
   - [*CreateTaxRule*](#createtaxrule)
   - [*UpdateTaxRule*](#updatetaxrule)
   - [*CreateCategory*](#createcategory)
@@ -412,6 +415,127 @@ console.log(data.orders);
 executeQuery(ref).then((response) => {
   const data = response.data;
   console.log(data.orders);
+});
+```
+
+## BranchRegisters
+You can execute the `BranchRegisters` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+branchRegisters(vars: BranchRegistersVariables, options?: ExecuteQueryOptions): QueryPromise<BranchRegistersData, BranchRegistersVariables>;
+
+interface BranchRegistersRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: BranchRegistersVariables): QueryRef<BranchRegistersData, BranchRegistersVariables>;
+}
+export const branchRegistersRef: BranchRegistersRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+branchRegisters(dc: DataConnect, vars: BranchRegistersVariables, options?: ExecuteQueryOptions): QueryPromise<BranchRegistersData, BranchRegistersVariables>;
+
+interface BranchRegistersRef {
+  ...
+  (dc: DataConnect, vars: BranchRegistersVariables): QueryRef<BranchRegistersData, BranchRegistersVariables>;
+}
+export const branchRegistersRef: BranchRegistersRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the branchRegistersRef:
+```typescript
+const name = branchRegistersRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `BranchRegisters` query requires an argument of type `BranchRegistersVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface BranchRegistersVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `BranchRegisters` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `BranchRegistersData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface BranchRegistersData {
+  registers: ({
+    id: UUIDString;
+    name: string;
+    archivedAt?: TimestampString | null;
+    cashSessions_on_register: ({
+      id: UUIDString;
+      openedBy: string;
+      openedAt: TimestampString;
+    } & CashSession_Key)[];
+  } & Register_Key)[];
+}
+```
+### Using `BranchRegisters`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, branchRegisters, BranchRegistersVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `BranchRegisters` query requires an argument of type `BranchRegistersVariables`:
+const branchRegistersVars: BranchRegistersVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `branchRegisters()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await branchRegisters(branchRegistersVars);
+// Variables can be defined inline as well.
+const { data } = await branchRegisters({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await branchRegisters(dataConnect, branchRegistersVars);
+
+console.log(data.registers);
+
+// Or, you can use the `Promise` API.
+branchRegisters(branchRegistersVars).then((response) => {
+  const data = response.data;
+  console.log(data.registers);
+});
+```
+
+### Using `BranchRegisters`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, branchRegistersRef, BranchRegistersVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `BranchRegisters` query requires an argument of type `BranchRegistersVariables`:
+const branchRegistersVars: BranchRegistersVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `branchRegistersRef()` function to get a reference to the query.
+const ref = branchRegistersRef(branchRegistersVars);
+// Variables can be defined inline as well.
+const ref = branchRegistersRef({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = branchRegistersRef(dataConnect, branchRegistersVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.registers);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.registers);
 });
 ```
 
@@ -5184,6 +5308,252 @@ console.log(data.order_updateMany);
 executeMutation(ref).then((response) => {
   const data = response.data;
   console.log(data.order_updateMany);
+});
+```
+
+## CreateRegister
+You can execute the `CreateRegister` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+createRegister(vars: CreateRegisterVariables): MutationPromise<CreateRegisterData, CreateRegisterVariables>;
+
+interface CreateRegisterRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: CreateRegisterVariables): MutationRef<CreateRegisterData, CreateRegisterVariables>;
+}
+export const createRegisterRef: CreateRegisterRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+createRegister(dc: DataConnect, vars: CreateRegisterVariables): MutationPromise<CreateRegisterData, CreateRegisterVariables>;
+
+interface CreateRegisterRef {
+  ...
+  (dc: DataConnect, vars: CreateRegisterVariables): MutationRef<CreateRegisterData, CreateRegisterVariables>;
+}
+export const createRegisterRef: CreateRegisterRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the createRegisterRef:
+```typescript
+const name = createRegisterRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `CreateRegister` mutation requires an argument of type `CreateRegisterVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface CreateRegisterVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  name: string;
+}
+```
+### Return Type
+Recall that executing the `CreateRegister` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `CreateRegisterData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface CreateRegisterData {
+  register_insert: Register_Key;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `CreateRegister`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, createRegister, CreateRegisterVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `CreateRegister` mutation requires an argument of type `CreateRegisterVariables`:
+const createRegisterVars: CreateRegisterVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  name: ..., 
+};
+
+// Call the `createRegister()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await createRegister(createRegisterVars);
+// Variables can be defined inline as well.
+const { data } = await createRegister({ tenantId: ..., branchId: ..., name: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await createRegister(dataConnect, createRegisterVars);
+
+console.log(data.register_insert);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+createRegister(createRegisterVars).then((response) => {
+  const data = response.data;
+  console.log(data.register_insert);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `CreateRegister`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, createRegisterRef, CreateRegisterVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `CreateRegister` mutation requires an argument of type `CreateRegisterVariables`:
+const createRegisterVars: CreateRegisterVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  name: ..., 
+};
+
+// Call the `createRegisterRef()` function to get a reference to the mutation.
+const ref = createRegisterRef(createRegisterVars);
+// Variables can be defined inline as well.
+const ref = createRegisterRef({ tenantId: ..., branchId: ..., name: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = createRegisterRef(dataConnect, createRegisterVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.register_insert);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.register_insert);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## UpdateRegister
+You can execute the `UpdateRegister` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+updateRegister(vars: UpdateRegisterVariables): MutationPromise<UpdateRegisterData, UpdateRegisterVariables>;
+
+interface UpdateRegisterRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: UpdateRegisterVariables): MutationRef<UpdateRegisterData, UpdateRegisterVariables>;
+}
+export const updateRegisterRef: UpdateRegisterRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+updateRegister(dc: DataConnect, vars: UpdateRegisterVariables): MutationPromise<UpdateRegisterData, UpdateRegisterVariables>;
+
+interface UpdateRegisterRef {
+  ...
+  (dc: DataConnect, vars: UpdateRegisterVariables): MutationRef<UpdateRegisterData, UpdateRegisterVariables>;
+}
+export const updateRegisterRef: UpdateRegisterRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the updateRegisterRef:
+```typescript
+const name = updateRegisterRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `UpdateRegister` mutation requires an argument of type `UpdateRegisterVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface UpdateRegisterVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  registerId: UUIDString;
+  name: string;
+  archived: boolean;
+}
+```
+### Return Type
+Recall that executing the `UpdateRegister` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `UpdateRegisterData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface UpdateRegisterData {
+  register_update?: Register_Key | null;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `UpdateRegister`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, updateRegister, UpdateRegisterVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `UpdateRegister` mutation requires an argument of type `UpdateRegisterVariables`:
+const updateRegisterVars: UpdateRegisterVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  registerId: ..., 
+  name: ..., 
+  archived: ..., 
+};
+
+// Call the `updateRegister()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await updateRegister(updateRegisterVars);
+// Variables can be defined inline as well.
+const { data } = await updateRegister({ tenantId: ..., branchId: ..., registerId: ..., name: ..., archived: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await updateRegister(dataConnect, updateRegisterVars);
+
+console.log(data.register_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+updateRegister(updateRegisterVars).then((response) => {
+  const data = response.data;
+  console.log(data.register_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `UpdateRegister`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, updateRegisterRef, UpdateRegisterVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `UpdateRegister` mutation requires an argument of type `UpdateRegisterVariables`:
+const updateRegisterVars: UpdateRegisterVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  registerId: ..., 
+  name: ..., 
+  archived: ..., 
+};
+
+// Call the `updateRegisterRef()` function to get a reference to the mutation.
+const ref = updateRegisterRef(updateRegisterVars);
+// Variables can be defined inline as well.
+const ref = updateRegisterRef({ tenantId: ..., branchId: ..., registerId: ..., name: ..., archived: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = updateRegisterRef(dataConnect, updateRegisterVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.register_update);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.register_update);
+  console.log(data.auditEvent_insert);
 });
 ```
 

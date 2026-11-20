@@ -107,6 +107,13 @@ stateDiagram-v2
 
 `abierta → en_cierre (conteo) → cerrada`. Una diferencia distinta de cero exige motivo. En el esquema, `CashSessionStatus` es `OPEN` o `CLOSED`: el conteo (`CashCount`) y el cierre se guardan en la misma transacción, así que no hace falta un estado intermedio.
 
+**Implementado (Fase 4, bloque 5, D-40):**
+
+- **Abrir** (`openCashSession`): con fondo inicial, en una caja de la sucursal no archivada y sin turno; quien ya tiene otra caja abierta no abre una segunda. Un doble clic responde el mismo turno.
+- **Mientras está abierta:** entradas y salidas con motivo (una salida no supera lo esperado), ventas en efectivo y reembolsos en efectivo. Cada movimiento sube `version`; quien envía una revisión antigua recibe «La caja cambió».
+- **Cerrar** (`closeCashSession`): con la revisión vista y lo contado; si no cuadra, exige motivo. Guarda esperado, contado y diferencia con signo, y libera la caja y a la persona. El reintento del mismo cierre devuelve el conteo guardado.
+- Una venta y un cierre simultáneos toman la misma fila: gana uno y el otro se rechaza.
+
 ## 6. Flujo crítico: pedido con preautorización
 
 > **Reemplazado por ADR-0012 (2026-11-18):** el pedido del comensal ya no pasa por la pasarela. Ver «Aprobación del pedido» en la sección 1. Se conserva como referencia para la fase de suscripciones.

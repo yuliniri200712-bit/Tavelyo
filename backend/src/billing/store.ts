@@ -1,4 +1,9 @@
-import type { BillScope, RecordedPaymentResponse, RecordPaymentRequest } from '@tavelyo/contracts';
+import type {
+  BillScope,
+  CashMovementKindCode,
+  RecordedPaymentResponse,
+  RecordPaymentRequest,
+} from '@tavelyo/contracts';
 import type { OrderItemStatus, RefundStatus } from '@tavelyo/core';
 import type { Actor, Outcome } from '../shared/outcome.ts';
 
@@ -42,6 +47,22 @@ export interface AccountSnapshot {
   readonly bill: { readonly id: string; readonly version: number; readonly status: string } | null;
   readonly lines: readonly AccountLine[];
   readonly payments: readonly AccountPayment[];
+  /** Caja abierta de quien llama en la sucursal (D-40): el efectivo pasa por ella. */
+  readonly cashSession: {
+    readonly id: string;
+    readonly version: number;
+    readonly openingFloatMinor: string;
+    readonly movements: readonly {
+      readonly kind: CashMovementKindCode;
+      readonly amountMinor: string;
+    }[];
+  } | null;
+}
+
+/** Caja que se bloquea al escribir un movimiento de efectivo (D-40). */
+export interface CashUse {
+  readonly sessionId: string;
+  readonly version: number;
 }
 
 export interface PaymentWrite {
@@ -50,6 +71,8 @@ export interface PaymentWrite {
   readonly fingerprint: string;
   readonly payment: RecordedPaymentResponse;
   readonly allocations: readonly { readonly orderItemId: string; readonly amountMinor: string }[];
+  /** Solo en efectivo: la caja y la venta (consumo más propina). */
+  readonly cash: (CashUse & { readonly saleMinor: string }) | null;
 }
 
 export interface RefundWrite {
@@ -65,6 +88,8 @@ export interface RefundWrite {
   }[];
   /** Reembolso por plato: la línea que se cancela con su versión y si cuenta como merma. */
   readonly line: { readonly id: string; readonly version: number; readonly wasted: boolean } | null;
+  /** Si algún reembolso es de un pago en efectivo: la caja y qué reembolsos salen de ella. */
+  readonly cash: (CashUse & { readonly refundIndexes: readonly number[] }) | null;
 }
 
 export type BillingPermission = 'bill.read' | 'payment.record' | 'payment.refund' | 'session.close';

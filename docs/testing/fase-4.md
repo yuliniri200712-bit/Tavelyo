@@ -132,3 +132,24 @@ Hallazgos durante la verificación:
 - **Carrera corregida en el diseño:** con PostgreSQL en READ COMMITTED, un envío a cocina y un cierre simultáneos podían pasar los dos y dejar un pedido en una mesa cerrada. El envío, la petición y la decisión de aprobación y los dos cierres toman ahora la fila de la sesión (`TableSession.version`), y los cierres comprueban después de tomarla. La prueba de tres rondas lo verifica.
 - Tres pruebas antiguas del caso 12 (`pedidos-fase-3.int.test.ts`, `mesa-pedido.int.test.ts` y `e2e/emulators/customer-order.spec.ts`) cerraban mesas con pedidos por la vía directa, que D-30 ya no permite. Ahora cancelan los platos antes de cerrar; siguen probando lo mismo (el cliente pierde el acceso al cerrar).
 - Un fallo de Prettier en un comando con *heredoc* dejó vacío `close.test.ts`; se reescribió y se volvió a verificar.
+
+## 2026-11-20 — Bloque 5: caja
+
+Alcance autorizado: cajas de la sucursal, turno de caja (apertura con fondo, entradas y salidas con motivo, efectivo esperado, conteo y cierre con diferencia) y efectivo de cobros y reembolsos a través de la caja abierta de quien lo registra. Reglas propuestas en D-40, pendientes de aprobación. Sin pantalla (bloque 6).
+
+| Comprobación | Comando | Resultado |
+|---|---|---|
+| Calidad completa | `npm run check` | ✅ 958 pruebas unitarias en 71 archivos (nuevas: `backend/src/cash/cash.test.ts`, con lectura, apertura, entradas y salidas y cierre con conteo, y el bloque «efectivo y caja» de `backend/src/billing/refund.test.ts`) |
+| SDK y esquema | `docker exec tavelyo-emu sh /scripts/gen-sdk.sh` y copia al paquete | ✅ Regenerado con `BranchRegisters`, `CreateRegister` y `UpdateRegister`; las 4 funciones de caja cargan en el emulador |
+| Integración de caja | `npx vitest run --config vitest.integration.config.ts backend/tests/caja-fase-4.int.test.ts` con las variables del backend | ✅ 7 pruebas: apertura con fondo, doble clic que responde el mismo turno, caja ocupada y segunda caja rechazadas, caja con turno que no se archiva, lista de cajas con su turno y auditoría; solo `branch.settings` crea cajas y una archivada no se abre; entradas y salidas (esperado, reintento sin duplicar, revisión antigua, salida mayor que lo que hay, motivo obligatorio); cierre que cuadra y con diferencia (motivo, signo, reintento, caja y persona liberadas, turno nuevo en la misma caja); **venta y cierre a la vez**, dos rondas (gana uno, nunca una venta en un turno cerrado); reembolso en efectivo que sale de la caja de quien devuelve y no supera lo que hay; aislamiento (otro cajero, mesero, otra sucursal, otra empresa y sin sesión; el administrador sí lee y cierra) |
+| Cobros adaptados | `backend/tests/cuenta-fase-4a/4b/4c.int.test.ts` | ✅ 24 pruebas. Cada cajero, administrador o propietario que cobra o devuelve efectivo abre su caja (`backend/tests/support/cash.ts`). Nuevas comprobaciones: sin caja no se cobra en efectivo; el pago guarda su turno y una venta de consumo más propina; los reembolsos salen como `REFUND` de la caja de quien devuelve; con dos cajeros a la vez entra una sola venta |
+| Regresión de conectores | `npx vitest run --config vitest.integration.config.ts dataconnect` | ✅ 117 pruebas |
+| Regresión del backend | `npx vitest run --config vitest.integration.config.ts backend/tests` con las variables del backend | ✅ 94 pruebas en 7 archivos |
+| Recorridos en Chrome | `npx playwright test --config playwright.emulators.config.ts --project=chrome e2e/emulators/customer-order.spec.ts e2e/emulators/waiter-floor.spec.ts` | ✅ 3 recorridos. El resto de navegadores los corre la CI |
+| Secretos | `npm run check:secrets` | ✅ Sin secretos en 499 archivos |
+| CI | Rama `fase-4-caja-pagos` | Pendiente del resultado tras subir el commit |
+
+Hallazgos durante la verificación:
+
+- Como se esperaba, la primera regresión tras exigir caja falló en las 12 pruebas de 4a, 4b y 4c que cobraban en efectivo sin turno («Abre tu caja para registrar efectivo.»); el resto (192) pasó. Se adaptaron abriendo la caja de cada persona.
+- `tsc` rechazó pasar `CashScope` a la consulta genérica de las pruebas; se corrigió copiando el objeto.
