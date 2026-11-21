@@ -187,3 +187,5 @@ Correcciones:
 | `npm run check:secrets` | Sin secretos en 508 archivos |
 
 Pendiente: los otros navegadores de D-15 (los corre la CI), la impresión en papel del comprobante y la aprobación del propietario de la 6a. La 6b y la 6c tienen ya pruebas, pero se revisan y aprueban después de la 6a.
+
+El propietario aprueba el bloque 4 (4a, 4b y 4c) el 2026-11-21, con la regresión anterior como nueva verificación.
