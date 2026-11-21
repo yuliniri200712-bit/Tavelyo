@@ -69,6 +69,7 @@ Solo lo crea el backend; vence en expiresAt o al cerrar la sesión, y el persona
 type SessionParticipant
   @table
   @unique(fields: ["sessionId", "authUid"])
+  @unique(fields: ["sessionId", "guestNumber"])
   @unique(fields: ["id", "tenantId", "branchId"]) {
   id: UUID! @default(expr: "uuidV4()")
   tenantId: UUID!
@@ -76,7 +77,9 @@ type SessionParticipant
   sessionId: UUID!
   session: TableSession!
     @ref(fields: ["sessionId", "tenantId", "branchId"], references: ["id", "tenantId", "branchId"])
-  authUid: String!
+  authUid: String
+  "Número de la persona sin teléfono dentro de esta sesión; carece de identidad de acceso."
+  guestNumber: Int
   joinedAt: Timestamp! @default(expr: "request.time")
   expiresAt: Timestamp!
   removedAt: Timestamp

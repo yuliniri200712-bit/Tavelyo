@@ -76,6 +76,7 @@ function fakeGateway(overrides: Partial<FloorServiceGateway> = {}): FloorService
     }),
     participants: vi.fn(async () => ok(people)),
     openTable: vi.fn(async () => ok(undefined)),
+    transfer: vi.fn(async () => ok(undefined)),
     closeSession: vi.fn(async () => ok(undefined)),
     removeParticipant: vi.fn(async () => ok(undefined)),
     ...overrides,

@@ -29,6 +29,8 @@ type Tenant @table {
   status: TenantStatus!
   defaultCurrency: String! @col(dataType: "char(3)")
   defaultTimezone: String!
+  "NIT con su dígito de verificación («900123456-7»). Lo valida y lo guarda el backend (Fase 4, bloque 6a); va en el comprobante del pago."
+  taxId: String
   createdAt: Timestamp! @default(expr: "request.time")
 }
 

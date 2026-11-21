@@ -87,6 +87,10 @@ export type QuoteChange =
       readonly totalMinor: string;
     };
 
+export type StaffOrderResponse =
+  | Exclude<QuoteOrderResponse, { outcome: 'quoted' }>
+  | { readonly outcome: 'sent'; readonly orderId: string };
+
 export type QuoteOrderResponse =
   /** Resumen verificable guardado; la Fase 3 lo envía a cocina. */
   | {

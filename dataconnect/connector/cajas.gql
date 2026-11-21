@@ -166,3 +166,54 @@ mutation UpdateRegister(
     }
   )
 }
+
+# Mesas abiertas de la sucursal para la pantalla de caja (bloque 6a), con la solicitud de cuenta
+# pendiente si la hay. Sin importes: la cuenta de cada mesa la calcula el backend (readBill).
+query BillingTables($tenantId: UUID!, $branchId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(where: { permission: { code: { eq: "payment.record" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: payment.record") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+  tableSessions(
+    where: { tenantId: { eq: $tenantId }, branchId: { eq: $branchId }, status: { eq: OPEN } }
+    orderBy: [{ openedAt: ASC }]
+  ) {
+    id
+    openedAt
+    table {
+      code
+      sector {
+        name
+      }
+    }
+    serviceRequests_on_session(
+      where: { status: { eq: PENDING }, kind: { eq: REQUEST_BILL } }
+      limit: 1
+    ) {
+      createdAt
+    }
+  }
+}

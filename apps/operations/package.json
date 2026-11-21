@@ -22,6 +22,8 @@
     "@tavelyo/kitchen": "*",
     "@tavelyo/tenancy": "*",
     "@tavelyo/orders": "*",
-    "@tavelyo/service-requests": "*"
+    "@tavelyo/service-requests": "*",
+    "@tavelyo/cash": "*",
+    "@tavelyo/billing": "*"
   }
 }

@@ -7,6 +7,7 @@ import {
   floorView,
   floorViewRef,
   openTableSession,
+  transferTableSession,
   OrderItemStatus,
   removeParticipant,
   rotateTableQr,
@@ -148,6 +149,11 @@ export function createFloorServiceGateway(
     // Dos personas abren la misma mesa a la vez: la unicidad de openTableId rechaza la segunda.
     openTable: (scope, tableId) =>
       command(() => openTableSession(dataConnect, { ...scope, tableId }), ALREADY_OPEN),
+    transfer: (scope, sessionId, sourceId, tableId) =>
+      command(
+        () => transferTableSession(dataConnect, { ...scope, sessionId, sourceId, tableId }),
+        'La mesa de destino ya está ocupada.',
+      ),
     // D-30: el backend cierra solo con saldo cero y todo entregado, y explica qué falta si no.
     async closeSession(scope, sessionId) {
       try {

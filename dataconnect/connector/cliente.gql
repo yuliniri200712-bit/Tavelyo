@@ -115,6 +115,12 @@ query MyOrders($sessionId: UUID!, $branchId: UUID!)
 )
 @refresh(
   onMutationExecuted: {
+    operation: "ServerSendStaffOrder"
+    condition: "request.variables.sessionId == mutation.variables.sessionId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
     operation: "ServerRequestOrderApproval"
     condition: "request.variables.sessionId == mutation.variables.sessionId"
   }

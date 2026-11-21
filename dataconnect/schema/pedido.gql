@@ -36,6 +36,7 @@ type OrderQuote
       fields: ["participantId", "tenantId", "branchId"]
       references: ["id", "tenantId", "branchId"]
     )
+  staffUid: String
   idempotencyKey: String!
   "Huella SHA-256 del contenido (líneas, versiones de precio, opciones, notas y total): identifica el resumen para la Fase 3 y detecta una clave reutilizada con otro contenido."
   fingerprint: String!

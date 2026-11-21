@@ -137,6 +137,9 @@ export function createReadBill(store: BillingStore) {
     const summary = accountSummary(loaded.value);
     if (!summary.ok) return summary;
     const bill = summary.value;
+    const guestNumbers = new Map(
+      loaded.value.lines.map((l) => [l.order.participantId, l.order.participant?.guestNumber]),
+    );
     const details = new Map(loaded.value.lines.map((l) => [l.id, l]));
     return ok({
       sessionId: input.value.sessionId,
@@ -161,12 +164,16 @@ export function createReadBill(store: BillingStore) {
           outstandingMinor: l.outstanding.amountMinor.toString(),
         };
       }),
-      participants: [...bill.byParticipant].map(([participantId, p]) => ({
-        participantId,
-        totalMinor: p.total.amountMinor.toString(),
-        paidMinor: p.paid.amountMinor.toString(),
-        outstandingMinor: p.outstanding.amountMinor.toString(),
-      })),
+      participants: [...bill.byParticipant].map(([participantId, p]) => {
+        const guestNumber = guestNumbers.get(participantId);
+        return {
+          participantId,
+          ...(guestNumber ? { guestNumber } : {}),
+          totalMinor: p.total.amountMinor.toString(),
+          paidMinor: p.paid.amountMinor.toString(),
+          outstandingMinor: p.outstanding.amountMinor.toString(),
+        };
+      }),
       refundedMinor: sumRefunds(loaded.value).toString(),
       split:
         input.value.parts === undefined

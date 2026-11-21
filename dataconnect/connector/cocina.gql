@@ -278,7 +278,19 @@ query KitchenQueue($tenantId: UUID!, $branchId: UUID!, $stationId: UUID!)
 @auth(level: USER)
 @refresh(
   onMutationExecuted: {
+    operation: "TransferTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
     operation: "ServerSendOrderToKitchen"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerSendStaffOrder"
     condition: "request.variables.branchId == mutation.variables.branchId"
   }
 )

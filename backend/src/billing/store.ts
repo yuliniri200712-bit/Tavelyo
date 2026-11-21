@@ -17,6 +17,7 @@ export interface AccountLine {
   readonly quantity: number;
   readonly order: {
     readonly participantId: string;
+    readonly participant?: { readonly guestNumber: number | null };
     readonly sentToKitchenAt: string | null;
     readonly approval: string;
   };

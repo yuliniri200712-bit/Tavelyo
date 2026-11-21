@@ -1,5 +1,9 @@
 import {
+  createBillingGateway,
+  createComandaGateway,
   createBranchAdminGateway,
+  createCashGateway,
+  createTenantProfileGateway,
   createCatalogAdminGateway,
   createFirebaseAuthGateway,
   createFloorAdminGateway,
@@ -15,6 +19,8 @@ import {
   parseFirebaseEnvironment,
   type RawEnvironment,
 } from '@tavelyo/data-access';
+import type { BillingGateway, TenantProfileGateway } from '@tavelyo/billing';
+import type { CashGateway } from '@tavelyo/cash';
 import type { CatalogAdminGateway } from '@tavelyo/catalog';
 import type { FloorAdminGateway, FloorServiceGateway } from '@tavelyo/floor';
 import type { AuthGateway, ProfileGateway } from '@tavelyo/identity';
@@ -25,6 +31,7 @@ import type { BranchAdminGateway, TenancyGateway } from '@tavelyo/tenancy';
 
 /** Dependencias de la app, inyectadas por contexto (ADR-0010). */
 export interface Services {
+  readonly comanda: import('@tavelyo/orders/domain').ComandaGateway;
   readonly auth: AuthGateway;
   readonly profiles: ProfileGateway;
   readonly tenancy: TenancyGateway;
@@ -36,6 +43,9 @@ export interface Services {
   readonly orders: StaffOrdersGateway;
   readonly serviceRequests: ServiceRequestsGateway;
   readonly orderApproval: OrderApprovalGateway;
+  readonly cash: CashGateway;
+  readonly billing: BillingGateway;
+  readonly tenantProfile: TenantProfileGateway;
   /** Dirección pública de menu-web: la del QR de cada mesa. */
   readonly menuWebUrl: string;
   readonly usesEmulators: boolean;
@@ -79,23 +89,25 @@ export function compose(env: RawEnvironment): Composition {
     };
   }
   const client = createFirebaseClient(environment.value);
+  const functions = createFunctionsClient(client, environment.value);
   return {
     ok: true,
     services: {
+      comanda: createComandaGateway(client.dataConnect, functions),
       auth: createFirebaseAuthGateway(client.auth),
       profiles: createProfileGateway(client.dataConnect),
       tenancy: createTenancyGateway(client.dataConnect),
       floorAdmin: createFloorAdminGateway(client.dataConnect),
-      floorService: createFloorServiceGateway(
-        client.dataConnect,
-        createFunctionsClient(client, environment.value),
-      ),
+      floorService: createFloorServiceGateway(client.dataConnect, functions),
       catalogAdmin: createCatalogAdminGateway(client.dataConnect),
       branchAdmin: createBranchAdminGateway(client.dataConnect),
       kitchen: createKitchenGateway(client.dataConnect),
       orders: createStaffOrdersGateway(client.dataConnect),
       serviceRequests: createServiceRequestsGateway(client.dataConnect),
       orderApproval: createOrderApprovalGateway(client.dataConnect),
+      cash: createCashGateway(client.dataConnect, functions),
+      billing: createBillingGateway(client.dataConnect, functions),
+      tenantProfile: createTenantProfileGateway(client.dataConnect, functions),
       menuWebUrl,
       usesEmulators: environment.value.useEmulators,
     },

@@ -2,6 +2,10 @@
 import { initializeApp } from 'firebase-admin/app';
 import { createBillingStore } from './data/billing.ts';
 import { createCashStore } from './data/cash.ts';
+import { createReceiptStore } from './data/receipt.ts';
+import { createTenantStore } from './data/tenant.ts';
+import { createReadPaymentReceipt } from './billing/receipt.ts';
+import { createSetTenantTaxId } from './tenant/tax-id.ts';
 import {
   createCloseCashSession,
   createOpenCashSession,
@@ -30,6 +34,8 @@ import {
 } from './data/sql-connect.ts';
 import { createRateLimiter, createTableSessionStore } from './data/table-sessions.ts';
 import { createRevokeMember } from './members/revoke-member.ts';
+import { createStaffOrder } from './orders/staff-order.ts';
+import { staffOrderContext } from './data/staff-orders.ts';
 import { createQuoteOrder } from './orders/quote-order.ts';
 import { createKitchenDispatcher } from './orders/send-to-kitchen.ts';
 import { createSubmitOrder } from './orders/submit-order.ts';
@@ -65,13 +71,25 @@ export const {
   readBillPayments,
   recordPayment,
   refundPayment,
+  readPaymentReceipt,
+  setTenantTaxId,
   revokeMember,
   provisionTenant,
   joinTableSession,
   quoteOrder,
+  submitStaffOrder,
   submitOrder,
   requestService,
 } = createCallables({
+  submitStaffOrder: createStaffOrder({
+    context: staffOrderContext(dataConnect),
+    quotes: (uid) => createQuoteStore(dataConnect, uid),
+    dispatch: createKitchenDispatcher({
+      orders: createKitchenOrderStore(dataConnect, 'ServerSendStaffOrder'),
+    }),
+    clock: systemClock,
+    limiter,
+  }),
   readBill: createReadBill(createBillingStore(dataConnect)),
   closeCashSession: createCloseCashSession(createCashStore(dataConnect)),
   closeTable: createCloseTable(createBillingStore(dataConnect)),
@@ -81,6 +99,8 @@ export const {
   readBillPayments: createReadBillPayments(createBillingStore(dataConnect)),
   recordPayment: createRecordPayment(createBillingStore(dataConnect)),
   refundPayment: createRefundPayment(createBillingStore(dataConnect)),
+  readPaymentReceipt: createReadPaymentReceipt(createReceiptStore(dataConnect)),
+  setTenantTaxId: createSetTenantTaxId(createTenantStore(dataConnect)),
   revokeMember: createRevokeMember({
     memberships: createMembershipCommands(dataConnect),
     directory: createMembershipDirectory(dataConnect),

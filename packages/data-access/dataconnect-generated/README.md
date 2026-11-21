@@ -11,6 +11,7 @@ This README will guide you through the process of using the generated JavaScript
   - [*BranchOrderApproval*](#branchorderapproval)
   - [*PendingApprovalOrders*](#pendingapprovalorders)
   - [*BranchRegisters*](#branchregisters)
+  - [*BillingTables*](#billingtables)
   - [*CatalogAdmin*](#catalogadmin)
   - [*BranchCatalog*](#branchcatalog)
   - [*PublicMenu*](#publicmenu)
@@ -19,6 +20,7 @@ This README will guide you through the process of using the generated JavaScript
   - [*BranchStations*](#branchstations)
   - [*KitchenStations*](#kitchenstations)
   - [*KitchenQueue*](#kitchenqueue)
+  - [*StaffOrderDesk*](#stafforderdesk)
   - [*BranchLayout*](#branchlayout)
   - [*ServerPaymentOperationByKey*](#serverpaymentoperationbykey)
   - [*ServerStalePaymentOperations*](#serverstalepaymentoperations)
@@ -45,6 +47,7 @@ This README will guide you through the process of using the generated JavaScript
   - [*ServerOrderByQuote*](#serverorderbyquote)
   - [*ServerProductsForOrder*](#serverproductsfororder)
   - [*TenantBranches*](#tenantbranches)
+  - [*TenantProfile*](#tenantprofile)
 - [**Mutations**](#mutations)
   - [*SetBranchOrderApproval*](#setbranchorderapproval)
   - [*ApproveOrder*](#approveorder)
@@ -69,6 +72,8 @@ This README will guide you through the process of using the generated JavaScript
   - [*SetProductStation*](#setproductstation)
   - [*StartOrderItem*](#startorderitem)
   - [*FinishOrderItem*](#finishorderitem)
+  - [*AddTableGuest*](#addtableguest)
+  - [*ServerSendStaffOrder*](#serversendstafforder)
   - [*CreateSector*](#createsector)
   - [*UpdateSector*](#updatesector)
   - [*CreateTable*](#createtable)
@@ -109,6 +114,7 @@ This README will guide you through the process of using the generated JavaScript
   - [*OpenTableSession*](#opentablesession)
   - [*CloseTableSession*](#closetablesession)
   - [*RemoveParticipant*](#removeparticipant)
+  - [*TransferTableSession*](#transfertablesession)
   - [*ServerInsertParticipant*](#serverinsertparticipant)
   - [*ServerRenewParticipant*](#serverrenewparticipant)
   - [*ServerHitRateLimit*](#serverhitratelimit)
@@ -536,6 +542,130 @@ console.log(data.registers);
 executeQuery(ref).then((response) => {
   const data = response.data;
   console.log(data.registers);
+});
+```
+
+## BillingTables
+You can execute the `BillingTables` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+billingTables(vars: BillingTablesVariables, options?: ExecuteQueryOptions): QueryPromise<BillingTablesData, BillingTablesVariables>;
+
+interface BillingTablesRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: BillingTablesVariables): QueryRef<BillingTablesData, BillingTablesVariables>;
+}
+export const billingTablesRef: BillingTablesRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+billingTables(dc: DataConnect, vars: BillingTablesVariables, options?: ExecuteQueryOptions): QueryPromise<BillingTablesData, BillingTablesVariables>;
+
+interface BillingTablesRef {
+  ...
+  (dc: DataConnect, vars: BillingTablesVariables): QueryRef<BillingTablesData, BillingTablesVariables>;
+}
+export const billingTablesRef: BillingTablesRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the billingTablesRef:
+```typescript
+const name = billingTablesRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `BillingTables` query requires an argument of type `BillingTablesVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface BillingTablesVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `BillingTables` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `BillingTablesData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface BillingTablesData {
+  tableSessions: ({
+    id: UUIDString;
+    openedAt: TimestampString;
+    table: {
+      code: string;
+      sector: {
+        name: string;
+      };
+    };
+    serviceRequests_on_session: ({
+      createdAt: TimestampString;
+    })[];
+  } & TableSession_Key)[];
+}
+```
+### Using `BillingTables`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, billingTables, BillingTablesVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `BillingTables` query requires an argument of type `BillingTablesVariables`:
+const billingTablesVars: BillingTablesVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `billingTables()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await billingTables(billingTablesVars);
+// Variables can be defined inline as well.
+const { data } = await billingTables({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await billingTables(dataConnect, billingTablesVars);
+
+console.log(data.tableSessions);
+
+// Or, you can use the `Promise` API.
+billingTables(billingTablesVars).then((response) => {
+  const data = response.data;
+  console.log(data.tableSessions);
+});
+```
+
+### Using `BillingTables`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, billingTablesRef, BillingTablesVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `BillingTables` query requires an argument of type `BillingTablesVariables`:
+const billingTablesVars: BillingTablesVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+};
+
+// Call the `billingTablesRef()` function to get a reference to the query.
+const ref = billingTablesRef(billingTablesVars);
+// Variables can be defined inline as well.
+const ref = billingTablesRef({ tenantId: ..., branchId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = billingTablesRef(dataConnect, billingTablesVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.tableSessions);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.tableSessions);
 });
 ```
 
@@ -1585,6 +1715,184 @@ console.log(data.orderItems);
 executeQuery(ref).then((response) => {
   const data = response.data;
   console.log(data.orderItems);
+});
+```
+
+## StaffOrderDesk
+You can execute the `StaffOrderDesk` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+staffOrderDesk(vars: StaffOrderDeskVariables, options?: ExecuteQueryOptions): QueryPromise<StaffOrderDeskData, StaffOrderDeskVariables>;
+
+interface StaffOrderDeskRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: StaffOrderDeskVariables): QueryRef<StaffOrderDeskData, StaffOrderDeskVariables>;
+}
+export const staffOrderDeskRef: StaffOrderDeskRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+staffOrderDesk(dc: DataConnect, vars: StaffOrderDeskVariables, options?: ExecuteQueryOptions): QueryPromise<StaffOrderDeskData, StaffOrderDeskVariables>;
+
+interface StaffOrderDeskRef {
+  ...
+  (dc: DataConnect, vars: StaffOrderDeskVariables): QueryRef<StaffOrderDeskData, StaffOrderDeskVariables>;
+}
+export const staffOrderDeskRef: StaffOrderDeskRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the staffOrderDeskRef:
+```typescript
+const name = staffOrderDeskRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `StaffOrderDesk` query requires an argument of type `StaffOrderDeskVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface StaffOrderDeskVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `StaffOrderDesk` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `StaffOrderDeskData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface StaffOrderDeskData {
+  tableSession?: {
+    status: TableSessionStatus;
+    tenantId: UUIDString;
+    branchId: UUIDString;
+    table: {
+      sector: {
+        branch: {
+          status: BranchStatus;
+        };
+      };
+    };
+  };
+  branch?: {
+    currency: string;
+    timezone: string;
+    productBranches_on_branch: ({
+      daysMask?: number | null;
+      startMinute?: number | null;
+      endMinute?: number | null;
+      currentPrice?: {
+        id: UUIDString;
+        amountMinor: Int64String;
+        currency: string;
+      } & Price_Key;
+      product: {
+        id: UUIDString;
+        name: string;
+        description?: string | null;
+        allergensDeclared?: string[] | null;
+        sort: number;
+        category: {
+          id: UUIDString;
+          name: string;
+          sort: number;
+        } & Category_Key;
+        modifierGroups_on_product: ({
+          id: UUIDString;
+          name: string;
+          minSelect: number;
+          maxSelect: number;
+          sort: number;
+          modifierOptions_on_group: ({
+            id: UUIDString;
+            name: string;
+            priceDeltaMinor: Int64String;
+            sort: number;
+          } & ModifierOption_Key)[];
+        } & ModifierGroup_Key)[];
+      } & Product_Key;
+    })[];
+  };
+  sessionParticipants: ({
+    id: UUIDString;
+    guestNumber?: number | null;
+    joinedAt: TimestampString;
+  } & SessionParticipant_Key)[];
+}
+```
+### Using `StaffOrderDesk`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, staffOrderDesk, StaffOrderDeskVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `StaffOrderDesk` query requires an argument of type `StaffOrderDeskVariables`:
+const staffOrderDeskVars: StaffOrderDeskVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+};
+
+// Call the `staffOrderDesk()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await staffOrderDesk(staffOrderDeskVars);
+// Variables can be defined inline as well.
+const { data } = await staffOrderDesk({ tenantId: ..., branchId: ..., sessionId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await staffOrderDesk(dataConnect, staffOrderDeskVars);
+
+console.log(data.tableSession);
+console.log(data.branch);
+console.log(data.sessionParticipants);
+
+// Or, you can use the `Promise` API.
+staffOrderDesk(staffOrderDeskVars).then((response) => {
+  const data = response.data;
+  console.log(data.tableSession);
+  console.log(data.branch);
+  console.log(data.sessionParticipants);
+});
+```
+
+### Using `StaffOrderDesk`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, staffOrderDeskRef, StaffOrderDeskVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `StaffOrderDesk` query requires an argument of type `StaffOrderDeskVariables`:
+const staffOrderDeskVars: StaffOrderDeskVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+};
+
+// Call the `staffOrderDeskRef()` function to get a reference to the query.
+const ref = staffOrderDeskRef(staffOrderDeskVars);
+// Variables can be defined inline as well.
+const ref = staffOrderDeskRef({ tenantId: ..., branchId: ..., sessionId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = staffOrderDeskRef(dataConnect, staffOrderDeskVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.tableSession);
+console.log(data.branch);
+console.log(data.sessionParticipants);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.tableSession);
+  console.log(data.branch);
+  console.log(data.sessionParticipants);
 });
 ```
 
@@ -4807,6 +5115,118 @@ executeQuery(ref).then((response) => {
 });
 ```
 
+## TenantProfile
+You can execute the `TenantProfile` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+tenantProfile(vars: TenantProfileVariables, options?: ExecuteQueryOptions): QueryPromise<TenantProfileData, TenantProfileVariables>;
+
+interface TenantProfileRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: TenantProfileVariables): QueryRef<TenantProfileData, TenantProfileVariables>;
+}
+export const tenantProfileRef: TenantProfileRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+tenantProfile(dc: DataConnect, vars: TenantProfileVariables, options?: ExecuteQueryOptions): QueryPromise<TenantProfileData, TenantProfileVariables>;
+
+interface TenantProfileRef {
+  ...
+  (dc: DataConnect, vars: TenantProfileVariables): QueryRef<TenantProfileData, TenantProfileVariables>;
+}
+export const tenantProfileRef: TenantProfileRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the tenantProfileRef:
+```typescript
+const name = tenantProfileRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `TenantProfile` query requires an argument of type `TenantProfileVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface TenantProfileVariables {
+  tenantId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `TenantProfile` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `TenantProfileData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface TenantProfileData {
+  tenant?: {
+    name: string;
+    taxId?: string | null;
+  };
+}
+```
+### Using `TenantProfile`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, tenantProfile, TenantProfileVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `TenantProfile` query requires an argument of type `TenantProfileVariables`:
+const tenantProfileVars: TenantProfileVariables = {
+  tenantId: ..., 
+};
+
+// Call the `tenantProfile()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await tenantProfile(tenantProfileVars);
+// Variables can be defined inline as well.
+const { data } = await tenantProfile({ tenantId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await tenantProfile(dataConnect, tenantProfileVars);
+
+console.log(data.tenant);
+
+// Or, you can use the `Promise` API.
+tenantProfile(tenantProfileVars).then((response) => {
+  const data = response.data;
+  console.log(data.tenant);
+});
+```
+
+### Using `TenantProfile`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, tenantProfileRef, TenantProfileVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `TenantProfile` query requires an argument of type `TenantProfileVariables`:
+const tenantProfileVars: TenantProfileVariables = {
+  tenantId: ..., 
+};
+
+// Call the `tenantProfileRef()` function to get a reference to the query.
+const ref = tenantProfileRef(tenantProfileVars);
+// Variables can be defined inline as well.
+const ref = tenantProfileRef({ tenantId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = tenantProfileRef(dataConnect, tenantProfileVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.tenant);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.tenant);
+});
+```
+
 # Mutations
 
 There are two ways to execute a Data Connect Mutation using the generated Web SDK:
@@ -7715,6 +8135,265 @@ console.log(data.auditEvent_insert);
 executeMutation(ref).then((response) => {
   const data = response.data;
   console.log(data.orderItem_updateMany);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## AddTableGuest
+You can execute the `AddTableGuest` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+addTableGuest(vars: AddTableGuestVariables): MutationPromise<AddTableGuestData, AddTableGuestVariables>;
+
+interface AddTableGuestRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: AddTableGuestVariables): MutationRef<AddTableGuestData, AddTableGuestVariables>;
+}
+export const addTableGuestRef: AddTableGuestRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+addTableGuest(dc: DataConnect, vars: AddTableGuestVariables): MutationPromise<AddTableGuestData, AddTableGuestVariables>;
+
+interface AddTableGuestRef {
+  ...
+  (dc: DataConnect, vars: AddTableGuestVariables): MutationRef<AddTableGuestData, AddTableGuestVariables>;
+}
+export const addTableGuestRef: AddTableGuestRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the addTableGuestRef:
+```typescript
+const name = addTableGuestRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `AddTableGuest` mutation requires an argument of type `AddTableGuestVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface AddTableGuestVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  number: number;
+}
+```
+### Return Type
+Recall that executing the `AddTableGuest` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `AddTableGuestData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface AddTableGuestData {
+  locked: number;
+  sessionParticipant_insert: SessionParticipant_Key;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `AddTableGuest`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, addTableGuest, AddTableGuestVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `AddTableGuest` mutation requires an argument of type `AddTableGuestVariables`:
+const addTableGuestVars: AddTableGuestVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  number: ..., 
+};
+
+// Call the `addTableGuest()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await addTableGuest(addTableGuestVars);
+// Variables can be defined inline as well.
+const { data } = await addTableGuest({ tenantId: ..., branchId: ..., sessionId: ..., number: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await addTableGuest(dataConnect, addTableGuestVars);
+
+console.log(data.locked);
+console.log(data.sessionParticipant_insert);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+addTableGuest(addTableGuestVars).then((response) => {
+  const data = response.data;
+  console.log(data.locked);
+  console.log(data.sessionParticipant_insert);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `AddTableGuest`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, addTableGuestRef, AddTableGuestVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `AddTableGuest` mutation requires an argument of type `AddTableGuestVariables`:
+const addTableGuestVars: AddTableGuestVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  number: ..., 
+};
+
+// Call the `addTableGuestRef()` function to get a reference to the mutation.
+const ref = addTableGuestRef(addTableGuestVars);
+// Variables can be defined inline as well.
+const ref = addTableGuestRef({ tenantId: ..., branchId: ..., sessionId: ..., number: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = addTableGuestRef(dataConnect, addTableGuestVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.locked);
+console.log(data.sessionParticipant_insert);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.locked);
+  console.log(data.sessionParticipant_insert);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## ServerSendStaffOrder
+You can execute the `ServerSendStaffOrder` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+serverSendStaffOrder(vars: ServerSendStaffOrderVariables): MutationPromise<ServerSendStaffOrderData, ServerSendStaffOrderVariables>;
+
+interface ServerSendStaffOrderRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerSendStaffOrderVariables): MutationRef<ServerSendStaffOrderData, ServerSendStaffOrderVariables>;
+}
+export const serverSendStaffOrderRef: ServerSendStaffOrderRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+serverSendStaffOrder(dc: DataConnect, vars: ServerSendStaffOrderVariables): MutationPromise<ServerSendStaffOrderData, ServerSendStaffOrderVariables>;
+
+interface ServerSendStaffOrderRef {
+  ...
+  (dc: DataConnect, vars: ServerSendStaffOrderVariables): MutationRef<ServerSendStaffOrderData, ServerSendStaffOrderVariables>;
+}
+export const serverSendStaffOrderRef: ServerSendStaffOrderRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverSendStaffOrderRef:
+```typescript
+const name = serverSendStaffOrderRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `ServerSendStaffOrder` mutation requires an argument of type `ServerSendStaffOrderVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface ServerSendStaffOrderVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  orderId: UUIDString;
+  authUid: string;
+}
+```
+### Return Type
+Recall that executing the `ServerSendStaffOrder` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `ServerSendStaffOrderData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface ServerSendStaffOrderData {
+  locked: number;
+  sent: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `ServerSendStaffOrder`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, serverSendStaffOrder, ServerSendStaffOrderVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerSendStaffOrder` mutation requires an argument of type `ServerSendStaffOrderVariables`:
+const serverSendStaffOrderVars: ServerSendStaffOrderVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  orderId: ..., 
+  authUid: ..., 
+};
+
+// Call the `serverSendStaffOrder()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await serverSendStaffOrder(serverSendStaffOrderVars);
+// Variables can be defined inline as well.
+const { data } = await serverSendStaffOrder({ tenantId: ..., branchId: ..., sessionId: ..., orderId: ..., authUid: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await serverSendStaffOrder(dataConnect, serverSendStaffOrderVars);
+
+console.log(data.locked);
+console.log(data.sent);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+serverSendStaffOrder(serverSendStaffOrderVars).then((response) => {
+  const data = response.data;
+  console.log(data.locked);
+  console.log(data.sent);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `ServerSendStaffOrder`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, serverSendStaffOrderRef, ServerSendStaffOrderVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerSendStaffOrder` mutation requires an argument of type `ServerSendStaffOrderVariables`:
+const serverSendStaffOrderVars: ServerSendStaffOrderVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  orderId: ..., 
+  authUid: ..., 
+};
+
+// Call the `serverSendStaffOrderRef()` function to get a reference to the mutation.
+const ref = serverSendStaffOrderRef(serverSendStaffOrderVars);
+// Variables can be defined inline as well.
+const ref = serverSendStaffOrderRef({ tenantId: ..., branchId: ..., sessionId: ..., orderId: ..., authUid: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = serverSendStaffOrderRef(dataConnect, serverSendStaffOrderVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.locked);
+console.log(data.sent);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.locked);
+  console.log(data.sent);
   console.log(data.auditEvent_insert);
 });
 ```
@@ -12637,6 +13316,132 @@ console.log(data.auditEvent_insert);
 executeMutation(ref).then((response) => {
   const data = response.data;
   console.log(data.sessionParticipant_update);
+  console.log(data.auditEvent_insert);
+});
+```
+
+## TransferTableSession
+You can execute the `TransferTableSession` mutation using the following action shortcut function, or by calling `executeMutation()` after calling the following `MutationRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+transferTableSession(vars: TransferTableSessionVariables): MutationPromise<TransferTableSessionData, TransferTableSessionVariables>;
+
+interface TransferTableSessionRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: TransferTableSessionVariables): MutationRef<TransferTableSessionData, TransferTableSessionVariables>;
+}
+export const transferTableSessionRef: TransferTableSessionRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `MutationRef` function.
+```typescript
+transferTableSession(dc: DataConnect, vars: TransferTableSessionVariables): MutationPromise<TransferTableSessionData, TransferTableSessionVariables>;
+
+interface TransferTableSessionRef {
+  ...
+  (dc: DataConnect, vars: TransferTableSessionVariables): MutationRef<TransferTableSessionData, TransferTableSessionVariables>;
+}
+export const transferTableSessionRef: TransferTableSessionRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the transferTableSessionRef:
+```typescript
+const name = transferTableSessionRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `TransferTableSession` mutation requires an argument of type `TransferTableSessionVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface TransferTableSessionVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  sourceId: UUIDString;
+  tableId: UUIDString;
+}
+```
+### Return Type
+Recall that executing the `TransferTableSession` mutation returns a `MutationPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `TransferTableSessionData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface TransferTableSessionData {
+  moved: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+```
+### Using `TransferTableSession`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, transferTableSession, TransferTableSessionVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `TransferTableSession` mutation requires an argument of type `TransferTableSessionVariables`:
+const transferTableSessionVars: TransferTableSessionVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  sourceId: ..., 
+  tableId: ..., 
+};
+
+// Call the `transferTableSession()` function to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await transferTableSession(transferTableSessionVars);
+// Variables can be defined inline as well.
+const { data } = await transferTableSession({ tenantId: ..., branchId: ..., sessionId: ..., sourceId: ..., tableId: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await transferTableSession(dataConnect, transferTableSessionVars);
+
+console.log(data.moved);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+transferTableSession(transferTableSessionVars).then((response) => {
+  const data = response.data;
+  console.log(data.moved);
+  console.log(data.auditEvent_insert);
+});
+```
+
+### Using `TransferTableSession`'s `MutationRef` function
+
+```typescript
+import { getDataConnect, executeMutation } from 'firebase/data-connect';
+import { connectorConfig, transferTableSessionRef, TransferTableSessionVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `TransferTableSession` mutation requires an argument of type `TransferTableSessionVariables`:
+const transferTableSessionVars: TransferTableSessionVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  sessionId: ..., 
+  sourceId: ..., 
+  tableId: ..., 
+};
+
+// Call the `transferTableSessionRef()` function to get a reference to the mutation.
+const ref = transferTableSessionRef(transferTableSessionVars);
+// Variables can be defined inline as well.
+const ref = transferTableSessionRef({ tenantId: ..., branchId: ..., sessionId: ..., sourceId: ..., tableId: ..., });
+
+// You can also pass in a `DataConnect` instance to the `MutationRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = transferTableSessionRef(dataConnect, transferTableSessionVars);
+
+// Call `executeMutation()` on the reference to execute the mutation.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeMutation(ref);
+
+console.log(data.moved);
+console.log(data.auditEvent_insert);
+
+// Or, you can use the `Promise` API.
+executeMutation(ref).then((response) => {
+  const data = response.data;
+  console.log(data.moved);
   console.log(data.auditEvent_insert);
 });
 ```

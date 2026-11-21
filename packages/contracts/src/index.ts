@@ -36,6 +36,8 @@ export type {
   RecordRefundRequest,
   RecordRefundResponse,
   CloseTableResponse,
+  ReadPaymentReceiptRequest,
+  PaymentReceiptResponse,
 } from './billing-api.ts';
 export {
   RECEIPT_NUMBER_MAX_LENGTH,
@@ -73,3 +75,6 @@ export type {
   CloseCashSessionResponse,
 } from './cash-api.ts';
 export { CASH_REASON } from './cash-api.ts';
+export type { SetTenantTaxIdRequest, SetTenantTaxIdResponse } from './tenant-api.ts';
+
+export type { StaffOrderResponse } from './customer-api.ts';

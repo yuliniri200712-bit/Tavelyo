@@ -72,3 +72,4 @@ export {
   type CashMovementKind,
   type ChangeError,
 } from './cash';
+export { NIT_DIGITS, nitCheckDigit, parseNit, type Nit } from './nit';

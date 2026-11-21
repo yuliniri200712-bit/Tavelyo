@@ -116,6 +116,12 @@ export interface FloorServiceGateway {
   ): () => void;
   participants(scope: BranchScope, sessionId: string): FloorResult<readonly SessionParticipant[]>;
   openTable(scope: BranchScope, tableId: string): FloorResult<void>;
+  transfer(
+    scope: BranchScope,
+    sessionId: string,
+    sourceId: string,
+    tableId: string,
+  ): FloorResult<void>;
   closeSession(scope: BranchScope, sessionId: string): FloorResult<void>;
   removeParticipant(scope: BranchScope, participantId: string): FloorResult<void>;
 }

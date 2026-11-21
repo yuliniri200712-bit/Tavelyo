@@ -153,3 +153,37 @@ Hallazgos durante la verificación:
 
 - Como se esperaba, la primera regresión tras exigir caja falló en las 12 pruebas de 4a, 4b y 4c que cobraban en efectivo sin turno («Abre tu caja para registrar efectivo.»); el resto (192) pasó. Se adaptaron abriendo la caja de cada persona.
 - `tsc` rechazó pasar `CashScope` a la consulta genérica de las pruebas; se corrigió copiando el objeto.
+
+## 2026-11-21 — Bloque 6 en desarrollo, caja y comprobante
+
+El cierre anterior se verificó directamente en GitHub. La rama `fase-4-caja-pagos` apunta a `8cb5356`, que registra la aprobación del bloque 5 y de D-40. Pasaron la [CI de la implementación](https://github.com/yuliniri200712-bit/Tavelyo/actions/runs/44779285439) y la [CI del cierre documental](https://github.com/yuliniri200712-bit/Tavelyo/actions/runs/44803569658).
+
+| Comprobación local | Resultado |
+|---|---|
+| `npm run check` | Formato, ESLint y tipos correctos. Pasaron 993 pruebas en 75 archivos. Las nuevas cubren el acceso del cajero, las rutas restringidas para el mesero y la confirmación de datáfono y transferencia con la misma clave al reintentar. |
+| `caja-comprobante.spec.ts` con Chrome y emuladores | Un pedido de $32.000. Antes de abrir turno, el cajero no puede confirmar efectivo. Abre con $10.000, revisa y cancela, luego confirma un único cobro con $50.000 recibidos. El turno muestra $42.000 y el comprobante muestra $18.000 de cambio. El comprobante ofrece impresión y pasó la revisión automatizada de accesibilidad con axe. |
+| Regresión de `backend/tests/caja-fase-4.int.test.ts` en el emulador | Pasaron las 7 pruebas del bloque 5 sobre la copia de trabajo del bloque 6, incluidas venta simultánea al cierre y devolución de efectivo. |
+| `npm run check:secrets` | Sin hallazgos en los 508 archivos revisados por el comando. |
+
+En el primer recorrido de Chrome caducó la espera de la prueba mientras las funciones cargaban la cuenta. El recorrido pasó con la espera de arranque en frío usada por las demás pruebas del proyecto. La impresión en papel y los demás navegadores quedan pendientes.
+
+## 2026-11-21 — Revisión del trabajo local del bloque 6 y verificación de la 6a
+
+Revisión del trabajo sin confirmar que dejaron Claude Code (2026-11-20) y Codex (2026-11-21), antes de seguir con la 6a (D-42).
+
+Correcciones:
+
+- Formato de Prettier en 27 archivos y 4 errores de ESLint (aserciones `!` en `backend/src/billing/account.ts`, `dataconnect/tests/salon-carta.int.test.ts` y `e2e/emulators/mesero-comanda-traslado.spec.ts`), sin cambiar el comportamiento.
+- Decisiones registradas en `requirements.md`: D-41 (NIT en el comprobante, aprobado el 2026-11-20), D-42 (bloque 6 en tres partes y recomendaciones aceptadas) y D-43 (persona sin teléfono con su propio saldo). Modelo de datos al día.
+- Pruebas unitarias nuevas de `submitStaffOrder` (`backend/src/orders/staff-order.test.ts`, 7): envío directo a cocina, identificadores y campos no admitidos, sin acceso a la mesa, precio cambiado, mesa cerrada y reintento con la misma clave.
+
+| Comprobación | Resultado |
+|---|---|
+| `npm run check` | Formato, ESLint y tipos correctos. 1004 pruebas en 76 archivos. En una primera tanda, dos pruebas de pantalla (cocina y salón) superaron los 5 s mientras el equipo seguía cargado por Playwright; repetidas, pasan todas |
+| Integración de SQL Connect | 118 pruebas, incluido el traslado con dos traslados simultáneos a la misma mesa |
+| Integración del backend | 94 pruebas, con la regresión de 4a, 4b, 4c y caja (bloque 5) |
+| SDK generado | Regenerado en `tavelyo-emu`; coincide con `packages/data-access/dataconnect-generated` |
+| Chrome con emuladores | `caja-comprobante.spec.ts` y `mesero-comanda-traslado.spec.ts` pasan (1,7 min) |
+| `npm run check:secrets` | Sin secretos en 508 archivos |
+
+Pendiente: los otros navegadores de D-15 (los corre la CI), la impresión en papel del comprobante y la aprobación del propietario de la 6a. La 6b y la 6c tienen ya pruebas, pero se revisan y aprueban después de la 6a.

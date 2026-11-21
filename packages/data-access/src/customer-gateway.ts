@@ -123,7 +123,7 @@ type MenuEntry =
 const byOrder = <T extends { readonly sort: number; readonly name: string }>(a: T, b: T) =>
   a.sort - b.sort || a.name.localeCompare(b.name, 'es');
 
-function toProduct(entry: MenuEntry, currency: string): MenuProduct | null {
+export function toProduct(entry: MenuEntry, currency: string): MenuProduct | null {
   const price = entry.currentPrice;
   // Un precio en otra moneda no se muestra: una cuenta no mezcla monedas (PM §2).
   if (!price || price.currency !== currency) return null;

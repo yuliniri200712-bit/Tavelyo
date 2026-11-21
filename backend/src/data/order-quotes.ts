@@ -136,13 +136,16 @@ export function toStoredQuote(row: QuoteRow): StoredQuote {
   };
 }
 
-const INSERT_QUOTE = `mutation InsertOrderQuote($quoteId: UUID!, $tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!, $participantId: UUID!, $authUid: String!, $quoteRef: String!, $idempotencyKey: String!, $fingerprint: String!, $currency: String!, $subtotalMinor: Int64!, $taxMinor: Int64!, $totalMinor: Int64!, $expiresAt: Timestamp!, $lines: [OrderQuoteLine_Data!]!) @transaction {
-  orderQuote_insert(data: { id: $quoteId, tenantId: $tenantId, branchId: $branchId, sessionId: $sessionId, participantId: $participantId, idempotencyKey: $idempotencyKey, fingerprint: $fingerprint, currency: $currency, subtotalMinor: $subtotalMinor, taxMinor: $taxMinor, totalMinor: $totalMinor, status: QUOTED, expiresAt: $expiresAt })
+const INSERT_QUOTE = `mutation InsertOrderQuote($staffUid: String, $initialStatus: OrderQuoteStatus!, $quoteId: UUID!, $tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!, $participantId: UUID!, $authUid: String!, $quoteRef: String!, $idempotencyKey: String!, $fingerprint: String!, $currency: String!, $subtotalMinor: Int64!, $taxMinor: Int64!, $totalMinor: Int64!, $expiresAt: Timestamp!, $lines: [OrderQuoteLine_Data!]!) @transaction {
+  orderQuote_insert(data: { id: $quoteId, tenantId: $tenantId, branchId: $branchId, sessionId: $sessionId, participantId: $participantId, idempotencyKey: $idempotencyKey, fingerprint: $fingerprint, currency: $currency, subtotalMinor: $subtotalMinor, taxMinor: $taxMinor, totalMinor: $totalMinor, staffUid: $staffUid, status: $initialStatus, expiresAt: $expiresAt })
   orderQuoteLine_insertMany(data: $lines)
   auditEvent_insert(data: { tenantId: $tenantId, actorId: $authUid, operation: "order_quote.create", resourceType: "order_quote", resourceId: $quoteRef })
 }`;
 
-export function createQuoteStore(dataConnect: DataConnect): QuoteStore {
+export function createQuoteStore(
+  dataConnect: DataConnect,
+  staffUid: string | null = null,
+): QuoteStore {
   return {
     async context(sessionId, authUid) {
       const { data } = await dataConnect.executeQuery<
@@ -166,7 +169,10 @@ export function createQuoteStore(dataConnect: DataConnect): QuoteStore {
       const { data } = await dataConnect.executeQuery<
         { orderQuotes: QuoteRow[] },
         { participantId: string; idempotencyKey: string }
-      >('ServerQuoteByKey', { participantId, idempotencyKey });
+      >('ServerQuoteByKey', {
+        participantId,
+        idempotencyKey: staffUid ? JSON.stringify([staffUid, idempotencyKey]) : idempotencyKey,
+      });
       const row = data.orderQuotes[0];
       return row ? toStoredQuote(row) : null;
     },
@@ -191,7 +197,11 @@ export function createQuoteStore(dataConnect: DataConnect): QuoteStore {
             participantId: quote.participantId,
             authUid: quote.authUid,
             quoteRef: quote.id,
-            idempotencyKey: quote.idempotencyKey,
+            staffUid,
+            initialStatus: staffUid ? 'CONFIRMED' : 'QUOTED',
+            idempotencyKey: staffUid
+              ? JSON.stringify([staffUid, quote.idempotencyKey])
+              : quote.idempotencyKey,
             fingerprint: quote.fingerprint,
             currency: summary.currency,
             subtotalMinor: summary.subtotalMinor,

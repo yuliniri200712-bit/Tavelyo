@@ -1,0 +1,22 @@
+{
+  "name": "@tavelyo/billing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Cuenta de la mesa en caja: cobrar en efectivo, datáfono o transferencia, dividir, reembolsar, cerrar la mesa y el comprobante con NIT (bloque 6a)",
+  "exports": {
+    ".": "./src/index.ts",
+    "./domain": "./src/domain/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@tavelyo/contracts": "*",
+    "@tavelyo/core": "*",
+    "@tavelyo/design-system": "*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.7"
+  }
+}

@@ -10,6 +10,12 @@ query FloorView($tenantId: UUID!, $branchId: UUID!)
 @auth(level: USER)
 @refresh(
   onMutationExecuted: {
+    operation: "TransferTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
     operation: "OpenTableSession"
     condition: "request.variables.branchId == mutation.variables.branchId"
   }
@@ -35,6 +41,12 @@ query FloorView($tenantId: UUID!, $branchId: UUID!)
 @refresh(
   onMutationExecuted: {
     operation: "ServerSendOrderToKitchen"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerSendStaffOrder"
     condition: "request.variables.branchId == mutation.variables.branchId"
   }
 )
@@ -412,6 +424,85 @@ mutation RemoveParticipant($tenantId: UUID!, $branchId: UUID!, $participantId: U
       operation: "session_participant.remove"
       resourceType: "session_participant"
       resourceId_expr: "vars.participantId"
+    }
+  )
+}
+
+mutation TransferTableSession(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sessionId: UUID!
+  $sourceId: UUID!
+  $tableId: UUID!
+) @auth(level: USER) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "session.transfer" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: session.transfer") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+    destination: diningTable(id: $tableId)
+      @check(expr: "this != null", message: "Mesa inexistente") {
+      tenantId @check(expr: "this == vars.tenantId", message: "La mesa no pertenece a la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "La mesa no pertenece a la sucursal")
+      archivedAt @check(expr: "this == null", message: "La mesa está archivada")
+      code
+      tableSessions_on_table(where: { status: { eq: OPEN } }, limit: 1)
+        @check(expr: "this.size() == 0", message: "La mesa de destino ya está ocupada") {
+        id
+      }
+      sector {
+        archivedAt @check(expr: "this == null", message: "El sector está archivado")
+        branch {
+          status @check(expr: "this == 'ACTIVE'", message: "La sucursal no está activa")
+        }
+      }
+    }
+  }
+  moved: tableSession_updateMany(
+    where: {
+      id: { eq: $sessionId }
+      tenantId: { eq: $tenantId }
+      branchId: { eq: $branchId }
+      tableId: { eq: $sourceId }
+      status: { eq: OPEN }
+    }
+    data: { tableId: $tableId, openTableId: $tableId, version_update: { inc: 1 } }
+  )
+  verified: query @redact {
+    tableSession(id: $sessionId)
+      @check(expr: "response.moved == 1", message: "La sesión cambió de mesa o ya está cerrada") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "session.transfer"
+      resourceType: "table_session"
+      resourceId_expr: "vars.sessionId"
+      reason_expr: "vars.sourceId + ' → ' + vars.tableId"
     }
   )
 }

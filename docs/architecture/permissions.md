@@ -158,7 +158,12 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - Las escrituras vuelven a comprobar en la transacción la membresía activa, el permiso, la sucursal y el estado del turno.
 - `recordPayment` y `refundPayment` en efectivo usan la caja abierta de quien llama (D-40).
 
-## 10. Pendiente
+## 10. Pantalla de caja y comprobante (Fase 4, bloque 6 en desarrollo)
+
+- `BillingTables` exige `payment.record`, membresía y empresa activas y acceso a la sucursal. Lista las sesiones abiertas de esa empresa y sucursal con la solicitud de cuenta pendiente. Los importes proceden de `readBill`.
+- `readPaymentReceipt` exige `payment.record` en la sucursal activa. Comprueba que el pago confirmado pertenece a la empresa, la sucursal y la sesión solicitadas. La interfaz de Operaciones usa el mismo permiso para las rutas de caja y comprobante.
+
+## 11. Pendiente
 
 - Topes concretos de descuento por rol (los de reembolso, D-34, están implementados desde 4b).
 - Política de autenticación reforzada para propietarios (según capacidades verificadas de Firebase Auth).

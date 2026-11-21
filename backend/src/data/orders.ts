@@ -82,7 +82,10 @@ export function orderVariables(order: NewOrder) {
 const ALREADY_SENT = /ya está en cocina/;
 const ALREADY_REQUESTED = /La aprobación ya se pidió/;
 
-export function createKitchenOrderStore(dataConnect: DataConnect): KitchenOrderStore {
+export function createKitchenOrderStore(
+  dataConnect: DataConnect,
+  sendOperation: 'ServerSendOrderToKitchen' | 'ServerSendStaffOrder' = 'ServerSendOrderToKitchen',
+): KitchenOrderStore {
   return {
     async byQuote(quoteId) {
       const { data } = await dataConnect.executeQuery<
@@ -145,7 +148,7 @@ export function createKitchenOrderStore(dataConnect: DataConnect): KitchenOrderS
 
     async send(target, authUid): Promise<SendResult> {
       try {
-        await dataConnect.executeMutation('ServerSendOrderToKitchen', { ...target, authUid });
+        await dataConnect.executeMutation(sendOperation, { ...target, authUid });
         return 'sent';
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

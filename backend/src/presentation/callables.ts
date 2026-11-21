@@ -12,6 +12,8 @@ import type {
   CloseTableResponse,
   RecordedPaymentResponse,
   RecordRefundResponse,
+  PaymentReceiptResponse,
+  SetTenantTaxIdResponse,
 } from '@tavelyo/contracts';
 import type { RevokeMemberResult } from '../members/revoke-member.ts';
 import type { ProvisionTenantResult } from '../provisioning/provision-tenant.ts';
@@ -20,6 +22,7 @@ import { failure, type Actor, type Outcome } from '../shared/outcome.ts';
 type UseCase<T> = (actor: Actor, data: unknown) => Promise<Outcome<T>>;
 
 export interface UseCases {
+  readonly submitStaffOrder: UseCase<import('@tavelyo/contracts').StaffOrderResponse>;
   readonly readBill: UseCase<BillResponse>;
   readonly closeCashSession: UseCase<CloseCashSessionResponse>;
   readonly closeTable: UseCase<CloseTableResponse>;
@@ -29,6 +32,8 @@ export interface UseCases {
   readonly readBillPayments: UseCase<BillPaymentsResponse>;
   readonly recordPayment: UseCase<RecordedPaymentResponse>;
   readonly refundPayment: UseCase<RecordRefundResponse>;
+  readonly readPaymentReceipt: UseCase<PaymentReceiptResponse>;
+  readonly setTenantTaxId: UseCase<SetTenantTaxIdResponse>;
   readonly revokeMember: UseCase<RevokeMemberResult>;
   readonly provisionTenant: UseCase<ProvisionTenantResult>;
   readonly joinTableSession: UseCase<JoinTableSessionResponse>;
@@ -69,6 +74,7 @@ const OPTIONS = { enforceAppCheck: false } as const;
 
 export function createCallables(useCases: UseCases) {
   return {
+    submitStaffOrder: onCall(OPTIONS, (request) => handle(request, useCases.submitStaffOrder)),
     readBill: onCall(OPTIONS, (request) => handle(request, useCases.readBill)),
     closeCashSession: onCall(OPTIONS, (request) => handle(request, useCases.closeCashSession)),
     openCashSession: onCall(OPTIONS, (request) => handle(request, useCases.openCashSession)),
@@ -78,6 +84,8 @@ export function createCallables(useCases: UseCases) {
     readBillPayments: onCall(OPTIONS, (request) => handle(request, useCases.readBillPayments)),
     recordPayment: onCall(OPTIONS, (request) => handle(request, useCases.recordPayment)),
     refundPayment: onCall(OPTIONS, (request) => handle(request, useCases.refundPayment)),
+    readPaymentReceipt: onCall(OPTIONS, (request) => handle(request, useCases.readPaymentReceipt)),
+    setTenantTaxId: onCall(OPTIONS, (request) => handle(request, useCases.setTenantTaxId)),
     revokeMember: onCall(OPTIONS, (request) => handle(request, useCases.revokeMember)),
     provisionTenant: onCall(OPTIONS, (request) => handle(request, useCases.provisionTenant)),
     // Del cliente en la mesa: exigen sesión de Firebase Auth, también anónima (ADR-0011).

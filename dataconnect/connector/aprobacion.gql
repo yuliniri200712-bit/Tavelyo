@@ -92,6 +92,12 @@ query PendingApprovalOrders($tenantId: UUID!, $branchId: UUID!)
 @auth(level: USER)
 @refresh(
   onMutationExecuted: {
+    operation: "TransferTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
     operation: "ServerRequestOrderApproval"
     condition: "request.variables.branchId == mutation.variables.branchId"
   }

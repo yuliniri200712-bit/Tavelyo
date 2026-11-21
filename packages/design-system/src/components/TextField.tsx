@@ -4,8 +4,8 @@ import { classNames } from './class-names.ts';
 export interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   /** Etiqueta visible y persistente; el placeholder nunca la sustituye (IV §6). */
   readonly label: string;
-  readonly hint?: string;
-  readonly error?: string;
+  readonly hint?: string | undefined;
+  readonly error?: string | undefined;
 }
 
 export function TextField({ label, hint, error, className, ...inputProps }: TextFieldProps) {

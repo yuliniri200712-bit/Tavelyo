@@ -14,7 +14,7 @@ If a user is not using a supported framework, they can use the generated SDK dir
 Here's an example of how to use it with the first 5 operations:
 
 ```js
-import { branchOrderApproval, setBranchOrderApproval, pendingApprovalOrders, approveOrder, rejectOrder, withdrawMyOrder, branchRegisters, createRegister, updateRegister, catalogAdmin } from '@tavelyo/dataconnect-sdk';
+import { branchOrderApproval, setBranchOrderApproval, pendingApprovalOrders, approveOrder, rejectOrder, withdrawMyOrder, branchRegisters, createRegister, updateRegister, billingTables } from '@tavelyo/dataconnect-sdk';
 
 
 // Operation BranchOrderApproval:  For variables, look at type BranchOrderApprovalVars in ../index.d.ts
@@ -44,8 +44,8 @@ const { data } = await CreateRegister(dataConnect, createRegisterVars);
 // Operation UpdateRegister:  For variables, look at type UpdateRegisterVars in ../index.d.ts
 const { data } = await UpdateRegister(dataConnect, updateRegisterVars);
 
-// Operation CatalogAdmin:  For variables, look at type CatalogAdminVars in ../index.d.ts
-const { data } = await CatalogAdmin(dataConnect, catalogAdminVars);
+// Operation BillingTables:  For variables, look at type BillingTablesVars in ../index.d.ts
+const { data } = await BillingTables(dataConnect, billingTablesVars);
 
 
 ```

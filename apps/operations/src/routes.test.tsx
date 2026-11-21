@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { ok } from '@tavelyo/core';
 import { SessionProvider, type AuthGateway, type StaffUser } from '@tavelyo/identity';
 import type { CatalogAdminGateway } from '@tavelyo/catalog';
+import type { BillingGateway, TenantProfileGateway } from '@tavelyo/billing';
+import type { CashGateway } from '@tavelyo/cash';
 import type { FloorAdminGateway, FloorServiceGateway } from '@tavelyo/floor';
 import type { KitchenGateway } from '@tavelyo/kitchen';
 import type { OrderApprovalGateway, StaffOrdersGateway } from '@tavelyo/orders';
@@ -53,7 +55,7 @@ const tenancy: TenancyGateway = {
         tenantName: 'El Puerto',
         roleCode: 'cashier',
         roleName: 'Cajero',
-        permissions: [],
+        permissions: ['payment.record', 'cash_session.open'],
       },
       {
         tenantId: 'c',
@@ -108,6 +110,7 @@ const floorService: FloorServiceGateway = {
   watchFloor: vi.fn(() => () => undefined),
   participants: vi.fn(async () => ok([])),
   openTable: vi.fn(async () => ok(undefined)),
+  transfer: vi.fn(async () => ok(undefined)),
   closeSession: vi.fn(async () => ok(undefined)),
   removeParticipant: vi.fn(async () => ok(undefined)),
 };
@@ -177,8 +180,31 @@ const orderApproval: OrderApprovalGateway = {
 
 function renderAt(path: string, user: StaffUser | null) {
   const auth = fakeAuth(user);
+  const cash: CashGateway = {
+    registers: vi.fn(async () => ok([])),
+    myTill: vi.fn(async () => ok(null)),
+    createRegister: done,
+    updateRegister: done,
+    openTill: vi.fn(),
+    move: vi.fn(),
+    closeTill: vi.fn(),
+  };
+  const billing: BillingGateway = {
+    openTables: vi.fn(async () => ok([])),
+    bill: vi.fn(),
+    payments: vi.fn(),
+    recordPayment: vi.fn(),
+    refund: vi.fn(),
+    closeTable: vi.fn(),
+    receipt: vi.fn(),
+  };
+  const tenantProfile: TenantProfileGateway = { profile: vi.fn(), setTaxId: vi.fn() };
   const services = {
+    comanda: { menu: vi.fn(), addGuest: vi.fn(), send: vi.fn() },
     auth,
+    cash,
+    billing,
+    tenantProfile,
     profiles: { ensureProfile: vi.fn(async () => ok(undefined)) },
     tenancy,
     floorAdmin,
@@ -204,6 +230,26 @@ function renderAt(path: string, user: StaffUser | null) {
 }
 
 describe('rutas de operations', () => {
+  it('el cajero entra en Caja y ve su turno y las mesas de la sucursal', async () => {
+    renderAt('/', ana);
+    fireEvent.click(await screen.findByRole('button', { name: 'El Puerto · Cajero' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Caja' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Caja' })).toBeTruthy();
+    expect(await screen.findByText('No hay cajas libres')).toBeTruthy();
+    expect(await screen.findByText('No hay mesas abiertas')).toBeTruthy();
+  });
+
+  it.each(['/caja', '/caja/comprobante/mesa/pago'])(
+    'el mesero sin payment.record no entra en %s',
+    async (path) => {
+      renderAt(path, ana);
+      fireEvent.click(await screen.findByRole('button', { name: 'La Fonda · Mesero' }));
+      expect(
+        await screen.findByRole('heading', { name: 'Esta sección no está disponible para tu rol' }),
+      ).toBeTruthy();
+    },
+  );
+
   it('sin sesión, el inicio lleva al acceso del personal', async () => {
     renderAt('/', null);
     expect(await screen.findByRole('heading', { name: 'Acceso del personal' })).toBeTruthy();

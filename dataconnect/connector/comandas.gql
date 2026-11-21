@@ -1,0 +1,277 @@
+# Comandas del mesero (RF-ME-02). La persona sin teléfono conserva su saldo en la sesión.
+query StaffOrderDesk($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      code
+      rolePermissions_on_role(where: { permission: { code: { eq: "order.create" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: order.create") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  actorBranch: membershipBranch(
+    key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+  )
+    @redact
+    @check(
+      expr: "this != null || response.membership.role.code == 'tenant_owner'"
+      message: "Sin acceso a la sucursal"
+    ) {
+    branchId
+  }
+
+  tableSession(id: $sessionId) @check(expr: "this != null", message: "Sesión inexistente") {
+    status @check(expr: "this == 'OPEN'", message: "La mesa está cerrada")
+    tenantId @check(expr: "this == vars.tenantId", message: "Sesión fuera de la empresa")
+    branchId @check(expr: "this == vars.branchId", message: "Sesión fuera de la sucursal")
+    table {
+      sector {
+        branch {
+          status @check(expr: "this == 'ACTIVE'", message: "Sucursal inactiva")
+        }
+      }
+    }
+  }
+  branch(id: $branchId) {
+    currency
+    timezone
+    productBranches_on_branch(
+      where: {
+        _and: [
+          { available: { eq: true } }
+          { currentPriceId: { isNull: false } }
+          { product: { archivedAt: { isNull: true } } }
+          { product: { category: { archivedAt: { isNull: true } } } }
+        ]
+      }
+      limit: 500
+    ) {
+      daysMask
+      startMinute
+      endMinute
+      currentPrice {
+        id
+        amountMinor
+        currency
+      }
+      product {
+        id
+        name
+        description
+        allergensDeclared
+        sort
+        category {
+          id
+          name
+          sort
+        }
+        modifierGroups_on_product(where: { archivedAt: { isNull: true } }) {
+          id
+          name
+          minSelect
+          maxSelect
+          sort
+          modifierOptions_on_group(where: { archivedAt: { isNull: true } }) {
+            id
+            name
+            priceDeltaMinor
+            sort
+          }
+        }
+      }
+    }
+  }
+  sessionParticipants(
+    where: {
+      _and: [
+        { sessionId: { eq: $sessionId } }
+        { removedAt: { isNull: true } }
+        { _or: [{ guestNumber: { isNull: false } }, { expiresAt: { gt_expr: "request.time" } }] }
+      ]
+    }
+    orderBy: [{ joinedAt: ASC }]
+  ) {
+    id
+    guestNumber
+    joinedAt
+  }
+}
+
+mutation AddTableGuest($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!, $number: Int!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "order.create" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: order.create") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId_expr: "auth.uid", branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+
+    tableSession(id: $sessionId)
+      @check(expr: "vars.number > 0", message: "Indica un número de persona mayor que cero")
+      @check(expr: "this != null", message: "Sesión inexistente") {
+      status @check(expr: "this == 'OPEN'", message: "La mesa está cerrada")
+      tenantId @check(expr: "this == vars.tenantId", message: "Sesión fuera de la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "Sesión fuera de la sucursal")
+      table {
+        sector {
+          branch {
+            status @check(expr: "this == 'ACTIVE'", message: "Sucursal inactiva")
+          }
+        }
+      }
+    }
+  }
+  locked: tableSession_updateMany(
+    where: { id: { eq: $sessionId }, status: { eq: OPEN } }
+    data: { version_update: { inc: 1 } }
+  )
+  verified: query @redact {
+    tableSession(id: $sessionId)
+      @check(expr: "response.locked == 1", message: "La mesa está cerrada") {
+      id
+    }
+  }
+  sessionParticipant_insert(
+    data: {
+      tenantId: $tenantId
+      branchId: $branchId
+      sessionId: $sessionId
+      guestNumber: $number
+      expiresAt_expr: "request.time"
+    }
+  )
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId_expr: "auth.uid"
+      operation: "session_participant.add_guest"
+      resourceType: "session_participant"
+      resourceId_expr: "response.sessionParticipant_insert.id"
+    }
+  )
+}
+
+mutation ServerSendStaffOrder(
+  $tenantId: UUID!
+  $branchId: UUID!
+  $sessionId: UUID!
+  $orderId: UUID!
+  $authUid: String!
+) @auth(level: NO_ACCESS) @transaction {
+  query @redact {
+    membership(key: { tenantId: $tenantId, userId: $authUid })
+      @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+      status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+      tenant {
+        status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+      }
+      role {
+        code
+        rolePermissions_on_role(where: { permission: { code: { eq: "order.create" } } })
+          @check(expr: "this.size() > 0", message: "Sin permiso: order.create") {
+          permission {
+            code
+          }
+        }
+      }
+    }
+    actorBranch: membershipBranch(
+      key: { tenantId: $tenantId, userId: $authUid, branchId: $branchId }
+    )
+      @check(
+        expr: "this != null || response.query.membership.role.code == 'tenant_owner'"
+        message: "Sin acceso a la sucursal"
+      ) {
+      branchId
+    }
+
+    tableSession(id: $sessionId) @check(expr: "this != null", message: "Sesión inexistente") {
+      status @check(expr: "this == 'OPEN'", message: "La mesa está cerrada")
+      tenantId @check(expr: "this == vars.tenantId", message: "Sesión fuera de la empresa")
+      branchId @check(expr: "this == vars.branchId", message: "Sesión fuera de la sucursal")
+      table {
+        sector {
+          branch {
+            status @check(expr: "this == 'ACTIVE'", message: "Sucursal inactiva")
+          }
+        }
+      }
+    }
+    order(id: $orderId) @check(expr: "this != null", message: "Pedido inexistente") {
+      sessionId @check(expr: "this == vars.sessionId", message: "Pedido de otra mesa")
+      sentToKitchenAt @check(expr: "this == null", message: "El pedido ya está en cocina")
+      quote {
+        staffUid
+          @check(expr: "this == vars.authUid", message: "La comanda no corresponde al mesero")
+        expiresAt @check(expr: "this > request.time", message: "Revisa otra vez el pedido")
+      }
+      participant
+        @check(
+          expr: "this.guestNumber != null || this.expiresAt > request.time"
+          message: "La participación venció"
+        ) {
+        sessionId @check(expr: "this == vars.sessionId", message: "Persona fuera de la mesa")
+        removedAt @check(expr: "this == null", message: "La persona fue retirada")
+        guestNumber
+        expiresAt
+      }
+    }
+  }
+  locked: tableSession_updateMany(
+    where: { id: { eq: $sessionId }, status: { eq: OPEN } }
+    data: { version_update: { inc: 1 } }
+  )
+  verified: query @redact {
+    tableSession(id: $sessionId)
+      @check(expr: "response.locked == 1", message: "La mesa está cerrada") {
+      id
+    }
+  }
+  sent: order_updateMany(
+    where: { id: { eq: $orderId }, sentToKitchenAt: { isNull: true } }
+    data: { sentToKitchenAt_expr: "request.time" }
+  )
+  checked: query @redact {
+    order(id: $orderId) @check(expr: "response.sent == 1", message: "El pedido ya está en cocina") {
+      id
+    }
+  }
+  auditEvent_insert(
+    data: {
+      tenantId: $tenantId
+      actorId: $authUid
+      operation: "order.send_to_kitchen"
+      resourceType: "order"
+      resourceId_expr: "vars.orderId"
+    }
+  )
+}

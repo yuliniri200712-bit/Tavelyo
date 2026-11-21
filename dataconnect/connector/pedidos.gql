@@ -9,6 +9,12 @@ query PickupQueue($tenantId: UUID!, $branchId: UUID!)
 @auth(level: USER)
 @refresh(
   onMutationExecuted: {
+    operation: "TransferTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
     operation: "FinishOrderItem"
     condition: "request.variables.branchId == mutation.variables.branchId"
   }
@@ -106,6 +112,12 @@ query SessionOrders($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!)
 @refresh(
   onMutationExecuted: {
     operation: "ServerSendOrderToKitchen"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
+@refresh(
+  onMutationExecuted: {
+    operation: "ServerSendStaffOrder"
     condition: "request.variables.branchId == mutation.variables.branchId"
   }
 )
@@ -484,6 +496,12 @@ mutation CancelOrderItem(
 # Solicitudes pendientes de las mesas abiertas de la sucursal, de la más antigua a la más reciente.
 query PendingServiceRequests($tenantId: UUID!, $branchId: UUID!)
 @auth(level: USER)
+@refresh(
+  onMutationExecuted: {
+    operation: "TransferTableSession"
+    condition: "request.variables.branchId == mutation.variables.branchId"
+  }
+)
 @refresh(
   onMutationExecuted: {
     operation: "ServerCreateServiceRequest"

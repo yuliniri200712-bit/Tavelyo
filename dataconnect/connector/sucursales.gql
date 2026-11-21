@@ -29,6 +29,31 @@ query TenantBranches($tenantId: UUID!) @auth(level: USER) {
   }
 }
 
+# Datos de la empresa para el comprobante (Fase 4, bloque 6a): nombre y NIT. El NIT lo guarda el
+# backend (setTenantTaxId), que comprueba el dígito de verificación.
+query TenantProfile($tenantId: UUID!) @auth(level: USER) {
+  membership(key: { tenantId: $tenantId, userId_expr: "auth.uid" })
+    @redact
+    @check(expr: "this != null", message: "Sin membresía activa en la empresa") {
+    status @check(expr: "this == 'ACTIVE'", message: "Sin membresía activa en la empresa")
+    tenant {
+      status @check(expr: "this == 'ACTIVE'", message: "Empresa suspendida")
+    }
+    role {
+      rolePermissions_on_role(where: { permission: { code: { eq: "tenant.settings" } } })
+        @check(expr: "this.size() > 0", message: "Sin permiso: tenant.settings") {
+        permission {
+          code
+        }
+      }
+    }
+  }
+  tenant(id: $tenantId) {
+    name
+    taxId
+  }
+}
+
 mutation CreateBranch($tenantId: UUID!, $name: String!, $currency: String!, $timezone: String!)
 @auth(level: USER)
 @transaction {

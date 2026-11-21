@@ -77,6 +77,11 @@ export enum ServiceRequestKind {
   REQUEST_BILL = "REQUEST_BILL",
 };
 
+export enum TableSessionStatus {
+  OPEN = "OPEN",
+  CLOSED = "CLOSED",
+};
+
 
 
 export interface AddMemberData {
@@ -88,6 +93,19 @@ export interface AddMemberVariables {
   tenantId: UUIDString;
   userId: string;
   roleCode: string;
+}
+
+export interface AddTableGuestData {
+  locked: number;
+  sessionParticipant_insert: SessionParticipant_Key;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface AddTableGuestVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  number: number;
 }
 
 export interface ApproveOrderData {
@@ -138,6 +156,27 @@ export interface BillPayment_Key {
 export interface Bill_Key {
   id: UUIDString;
   __typename?: 'Bill_Key';
+}
+
+export interface BillingTablesData {
+  tableSessions: ({
+    id: UUIDString;
+    openedAt: TimestampString;
+    table: {
+      code: string;
+      sector: {
+        name: string;
+      };
+    };
+    serviceRequests_on_session: ({
+      createdAt: TimestampString;
+    })[];
+  } & TableSession_Key)[];
+}
+
+export interface BillingTablesVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
 }
 
 export interface BranchCatalogData {
@@ -1635,6 +1674,20 @@ export interface ServerSendOrderToKitchenVariables {
   authUid: string;
 }
 
+export interface ServerSendStaffOrderData {
+  locked: number;
+  sent: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface ServerSendStaffOrderVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  orderId: UUIDString;
+  authUid: string;
+}
+
 export interface ServerSettleAuthorizeData {
   paymentOperation_updateMany: number;
   orderQuote_update?: OrderQuote_Key | null;
@@ -1823,6 +1876,71 @@ export interface SetProductStationVariables {
   stationId: UUIDString;
 }
 
+export interface StaffOrderDeskData {
+  tableSession?: {
+    status: TableSessionStatus;
+    tenantId: UUIDString;
+    branchId: UUIDString;
+    table: {
+      sector: {
+        branch: {
+          status: BranchStatus;
+        };
+      };
+    };
+  };
+  branch?: {
+    currency: string;
+    timezone: string;
+    productBranches_on_branch: ({
+      daysMask?: number | null;
+      startMinute?: number | null;
+      endMinute?: number | null;
+      currentPrice?: {
+        id: UUIDString;
+        amountMinor: Int64String;
+        currency: string;
+      } & Price_Key;
+      product: {
+        id: UUIDString;
+        name: string;
+        description?: string | null;
+        allergensDeclared?: string[] | null;
+        sort: number;
+        category: {
+          id: UUIDString;
+          name: string;
+          sort: number;
+        } & Category_Key;
+        modifierGroups_on_product: ({
+          id: UUIDString;
+          name: string;
+          minSelect: number;
+          maxSelect: number;
+          sort: number;
+          modifierOptions_on_group: ({
+            id: UUIDString;
+            name: string;
+            priceDeltaMinor: Int64String;
+            sort: number;
+          } & ModifierOption_Key)[];
+        } & ModifierGroup_Key)[];
+      } & Product_Key;
+    })[];
+  };
+  sessionParticipants: ({
+    id: UUIDString;
+    guestNumber?: number | null;
+    joinedAt: TimestampString;
+  } & SessionParticipant_Key)[];
+}
+
+export interface StaffOrderDeskVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+}
+
 export interface StartOrderItemData {
   orderItem_updateMany: number;
   auditEvent_insert: AuditEvent_Key;
@@ -1906,9 +2024,33 @@ export interface TenantMembersVariables {
   tenantId: UUIDString;
 }
 
+export interface TenantProfileData {
+  tenant?: {
+    name: string;
+    taxId?: string | null;
+  };
+}
+
+export interface TenantProfileVariables {
+  tenantId: UUIDString;
+}
+
 export interface Tenant_Key {
   id: UUIDString;
   __typename?: 'Tenant_Key';
+}
+
+export interface TransferTableSessionData {
+  moved: number;
+  auditEvent_insert: AuditEvent_Key;
+}
+
+export interface TransferTableSessionVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  sessionId: UUIDString;
+  sourceId: UUIDString;
+  tableId: UUIDString;
 }
 
 export interface UnassignMemberBranchData {
@@ -2193,6 +2335,18 @@ export const updateRegisterRef: UpdateRegisterRef;
 
 export function updateRegister(vars: UpdateRegisterVariables): MutationPromise<UpdateRegisterData, UpdateRegisterVariables>;
 export function updateRegister(dc: DataConnect, vars: UpdateRegisterVariables): MutationPromise<UpdateRegisterData, UpdateRegisterVariables>;
+
+interface BillingTablesRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: BillingTablesVariables): QueryRef<BillingTablesData, BillingTablesVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: BillingTablesVariables): QueryRef<BillingTablesData, BillingTablesVariables>;
+  operationName: string;
+}
+export const billingTablesRef: BillingTablesRef;
+
+export function billingTables(vars: BillingTablesVariables, options?: ExecuteQueryOptions): QueryPromise<BillingTablesData, BillingTablesVariables>;
+export function billingTables(dc: DataConnect, vars: BillingTablesVariables, options?: ExecuteQueryOptions): QueryPromise<BillingTablesData, BillingTablesVariables>;
 
 interface CatalogAdminRef {
   /* Allow users to create refs without passing in DataConnect */
@@ -2493,6 +2647,42 @@ export const finishOrderItemRef: FinishOrderItemRef;
 
 export function finishOrderItem(vars: FinishOrderItemVariables): MutationPromise<FinishOrderItemData, FinishOrderItemVariables>;
 export function finishOrderItem(dc: DataConnect, vars: FinishOrderItemVariables): MutationPromise<FinishOrderItemData, FinishOrderItemVariables>;
+
+interface StaffOrderDeskRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: StaffOrderDeskVariables): QueryRef<StaffOrderDeskData, StaffOrderDeskVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: StaffOrderDeskVariables): QueryRef<StaffOrderDeskData, StaffOrderDeskVariables>;
+  operationName: string;
+}
+export const staffOrderDeskRef: StaffOrderDeskRef;
+
+export function staffOrderDesk(vars: StaffOrderDeskVariables, options?: ExecuteQueryOptions): QueryPromise<StaffOrderDeskData, StaffOrderDeskVariables>;
+export function staffOrderDesk(dc: DataConnect, vars: StaffOrderDeskVariables, options?: ExecuteQueryOptions): QueryPromise<StaffOrderDeskData, StaffOrderDeskVariables>;
+
+interface AddTableGuestRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: AddTableGuestVariables): MutationRef<AddTableGuestData, AddTableGuestVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: AddTableGuestVariables): MutationRef<AddTableGuestData, AddTableGuestVariables>;
+  operationName: string;
+}
+export const addTableGuestRef: AddTableGuestRef;
+
+export function addTableGuest(vars: AddTableGuestVariables): MutationPromise<AddTableGuestData, AddTableGuestVariables>;
+export function addTableGuest(dc: DataConnect, vars: AddTableGuestVariables): MutationPromise<AddTableGuestData, AddTableGuestVariables>;
+
+interface ServerSendStaffOrderRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerSendStaffOrderVariables): MutationRef<ServerSendStaffOrderData, ServerSendStaffOrderVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerSendStaffOrderVariables): MutationRef<ServerSendStaffOrderData, ServerSendStaffOrderVariables>;
+  operationName: string;
+}
+export const serverSendStaffOrderRef: ServerSendStaffOrderRef;
+
+export function serverSendStaffOrder(vars: ServerSendStaffOrderVariables): MutationPromise<ServerSendStaffOrderData, ServerSendStaffOrderVariables>;
+export function serverSendStaffOrder(dc: DataConnect, vars: ServerSendStaffOrderVariables): MutationPromise<ServerSendStaffOrderData, ServerSendStaffOrderVariables>;
 
 interface BranchLayoutRef {
   /* Allow users to create refs without passing in DataConnect */
@@ -3190,6 +3380,18 @@ export const removeParticipantRef: RemoveParticipantRef;
 export function removeParticipant(vars: RemoveParticipantVariables): MutationPromise<RemoveParticipantData, RemoveParticipantVariables>;
 export function removeParticipant(dc: DataConnect, vars: RemoveParticipantVariables): MutationPromise<RemoveParticipantData, RemoveParticipantVariables>;
 
+interface TransferTableSessionRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: TransferTableSessionVariables): MutationRef<TransferTableSessionData, TransferTableSessionVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: TransferTableSessionVariables): MutationRef<TransferTableSessionData, TransferTableSessionVariables>;
+  operationName: string;
+}
+export const transferTableSessionRef: TransferTableSessionRef;
+
+export function transferTableSession(vars: TransferTableSessionVariables): MutationPromise<TransferTableSessionData, TransferTableSessionVariables>;
+export function transferTableSession(dc: DataConnect, vars: TransferTableSessionVariables): MutationPromise<TransferTableSessionData, TransferTableSessionVariables>;
+
 interface ServerOpenSessionByQrRef {
   /* Allow users to create refs without passing in DataConnect */
   (vars: ServerOpenSessionByQrVariables): QueryRef<ServerOpenSessionByQrData, ServerOpenSessionByQrVariables>;
@@ -3405,6 +3607,18 @@ export const tenantBranchesRef: TenantBranchesRef;
 
 export function tenantBranches(vars: TenantBranchesVariables, options?: ExecuteQueryOptions): QueryPromise<TenantBranchesData, TenantBranchesVariables>;
 export function tenantBranches(dc: DataConnect, vars: TenantBranchesVariables, options?: ExecuteQueryOptions): QueryPromise<TenantBranchesData, TenantBranchesVariables>;
+
+interface TenantProfileRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: TenantProfileVariables): QueryRef<TenantProfileData, TenantProfileVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: TenantProfileVariables): QueryRef<TenantProfileData, TenantProfileVariables>;
+  operationName: string;
+}
+export const tenantProfileRef: TenantProfileRef;
+
+export function tenantProfile(vars: TenantProfileVariables, options?: ExecuteQueryOptions): QueryPromise<TenantProfileData, TenantProfileVariables>;
+export function tenantProfile(dc: DataConnect, vars: TenantProfileVariables, options?: ExecuteQueryOptions): QueryPromise<TenantProfileData, TenantProfileVariables>;
 
 interface CreateBranchRef {
   /* Allow users to create refs without passing in DataConnect */

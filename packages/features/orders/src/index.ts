@@ -1,3 +1,4 @@
+export { ComandaPanel } from './presentation/ComandaPanel.tsx';
 export type {
   ApprovalLine,
   BranchScope,

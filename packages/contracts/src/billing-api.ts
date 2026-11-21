@@ -54,7 +54,10 @@ export interface BillResponse extends BillPartResponse {
     readonly quantity: number;
     readonly taxMinor: string;
   })[];
-  readonly participants: readonly (BillPartResponse & { readonly participantId: string })[];
+  readonly participants: readonly (BillPartResponse & {
+    readonly participantId: string;
+    readonly guestNumber?: number;
+  })[];
   /** Suma de los reembolsos confirmados (por plato y generales). */
   readonly refundedMinor: string;
   /** Lo pendiente dividido en partes iguales en pesos enteros, si se pidió `parts`. */
@@ -128,4 +131,36 @@ export interface CloseTableResponse {
   readonly sessionId: string;
   /** Total de la cuenta saldada; null si la mesa no tuvo consumo. */
   readonly settledTotalMinor: string | null;
+}
+
+/** Comprobante comercial de un pago (bloque 6a). No es factura electrónica (RF-PA-08). */
+export interface ReadPaymentReceiptRequest extends BillScope {
+  readonly paymentId: string;
+}
+
+export interface PaymentReceiptResponse {
+  readonly paymentId: string;
+  readonly tenantName: string;
+  /** NIT con DV («900123456-7»); null si la empresa todavía no lo registró. */
+  readonly taxId: string | null;
+  readonly branchName: string;
+  readonly tableCode: string;
+  /** Instante del pago (ISO 8601); la pantalla lo muestra en la zona de la sucursal. */
+  readonly paidAt: string;
+  readonly method: RecordedPaymentMethod;
+  readonly receiptNumber: string | null;
+  readonly currency: string;
+  /** Platos que cubre este pago y cuánto de cada uno. */
+  readonly lines: readonly {
+    readonly name: string;
+    readonly quantity: number;
+    readonly amountMinor: string;
+  }[];
+  readonly amountMinor: string;
+  readonly tipMinor: string;
+  readonly totalMinor: string;
+  readonly receivedMinor: string | null;
+  readonly changeMinor: string | null;
+  /** Lo devuelto de este pago hasta ahora (reembolsos confirmados). */
+  readonly refundedMinor: string;
 }

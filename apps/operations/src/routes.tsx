@@ -5,6 +5,9 @@ import {
   BranchesAdminRoute,
   BranchMenuRoute,
   BranchSettingsRoute,
+  CashDeskRoute,
+  CompanyDataRoute,
+  ReceiptRoute,
   CatalogAdminRoute,
   FloorServiceRoute,
   KitchenRoute,
@@ -35,6 +38,36 @@ export const routes: RouteObject[] = [
           <RequireStaffContext>
             <RequirePermission permissions={['session.open']}>
               <FloorServiceRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/caja',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['payment.record']}>
+              <CashDeskRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/caja/comprobante/:sessionId/:paymentId',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['payment.record']}>
+              <ReceiptRoute />
+            </RequirePermission>
+          </RequireStaffContext>
+        ),
+      },
+      {
+        path: '/empresa',
+        element: (
+          <RequireStaffContext>
+            <RequirePermission permissions={['tenant.settings']}>
+              <CompanyDataRoute />
             </RequirePermission>
           </RequireStaffContext>
         ),

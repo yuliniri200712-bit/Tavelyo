@@ -1,12 +1,15 @@
-import type { ReactNode } from 'react';
-import { Link } from 'react-router';
+import { useCallback, useState, type ReactNode } from 'react';
+import { Link, useParams } from 'react-router';
+import { BillingDesk, CompanyDataCard, ReceiptPage } from '@tavelyo/billing';
+import { RegistersAdmin, TillPanel, type Till } from '@tavelyo/cash';
 import { BranchMenuPage, CatalogAdminPage, StationsAdminPage } from '@tavelyo/catalog';
-import { EmptyState, type IconName } from '@tavelyo/design-system';
+import { EmptyState, PageTitle, type IconName } from '@tavelyo/design-system';
 import { FloorServicePage, LayoutAdminPage, PrintQrPage } from '@tavelyo/floor';
 import { useInactivityHold } from '@tavelyo/identity';
 import { KitchenPage } from '@tavelyo/kitchen';
 import {
   OrderApprovalPanel,
+  ComandaPanel,
   OrderApprovalSettings,
   PickupPage,
   SessionOrdersPanel,
@@ -26,6 +29,14 @@ export interface StaffModule {
 
 /** Módulos del personal y los permisos que habilitan cada uno en la interfaz. */
 export const STAFF_MODULES: readonly StaffModule[] = [
+  {
+    path: '/caja',
+    icon: 'bill',
+    title: 'Caja',
+    description:
+      'Tu turno de caja y las mesas abiertas: cobrar, dividir, reembolsar, cerrar la mesa y el comprobante.',
+    permissions: ['payment.record'],
+  },
   {
     path: '/cocina',
     icon: 'kitchen',
@@ -84,11 +95,18 @@ export const STAFF_MODULES: readonly StaffModule[] = [
     permissions: ['tenant.settings'],
   },
   {
+    path: '/empresa',
+    icon: 'settings',
+    title: 'Datos de la empresa',
+    description: 'El NIT que va en el comprobante de cada pago.',
+    permissions: ['tenant.settings'],
+  },
+  {
     path: '/sucursal/ajustes',
     icon: 'settings',
     title: 'Ajustes de la sucursal',
     description:
-      'Si los pedidos del teléfono del cliente van directo a cocina o los aprueba el mesero.',
+      'Las cajas de la sucursal y si los pedidos del teléfono del cliente van directo a cocina o los aprueba el mesero.',
     permissions: ['branch.settings'],
   },
 ];
@@ -147,6 +165,26 @@ export function FloorServiceRoute() {
       branchName={branchName}
       timezone={timezone}
       canClose={can('session.close')}
+      canTransfer={can('session.transfer')}
+      {...(can('order.create')
+        ? {
+            renderComanda: (
+              sessionId: string,
+              tableCode: string,
+              sector: string,
+              offline: boolean,
+            ) => (
+              <ComandaPanel
+                key={sessionId}
+                gateway={services.comanda}
+                scope={{ ...scope, sessionId }}
+                tableCode={tableCode}
+                sector={sector}
+                offline={offline}
+              />
+            ),
+          }
+        : {})}
       requestsPanel={
         <>
           {can('order.approve') ? (
@@ -329,11 +367,92 @@ export function BranchSettingsRoute() {
           <p className="tv-list__meta">{branchName}</p>
         </div>
       </header>
+      <RegistersAdmin gateway={services.cash} scope={scope} branchName={branchName} />
       <OrderApprovalSettings
         gateway={services.orderApproval}
         scope={scope}
         branchName={branchName}
       />
+    </div>
+  );
+}
+
+/**
+ * Caja (bloque 6a): el turno de quien la usa y la cuenta de las mesas abiertas. Cobrar en efectivo
+ * exige la caja abierta (D-40); el servidor lo comprueba en cada cobro.
+ */
+export function CashDeskRoute() {
+  const { services } = useAppContext();
+  const { scope, branchName, timezone, can } = useStaffContext();
+  const [till, setTill] = useState<Till | null>(null);
+  const [cashMoves, setCashMoves] = useState(0);
+  const onTillChange = useCallback((next: Till | null) => setTill(next), []);
+  const onCashMoved = useCallback(() => setCashMoves((n) => n + 1), []);
+  return (
+    <div className="tv-page">
+      <header className="tv-page__header">
+        <div>
+          <PageTitle icon="bill">Caja</PageTitle>
+          <p className="tv-list__meta">{branchName}</p>
+        </div>
+      </header>
+      {can('cash_session.open') ? (
+        <TillPanel
+          gateway={services.cash}
+          scope={scope}
+          timezone={timezone}
+          refreshToken={cashMoves}
+          onTillChange={onTillChange}
+        />
+      ) : null}
+      <BillingDesk
+        gateway={services.billing}
+        scope={scope}
+        timezone={timezone}
+        canRefund={can('payment.refund')}
+        canClose={can('session.close')}
+        cashTillOpen={till !== null}
+        onCashMoved={onCashMoved}
+        receiptLink={(sessionId, paymentId) => (
+          <Link className="tv-link-button" to={`/caja/comprobante/${sessionId}/${paymentId}`}>
+            Ver el comprobante
+          </Link>
+        )}
+      />
+    </div>
+  );
+}
+
+/** Comprobante imprimible de un pago (bloque 6a), con el NIT de la empresa. */
+export function ReceiptRoute() {
+  const { services } = useAppContext();
+  const { scope, timezone } = useStaffContext();
+  const { sessionId = '', paymentId = '' } = useParams();
+  return (
+    <ReceiptPage
+      gateway={services.billing}
+      scope={{ ...scope, sessionId }}
+      paymentId={paymentId}
+      timezone={timezone}
+      backLink={
+        <Link className="tv-link-button" to="/caja">
+          Volver a la caja
+        </Link>
+      }
+    />
+  );
+}
+
+/** Datos de la empresa (tenant.settings): el NIT del comprobante. */
+export function CompanyDataRoute() {
+  const { services } = useAppContext();
+  const { scope } = useStaffContext();
+  return (
+    <div className="tv-page">
+      <header className="tv-page__header">
+        <PageTitle icon="settings">Datos de la empresa</PageTitle>
+      </header>
+      <CompanyDataCard gateway={services.tenantProfile} tenantId={scope.tenantId} />
     </div>
   );
 }

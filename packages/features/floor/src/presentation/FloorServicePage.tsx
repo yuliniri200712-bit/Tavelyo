@@ -6,6 +6,7 @@ import {
   EmptyState,
   ErrorState,
   FilterPills,
+  SelectField,
   Icon,
   LiveStatus,
   LoadingState,
@@ -43,6 +44,13 @@ export interface FloorServicePageProps {
   readonly timezone: string;
   /** session.close: cerrar la mesa y retirar personas (el servidor lo vuelve a comprobar). */
   readonly canClose: boolean;
+  readonly canTransfer?: boolean;
+  readonly renderComanda?: (
+    sessionId: string,
+    tableCode: string,
+    sector: string,
+    offline: boolean,
+  ) => ReactNode;
   /** Reloj inyectable para las pruebas. */
   readonly now?: () => Date;
   /** Solicitudes pendientes de la sucursal (otro módulo; se muestra arriba si hay permiso). */
@@ -68,6 +76,8 @@ export function FloorServicePage({
   now = systemNow,
   requestsPanel,
   renderOrders,
+  canTransfer = false,
+  renderComanda,
 }: FloorServicePageProps) {
   const { tenantId, branchId } = scope;
   const load = useCallback(
@@ -83,6 +93,7 @@ export function FloorServicePage({
   const [sectorFilter, setSectorFilter] = useState(ALL_SECTORS);
   const data = state.data;
   const sectors = data ? data.filter((s) => s.tables.length > 0) : [];
+  const free = sectors.flatMap((s) => s.tables.filter((t) => !t.session));
   const shown = sectors.filter((s) => sectorFilter === ALL_SECTORS || s.id === sectorFilter);
   const reload = () => void refresh();
 
@@ -177,7 +188,19 @@ export function FloorServicePage({
           <ul className="tv-table-grid" aria-label={`Mesas de ${sector.name}`}>
             {sector.tables.map((table) => (
               <FloorTableItem
-                key={table.id}
+                key={table.id + (table.session?.id ?? '')}
+                free={free}
+                canTransfer={canTransfer}
+                comanda={
+                  renderComanda && table.session
+                    ? renderComanda(
+                        table.session.id,
+                        table.code,
+                        sector.name,
+                        state.connection === 'offline',
+                      )
+                    : null
+                }
                 table={table}
                 gateway={gateway}
                 scope={scope}
@@ -197,6 +220,9 @@ export function FloorServicePage({
 }
 
 interface FloorTableItemProps {
+  readonly comanda: ReactNode;
+  readonly canTransfer: boolean;
+  readonly free: readonly FloorTable[];
   readonly table: FloorTable;
   readonly gateway: FloorServiceGateway;
   readonly scope: BranchScope;
@@ -210,6 +236,9 @@ interface FloorTableItemProps {
 
 function FloorTableItem({
   table,
+  comanda,
+  canTransfer,
+  free,
   gateway,
   scope,
   timezone,
@@ -219,6 +248,9 @@ function FloorTableItem({
   offline,
   renderOrders,
 }: FloorTableItemProps) {
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [destination, setDestination] = useState('');
+  const [showComanda, setShowComanda] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
   const [showOrders, setShowOrders] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
@@ -258,8 +290,9 @@ function FloorTableItem({
     </ConfirmDialog>
   ) : null;
   const expanded =
-    session && ((showOrders && renderOrders) || showPeople) ? (
+    session && (showComanda || (showOrders && renderOrders) || showPeople) ? (
       <>
+        {showComanda ? comanda : null}
         {showOrders && renderOrders ? renderOrders(session, table.code) : null}
         {showPeople ? (
           <ParticipantsPanel
@@ -310,6 +343,61 @@ function FloorTableItem({
         actions={
           session ? (
             <>
+              {comanda ? (
+                <TavelyoButton
+                  variant="secondary"
+                  aria-expanded={showComanda}
+                  disabled={offline}
+                  onClick={() => setShowComanda(!showComanda)}
+                >
+                  {showComanda ? 'Ocultar comanda' : 'Tomar pedido'}
+                </TavelyoButton>
+              ) : null}
+              {canTransfer ? (
+                <>
+                  <TavelyoButton
+                    variant="secondary"
+                    disabled={offline || !free.length}
+                    onClick={() => {
+                      setDestination(free[0]?.id ?? '');
+                      setTransferOpen(true);
+                    }}
+                  >
+                    Trasladar mesa
+                  </TavelyoButton>
+                  <ConfirmDialog
+                    open={transferOpen}
+                    title={'Trasladar mesa ' + table.code}
+                    confirmLabel="Confirmar traslado"
+                    busy={busy}
+                    onCancel={() => setTransferOpen(false)}
+                    onConfirm={() => {
+                      const target = free.find((t) => t.id === destination);
+                      if (!target || offline) {
+                        setTransferOpen(false);
+                        return;
+                      }
+                      void execute(
+                        () => gateway.transfer(scope, session.id, table.id, target.id),
+                        'Sesión trasladada a la mesa ' + target.code + '.',
+                      ).then(() => setTransferOpen(false));
+                    }}
+                  >
+                    <p>La cuenta, las personas y los pedidos pasan juntos a la mesa de destino.</p>
+                    <SelectField
+                      label="Mesa de destino"
+                      value={destination}
+                      onChange={(e) => setDestination(e.target.value)}
+                    >
+                      {free.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.code}
+                        </option>
+                      ))}
+                    </SelectField>
+                  </ConfirmDialog>
+                </>
+              ) : null}
               {renderOrders ? (
                 <TavelyoButton
                   variant="secondary"

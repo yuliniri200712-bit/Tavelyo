@@ -79,6 +79,12 @@ const ServiceRequestKind = {
 }
 exports.ServiceRequestKind = ServiceRequestKind;
 
+const TableSessionStatus = {
+  OPEN: "OPEN",
+  CLOSED: "CLOSED",
+}
+exports.TableSessionStatus = TableSessionStatus;
+
 const connectorConfig = {
   connector: 'tavelyo',
   service: 'tavelyo',
@@ -212,6 +218,21 @@ exports.updateRegisterRef = updateRegisterRef;
 exports.updateRegister = function updateRegister(dcOrVars, vars) {
   const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
   return executeMutation(updateRegisterRef(dcInstance, inputVars));
+}
+;
+
+const billingTablesRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'BillingTables', inputVars);
+}
+billingTablesRef.operationName = 'BillingTables';
+exports.billingTablesRef = billingTablesRef;
+
+exports.billingTables = function billingTables(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(billingTablesRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
 }
 ;
 
@@ -570,6 +591,49 @@ exports.finishOrderItemRef = finishOrderItemRef;
 exports.finishOrderItem = function finishOrderItem(dcOrVars, vars) {
   const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
   return executeMutation(finishOrderItemRef(dcInstance, inputVars));
+}
+;
+
+const staffOrderDeskRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'StaffOrderDesk', inputVars);
+}
+staffOrderDeskRef.operationName = 'StaffOrderDesk';
+exports.staffOrderDeskRef = staffOrderDeskRef;
+
+exports.staffOrderDesk = function staffOrderDesk(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(staffOrderDeskRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const addTableGuestRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'AddTableGuest', inputVars);
+}
+addTableGuestRef.operationName = 'AddTableGuest';
+exports.addTableGuestRef = addTableGuestRef;
+
+exports.addTableGuest = function addTableGuest(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(addTableGuestRef(dcInstance, inputVars));
+}
+;
+
+const serverSendStaffOrderRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'ServerSendStaffOrder', inputVars);
+}
+serverSendStaffOrderRef.operationName = 'ServerSendStaffOrder';
+exports.serverSendStaffOrderRef = serverSendStaffOrderRef;
+
+exports.serverSendStaffOrder = function serverSendStaffOrder(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(serverSendStaffOrderRef(dcInstance, inputVars));
 }
 ;
 
@@ -1403,6 +1467,20 @@ exports.removeParticipant = function removeParticipant(dcOrVars, vars) {
 }
 ;
 
+const transferTableSessionRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return mutationRef(dcInstance, 'TransferTableSession', inputVars);
+}
+transferTableSessionRef.operationName = 'TransferTableSession';
+exports.transferTableSessionRef = transferTableSessionRef;
+
+exports.transferTableSession = function transferTableSession(dcOrVars, vars) {
+  const { dc: dcInstance, vars: inputVars } = validateArgs(connectorConfig, dcOrVars, vars, true);
+  return executeMutation(transferTableSessionRef(dcInstance, inputVars));
+}
+;
+
 const serverOpenSessionByQrRef = (dcOrVars, vars) => {
   const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
   dcInstance._useGeneratedSdk();
@@ -1660,6 +1738,21 @@ exports.tenantBranches = function tenantBranches(dcOrVars, varsOrOptions, option
   
   const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
   return executeQuery(tenantBranchesRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
+}
+;
+
+const tenantProfileRef = (dcOrVars, vars) => {
+  const { dc: dcInstance, vars: inputVars} = validateArgs(connectorConfig, dcOrVars, vars, true);
+  dcInstance._useGeneratedSdk();
+  return queryRef(dcInstance, 'TenantProfile', inputVars);
+}
+tenantProfileRef.operationName = 'TenantProfile';
+exports.tenantProfileRef = tenantProfileRef;
+
+exports.tenantProfile = function tenantProfile(dcOrVars, varsOrOptions, options) {
+  
+  const { dc: dcInstance, vars: inputVars, options: inputOpts } = validateArgsWithOptions(connectorConfig, dcOrVars, varsOrOptions, options, true, true);
+  return executeQuery(tenantProfileRef(dcInstance, inputVars), inputOpts && { fetchPolicy: inputOpts.fetchPolicy });
 }
 ;
 

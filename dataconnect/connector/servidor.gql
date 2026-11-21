@@ -181,7 +181,13 @@ query ServerQuoteByKey($participantId: UUID!, $idempotencyKey: String!) @auth(le
 # filtrarlos, para responder por qué no se envió.
 query ServerQuoteForSubmit($quoteId: UUID!, $authUid: String!) @auth(level: NO_ACCESS) {
   orderQuotes(
-    where: { _and: [{ id: { eq: $quoteId } }, { participant: { authUid: { eq: $authUid } } }] }
+    where: {
+      _and: [
+        { id: { eq: $quoteId } }
+        { staffUid: { isNull: true } }
+        { participant: { authUid: { eq: $authUid } } }
+      ]
+    }
     limit: 1
   ) {
     id

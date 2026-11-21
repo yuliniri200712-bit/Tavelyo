@@ -1,3 +1,4 @@
+export { createComandaGateway } from './comanda-gateway.ts';
 export {
   parseFirebaseEnvironment,
   type FirebaseEnvironment,
@@ -29,3 +30,5 @@ export {
   mapCallableError,
   type CustomerClient,
 } from './customer-gateway.ts';
+export { createCashGateway } from './cash-gateway.ts';
+export { createBillingGateway, createTenantProfileGateway } from './billing-gateway.ts';

@@ -22,6 +22,8 @@
     "@tavelyo/contracts": "*",
     "@tavelyo/table-session": "*",
     "@tavelyo/orders": "*",
-    "@tavelyo/service-requests": "*"
+    "@tavelyo/service-requests": "*",
+    "@tavelyo/cash": "*",
+    "@tavelyo/billing": "*"
   }
 }

@@ -1040,3 +1040,69 @@ describe('empresa suspendida', () => {
     expect(await menuProducts(randomUUID())).toBeNull();
   });
 });
+
+describe('traslado de sesión con su cuenta (bloque 6)', () => {
+  it('dos sesiones compiten por una mesa libre y solo se audita el traslado que gana', async () => {
+    const scope = { tenantId: a.tenantId, branchId: a.branchId };
+    const sector = expectOk(
+      await mutate<{ sector_insert: { id: string } }>(u.ownerA, 'CreateSector', {
+        ...scope,
+        name: 'Traslados',
+        sort: 10,
+      }),
+      'Nuevo sector',
+    ).sector_insert.id;
+    async function table(code: string) {
+      return expectOk(
+        await mutate<{ diningTable_insert: { id: string } }>(u.ownerA, 'CreateTable', {
+          ...scope,
+          sectorId: sector,
+          code,
+          seats: 4,
+        }),
+        'Mesa de traslado',
+      ).diningTable_insert.id;
+    }
+    const one = await table('TR1'),
+      two = await table('TR2'),
+      target = await table('TR3');
+    const open = async (tableId: string) =>
+      expectOk(
+        await mutate<{ tableSession_insert: { id: string } }>(u.waiterA, 'OpenTableSession', {
+          ...scope,
+          tableId,
+        }),
+        'Abrir',
+      ).tableSession_insert.id;
+    const first = await open(one),
+      second = await open(two);
+    const aMove = { ...scope, sessionId: first, sourceId: one, tableId: target };
+    for (const user of [u.cashierA, u.waiterNorte, u.ownerB, customer, null]) {
+      expect((await mutate(user, 'TransferTableSession', aMove)).errors.length).toBeGreaterThan(0);
+    }
+    expect(
+      (await mutate(u.waiterA, 'TransferTableSession', { ...aMove, tableId: b.tableId })).errors
+        .length,
+    ).toBeGreaterThan(0);
+    const moves = await Promise.all([
+      mutate(u.waiterA, 'TransferTableSession', aMove),
+      mutate(u.waiterA, 'TransferTableSession', { ...aMove, sourceId: two, sessionId: second }),
+    ]);
+    expect(moves.filter((m) => !m.errors.length)).toHaveLength(1);
+    const winner = moves[0]?.errors.length ? second : first;
+    const result = expectOk(
+      await admin<{
+        tableSession: { tableId: string; openTableId: string; status: string };
+        auditEvents: { actorId: string; reason: string }[];
+      }>(
+        'query($id:UUID!,$ref:String!){tableSession(id:$id){tableId openTableId status} auditEvents(where:{operation:{eq:"session.transfer"},resourceId:{eq:$ref}}){actorId reason}}',
+        { id: winner, ref: winner },
+      ),
+      'Traslado registrado',
+    );
+    expect(result.tableSession).toEqual({ tableId: target, openTableId: target, status: 'OPEN' });
+    expect(result.auditEvents).toEqual([
+      { actorId: u.waiterA.uid, reason: (winner === first ? one : two) + ' → ' + target },
+    ]);
+  });
+});

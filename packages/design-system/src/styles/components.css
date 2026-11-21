@@ -1293,6 +1293,40 @@
   margin: var(--tv-space-5) auto 0;
 }
 
+/* ---------- Comprobante del pago (Fase 4, bloque 6a) ---------- */
+.tv-receipt {
+  display: grid;
+  gap: var(--tv-space-3);
+  max-width: 28rem;
+  padding: var(--tv-space-4);
+  border: var(--tv-stroke-hairline) solid var(--tv-color-border-control);
+  border-radius: var(--tv-radius-card);
+  background: var(--tv-color-surface-card);
+}
+.tv-receipt p {
+  margin: 0;
+}
+.tv-receipt__head {
+  display: grid;
+  gap: var(--tv-space-1);
+  text-align: center;
+}
+.tv-receipt__title {
+  font-size: var(--tv-type-h2-size);
+  line-height: var(--tv-type-h2-line-height);
+  font-weight: var(--tv-type-h2-weight);
+}
+.tv-receipt__line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--tv-space-3);
+  font-variant-numeric: tabular-nums;
+}
+.tv-receipt__legal {
+  text-align: center;
+  font-weight: var(--tv-font-weight-bold);
+}
+
 @media print {
   .tv-app-header,
   .tv-skip-link,
@@ -1306,5 +1340,9 @@
   }
   .tv-print-card {
     box-shadow: none;
+  }
+  .tv-receipt {
+    max-width: none;
+    border: none;
   }
 }
