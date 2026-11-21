@@ -189,3 +189,5 @@ Correcciones:
 Pendiente: los otros navegadores de D-15 (los corre la CI), la impresión en papel del comprobante y la aprobación del propietario de la 6a. La 6b y la 6c tienen ya pruebas, pero se revisan y aprueban después de la 6a.
 
 El propietario aprueba el bloque 4 (4a, 4b y 4c) el 2026-11-21, con la regresión anterior como nueva verificación.
+
+El propietario aprueba la parte 6a (pantalla de caja y comprobante con NIT, commit `59d5fe6`) el 2026-11-21, con la CI #73 de `fase-4-caja-pagos` en verde, y autoriza la 6b. Siguen pendientes, sin bloquear la 6a, la impresión en papel del comprobante y la prueba en el Android real (bloque 9).
