@@ -195,9 +195,10 @@ query SessionParticipants($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!)
       branchId: { eq: $branchId }
       sessionId: { eq: $sessionId }
     }
-    orderBy: [{ joinedAt: ASC }]
+    orderBy: [{ joinedAt: ASC }, { id: ASC }]
   ) {
     id
+    guestNumber
     joinedAt
     expiresAt
     removedAt

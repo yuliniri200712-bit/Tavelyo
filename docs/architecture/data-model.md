@@ -152,7 +152,7 @@ Se omiten las columnas comunes de la sección 1 salvo cuando aportan.
 | Sector | `tenant_id`, `branch_id`, `name`, `sort` | |
 | DiningTable | `tenant_id`, `branch_id`, `sector_id`, `code`, `seats`, `qr_public_id`, `version` | `UNIQUE (tenant_id, branch_id, code)` |
 | TableSession | `tenant_id`, `branch_id`, `table_id`, `status`, `opened_at`, `closed_at`, `version` | Máximo una sesión abierta por mesa (índice único parcial) |
-| SessionParticipant | `session_id`, `kind` (cliente/mesero), `auth_uid` (opcional para la persona sin teléfono, D-43), `guest_number` (único por sesión, D-43), `token_hash`, `expires_at` | Credencial de alcance reducido; nunca se guarda el token en claro |
+| SessionParticipant | `session_id`, `kind` (cliente/mesero), `auth_uid` (opcional para la persona sin teléfono, D-43), `guest_number` (de 1 a 99 y único por sesión, D-43; sin teléfono no tiene acceso que venza), `token_hash`, `expires_at` | Credencial de alcance reducido; nunca se guarda el token en claro |
 | ServiceRequest | `session_id`, `type`, `status`, `handled_by` | |
 
 ### Carta

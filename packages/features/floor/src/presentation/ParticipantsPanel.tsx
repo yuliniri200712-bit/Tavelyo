@@ -1,5 +1,5 @@
 import { useCallback, useId, useState } from 'react';
-import { formatLocalTime } from '@tavelyo/core';
+import { formatLocalTime, tablePersonLabels } from '@tavelyo/core';
 import {
   ActionNotice,
   ConfirmDialog,
@@ -34,8 +34,9 @@ const STATUS: Record<
 };
 
 /**
- * Personas que se unieron a la mesa desde el QR (riesgo T11 de ADR-0011): el personal ve cuántas
- * hay y retira a quien no está sentado en la mesa. El servidor no entrega su cuenta.
+ * Personas de la mesa: las que se unieron desde el QR (riesgo T11 de ADR-0011) y las que agregó el
+ * mesero sin teléfono (D-43). El personal ve cuántas hay y retira a quien no está sentado en la
+ * mesa. El servidor no entrega su cuenta.
  */
 export function ParticipantsPanel({
   gateway,
@@ -53,6 +54,7 @@ export function ParticipantsPanel({
   );
   const { state, notice, reload, run } = useServerData(load);
   const label = `Personas en la mesa ${tableCode}`;
+  const names = tablePersonLabels(state.status === 'ready' ? state.data : []);
   const headingId = useId();
 
   return (
@@ -76,11 +78,11 @@ export function ParticipantsPanel({
       ) : null}
       {state.status === 'ready' && state.data.length > 0 ? (
         <ul className="tv-list" aria-label={label}>
-          {state.data.map((participant, index) => (
+          {state.data.map((participant) => (
             <ParticipantItem
               key={participant.id}
               participant={participant}
-              number={index + 1}
+              name={names.get(participant.id) ?? 'Persona de la mesa'}
               tableCode={tableCode}
               status={participantStatus(participant, now())}
               timezone={timezone}
@@ -101,7 +103,7 @@ export function ParticipantsPanel({
 
 interface ParticipantItemProps {
   readonly participant: SessionParticipant;
-  readonly number: number;
+  readonly name: string;
   readonly tableCode: string;
   readonly status: ParticipantStatus;
   readonly timezone: string;
@@ -111,7 +113,7 @@ interface ParticipantItemProps {
 
 function ParticipantItem({
   participant,
-  number,
+  name,
   tableCode,
   status,
   timezone,
@@ -120,7 +122,7 @@ function ParticipantItem({
 }: ParticipantItemProps) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
-  const name = `Persona ${number}`;
+  const guest = participant.guestNumber !== null;
 
   return (
     <li className="tv-list__item">
@@ -129,7 +131,8 @@ function ParticipantItem({
         <StatusChip tone={STATUS[status].tone} label={STATUS[status].label} />
       </div>
       <p className="tv-list__meta">
-        Se unió a las {formatLocalTime(participant.joinedAt, timezone)}
+        {guest ? 'Sin teléfono, la agregó el mesero a las ' : 'Se unió a las '}
+        {formatLocalTime(participant.joinedAt, timezone)}
         {status === 'expired' ? '. Si sigue en la mesa, vuelve a unirse con el QR.' : ''}
       </p>
       {canRemove && status === 'active' ? (
@@ -154,10 +157,14 @@ function ParticipantItem({
           });
         }}
       >
-        <p>
-          Pierde el acceso a la mesa al instante. Úsalo si se unió alguien que no está sentado en la
-          mesa. Si vuelve a pasar, pide a la administración generar un QR nuevo para esta mesa.
-        </p>
+        {guest ? (
+          <p>Ya no se le podrán tomar pedidos. Lo que ya pidió sigue en la cuenta de la mesa.</p>
+        ) : (
+          <p>
+            Pierde el acceso a la mesa al instante. Úsalo si se unió alguien que no está sentado en
+            la mesa. Si vuelve a pasar, pide a la administración generar un QR nuevo para esta mesa.
+          </p>
+        )}
       </ConfirmDialog>
     </li>
   );

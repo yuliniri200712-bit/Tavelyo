@@ -18,6 +18,15 @@ export {
 export { parseMajorAmount, toMajorInput, type MoneyInputError } from './money-input';
 export { elapsedMinutes, formatLocalTime, formatShortWait } from './time-format';
 export {
+  GUEST_NUMBER_MAX,
+  nextGuestNumber,
+  numberTablePeople,
+  tablePersonLabel,
+  tablePersonLabels,
+  type TablePerson,
+  type TableSeat,
+} from './table-people';
+export {
   applyOrderItemAction,
   availableOrderItemActions,
   deriveOrderStatus,

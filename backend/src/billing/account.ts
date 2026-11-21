@@ -8,6 +8,7 @@ import {
   err,
   formatMoney,
   Money,
+  numberTablePeople,
   ok,
   refundableAmount,
   splitEvenly,
@@ -137,9 +138,7 @@ export function createReadBill(store: BillingStore) {
     const summary = accountSummary(loaded.value);
     if (!summary.ok) return summary;
     const bill = summary.value;
-    const guestNumbers = new Map(
-      loaded.value.lines.map((l) => [l.order.participantId, l.order.participant?.guestNumber]),
-    );
+    const seats = numberTablePeople(loaded.value.people);
     const details = new Map(loaded.value.lines.map((l) => [l.id, l]));
     return ok({
       sessionId: input.value.sessionId,
@@ -165,10 +164,11 @@ export function createReadBill(store: BillingStore) {
         };
       }),
       participants: [...bill.byParticipant].map(([participantId, p]) => {
-        const guestNumber = guestNumbers.get(participantId);
+        const seat = seats.get(participantId);
         return {
           participantId,
-          ...(guestNumber ? { guestNumber } : {}),
+          ...(seat?.guestNumber !== undefined ? { guestNumber: seat.guestNumber } : {}),
+          ...(seat?.personNumber !== undefined ? { personNumber: seat.personNumber } : {}),
           totalMinor: p.total.amountMinor.toString(),
           paidMinor: p.paid.amountMinor.toString(),
           outstandingMinor: p.outstanding.amountMinor.toString(),

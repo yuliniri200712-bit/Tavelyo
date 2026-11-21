@@ -781,10 +781,12 @@ describe('sesión de mesa, participantes y QR', () => {
       { ...t, sessionId },
     );
     expect(list.sessionParticipants).toHaveLength(2);
-    // Minimización: el mesero no ve el uid de Firebase Auth del cliente.
+    // Minimización: el mesero no ve el uid de Firebase Auth del cliente. guestNumber solo es el
+    // número de la persona sin teléfono en la mesa (D-43); para quien tiene teléfono va vacío.
     expect(Object.keys(list.sessionParticipants[0] ?? {}).sort()).toEqual(
-      ['expiresAt', 'id', 'joinedAt', 'removedAt'].sort(),
+      ['expiresAt', 'guestNumber', 'id', 'joinedAt', 'removedAt'].sort(),
     );
+    expect(list.sessionParticipants.every((p) => p.guestNumber === null)).toBe(true);
 
     const mine = async (user: TestUser) =>
       (

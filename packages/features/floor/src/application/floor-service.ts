@@ -14,6 +14,8 @@ export type ParticipantStatus = 'active' | 'expired' | 'removed';
  */
 export function participantStatus(participant: SessionParticipant, now: Date): ParticipantStatus {
   if (participant.removedAt) return 'removed';
+  // Sin teléfono no hay acceso que venza: sigue en la mesa hasta que la retiren o se cierre (D-43).
+  if (participant.guestNumber !== null) return 'active';
   return participant.expiresAt.getTime() > now.getTime() ? 'active' : 'expired';
 }
 

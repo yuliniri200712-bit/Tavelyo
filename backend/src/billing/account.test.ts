@@ -28,6 +28,7 @@ const snapshot: AccountSnapshot = {
   roleCode: 'cashier',
   bill: null,
   lines: [line],
+  people: [],
   payments: [],
   cashSession: { id: id(70), version: 1, openingFloatMinor: '0', movements: [] },
 };
@@ -73,6 +74,27 @@ describe('cuenta y pagos registrados (4a)', () => {
         lines: [{ id: line.id }],
       },
     });
+  });
+
+  it('numera a cada persona como el salón: con teléfono «Persona N» y sin teléfono su número (D-43)', async () => {
+    const guest = { ...line, id: id(21), order: { ...line.order, participantId: id(6) } };
+    const result = await createReadBill(
+      store({
+        ...snapshot,
+        lines: [line, guest],
+        // id(7) se unió antes pero no pidió: cuenta para el número aunque no salga en la cuenta.
+        people: [
+          { id: id(7), guestNumber: null },
+          { id: id(6), guestNumber: 3 },
+          { id: id(5), guestNumber: null },
+        ],
+      }),
+    )(actor, scope);
+    expect(result.ok && result.value.participants).toEqual([
+      expect.objectContaining({ participantId: id(5), personNumber: 2 }),
+      expect.objectContaining({ participantId: id(6), guestNumber: 3 }),
+    ]);
+    expect(result.ok && result.value.participants[0]).not.toHaveProperty('guestNumber');
   });
   it('registra consumo y propina separados y calcula el cambio en el servidor', async () => {
     const db = store();

@@ -4,7 +4,7 @@ import type {
   RecordedPaymentResponse,
   RecordPaymentRequest,
 } from '@tavelyo/contracts';
-import type { OrderItemStatus, RefundStatus } from '@tavelyo/core';
+import type { OrderItemStatus, RefundStatus, TablePerson } from '@tavelyo/core';
 import type { Actor, Outcome } from '../shared/outcome.ts';
 
 export interface AccountLine {
@@ -17,7 +17,6 @@ export interface AccountLine {
   readonly quantity: number;
   readonly order: {
     readonly participantId: string;
-    readonly participant?: { readonly guestNumber: number | null };
     readonly sentToKitchenAt: string | null;
     readonly approval: string;
   };
@@ -47,6 +46,8 @@ export interface AccountSnapshot {
   readonly roleCode: string;
   readonly bill: { readonly id: string; readonly version: number; readonly status: string } | null;
   readonly lines: readonly AccountLine[];
+  /** Personas de la sesión por orden de llegada, para numerarlas como el salón (D-43). */
+  readonly people: readonly TablePerson[];
   readonly payments: readonly AccountPayment[];
   /** Caja abierta de quien llama en la sucursal (D-40): el efectivo pasa por ella. */
   readonly cashSession: {

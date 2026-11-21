@@ -1,4 +1,10 @@
-export type { ComandaScope, ComandaMenu, ComandaProduct, ComandaGateway } from './comanda.ts';
+export type {
+  ComandaScope,
+  ComandaMenu,
+  ComandaProduct,
+  ComandaGateway,
+  GuestAdded,
+} from './comanda.ts';
 import type { LiveObserver, OrderItemStatus, Result } from '@tavelyo/core';
 
 /** Sucursal en la que se trabaja: el servidor vuelve a comprobar empresa, sucursal y permiso. */

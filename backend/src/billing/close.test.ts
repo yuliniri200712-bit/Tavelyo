@@ -58,6 +58,7 @@ const settled: AccountSnapshot = {
   roleCode: 'waiter',
   bill: { id: id(50), version: 4, status: 'OPEN' },
   lines: [line(10), line(11)],
+  people: [],
   payments: [paid([10, 11])],
   cashSession: null,
 };

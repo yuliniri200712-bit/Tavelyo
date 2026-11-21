@@ -15,6 +15,7 @@ const base = {
   joinedAt: new Date('2026-11-15T19:00:00Z'),
   expiresAt: new Date('2026-11-15T23:00:00Z'),
   removedAt: null,
+  guestNumber: null,
 };
 
 describe('participantStatus', () => {
@@ -24,6 +25,12 @@ describe('participantStatus', () => {
     expect(participantStatus({ ...base, removedAt: new Date('2026-11-15T19:30:00Z') }, now)).toBe(
       'removed',
     );
+  });
+
+  it('la persona sin teléfono sigue en la mesa aunque su acceso por QR no exista (D-43)', () => {
+    const guest = { ...base, guestNumber: 1, expiresAt: base.joinedAt };
+    expect(participantStatus(guest, now)).toBe('active');
+    expect(participantStatus({ ...guest, removedAt: now }, now)).toBe('removed');
   });
 });
 

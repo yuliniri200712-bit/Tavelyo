@@ -1,4 +1,12 @@
-import { err, formatMoney, Money, ok, parseMajorAmount, type Result } from '@tavelyo/core';
+import {
+  err,
+  formatMoney,
+  Money,
+  ok,
+  parseMajorAmount,
+  tablePersonLabel,
+  type Result,
+} from '@tavelyo/core';
 import { RECEIPT_NUMBER_MAX_LENGTH, REFUND_REASON } from '@tavelyo/contracts';
 import type { PaymentInput, PaymentMethod } from '../domain/index.ts';
 
@@ -113,8 +121,24 @@ export function changePreview(draft: PaymentDraft): string | null {
 }
 
 /** «Persona 1», «Persona 2»…: los comensales no dan su nombre (D-10). */
-export function participantLabels(ids: readonly string[]): ReadonlyMap<string, string> {
-  return new Map(ids.map((id, i) => [id, `Persona ${i + 1}`]));
+/** Nombre de cada persona con el número que entrega el servidor, igual que en el salón (D-43). */
+export function participantLabels(
+  participants: readonly {
+    readonly participantId: string;
+    readonly guestNumber?: number;
+    readonly personNumber?: number;
+  }[],
+): ReadonlyMap<string, string> {
+  return new Map(
+    participants.map(({ participantId, guestNumber, personNumber }) => [
+      participantId,
+      guestNumber !== undefined
+        ? tablePersonLabel({ guestNumber })
+        : personNumber !== undefined
+          ? tablePersonLabel({ personNumber })
+          : 'Persona de la mesa',
+    ]),
+  );
 }
 
 export function describeTable(table: { tableCode: string; billRequestedAt: Date | null }): string {

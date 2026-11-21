@@ -65,6 +65,7 @@ const base: AccountSnapshot = {
   roleCode: 'cashier',
   bill: { id: id(50), version: 3, status: 'OPEN' },
   lines: [line(10, 40_000), line(11, 60_000)],
+  people: [],
   payments: [
     payment(20, [
       [10, 40_000],

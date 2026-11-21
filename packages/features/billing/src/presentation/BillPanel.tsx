@@ -112,9 +112,7 @@ export function BillPanel({
     );
 
   const { bill, payments } = loaded;
-  const labels = new Map(participantLabels(bill.participants.map((p) => p.participantId)));
-  for (const p of bill.participants)
-    if (p.guestNumber) labels.set(p.participantId, `Persona sin teléfono ${p.guestNumber}`);
+  const labels = participantLabels(bill.participants);
   const amountFor = (t: Target): string | null => {
     if (t.kind === 'all') return bill.outstandingMinor;
     if (t.kind === 'part') return bill.split?.[t.index] ?? null;

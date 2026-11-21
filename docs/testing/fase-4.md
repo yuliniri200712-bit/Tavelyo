@@ -191,3 +191,38 @@ Pendiente: los otros navegadores de D-15 (los corre la CI), la impresión en pap
 El propietario aprueba el bloque 4 (4a, 4b y 4c) el 2026-11-21, con la regresión anterior como nueva verificación.
 
 El propietario aprueba la parte 6a (pantalla de caja y comprobante con NIT, commit `59d5fe6`) el 2026-11-21, con la CI #73 de `fase-4-caja-pagos` en verde, y autoriza la 6b. Siguen pendientes, sin bloquear la 6a, la impresión en papel del comprobante y la prueba en el Android real (bloque 9).
+
+## 2026-11-21 — Parte 6b: pedidos del mesero (D-42, D-43)
+
+Revisión del código adelantado de `59d5fe6` contra el plan, autorizada por el propietario junto con la ampliación de D-43 (el mesero también pide para un comensal con teléfono vigente). Correcciones:
+
+1. **Persona sin teléfono «vencida» en el salón:** su acceso por QR no existe, así que ahora sigue «En la mesa» hasta que la retiren o se cierre la mesa (`participantStatus`), con «Sin teléfono, la agregó el mesero a las …» y su propio texto al retirarla.
+2. **Una sola numeración** en el salón, la comanda y la caja (`packages/core/src/table-people.ts`): «Persona N» por orden de llegada solo entre quienes tienen teléfono y «Persona sin teléfono N» con el número del servidor, contando también a las vencidas o retiradas para que nadie cambie de número. `readBill` devuelve `personNumber` o `guestNumber`; `SessionParticipants` y `StaffOrderDesk` entregan `guestNumber` y a todas las personas de la sesión.
+3. **Agregar persona sin duplicados:** si se pierde la respuesta, «Reintentar agregar Persona sin teléfono N» repite el mismo número; si ya existe, queda elegida. Si otra persona del equipo lo tomó a la vez, se avisa sin elegirla. Límite de 1 a 99 en el conector y en la pantalla.
+4. **Clave de la comanda:** cambiar la persona o los platos genera una clave nueva; la misma clave solo se reutiliza al reintentar una comanda sin respuesta.
+5. Pruebas de integración nuevas (`backend/tests/mesero-fase-4-6b.int.test.ts`).
+6. Pruebas de pantalla nuevas (`ComandaPanel.test.tsx`, `comanda-gateway.test.ts`, `table-people.test.ts` y los cambios de salón y cuenta).
+7. El recorrido se separó en `mesero-comanda.spec.ts` (6b) y `traslado-mesa.spec.ts` (6c).
+8. Documentación: `permissions.md` (sección 11), `data-model.md`, `requirements.md` (D-43) y este registro.
+
+| Comprobación | Resultado |
+|---|---|
+| `npm run check` | Formato, ESLint y tipos correctos. 1019 pruebas en 79 archivos (15 nuevas o ampliadas de la 6b) |
+| Integración del backend | 102 pruebas, incluidas las 8 nuevas de la 6b y la regresión de 4a, 4b, 4c y caja |
+| Integración de SQL Connect | 118 pruebas. La de minimización de `SessionParticipants` admite ahora `guestNumber` (vacío para quien tiene teléfono) y sigue sin el uid del comensal |
+| SDK generado | Regenerado en `tavelyo-emu` y copiado a `packages/data-access/dataconnect-generated` |
+| Chrome con emuladores | `mesero-comanda.spec.ts`, `traslado-mesa.spec.ts` y `caja-comprobante.spec.ts` pasan (2,0 min) |
+| `npm run check:secrets` | Sin secretos en 547 archivos |
+
+Casos de integración de la 6b, todos en verde:
+
+- directo a cocina con la sucursal en «aprobación del mesero» (D-42), `staffUid` del mesero, auditoría, y el comensal de la misma mesa no puede enviar el resumen del mesero;
+- saldo propio con la numeración común: comensal con teléfono «Persona 1» y persona sin teléfono con su número;
+- la misma clave no crea otro pedido y con otro contenido se rechaza;
+- aislamiento: otra empresa (con sus identificadores y con los de esta), mesero de otra sucursal, sesión de otra sucursal presentada como de esta y persona de otra mesa;
+- sin permiso: cajero, cocina y membresía revocada;
+- mesa cerrada;
+- persona retirada;
+- dos meseros que agregan el mismo número a la vez (solo uno lo crea), y números 0 y 100 rechazados.
+
+Pendiente: los otros navegadores de D-15 (los corre la CI) y la aprobación del propietario de la 6b.

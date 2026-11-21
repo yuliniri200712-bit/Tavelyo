@@ -97,9 +97,13 @@ export interface FloorSector {
   readonly tables: readonly FloorTable[];
 }
 
-/** Persona que se unió a la mesa desde su teléfono. El servidor no entrega su cuenta. */
+/**
+ * Persona de la mesa: se unió desde su teléfono o, sin teléfono, la agregó el mesero con un número
+ * (`guestNumber`, D-43). El servidor no entrega su cuenta.
+ */
 export interface SessionParticipant {
   readonly id: string;
+  readonly guestNumber: number | null;
   readonly joinedAt: Date;
   readonly expiresAt: Date;
   readonly removedAt: Date | null;

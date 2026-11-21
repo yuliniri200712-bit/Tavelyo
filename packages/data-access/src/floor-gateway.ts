@@ -137,6 +137,7 @@ export function createFloorServiceGateway(
         return ok(
           data.sessionParticipants.map((participant) => ({
             id: participant.id,
+            guestNumber: participant.guestNumber ?? null,
             joinedAt: new Date(participant.joinedAt),
             expiresAt: new Date(participant.expiresAt),
             removedAt: participant.removedAt ? new Date(participant.removedAt) : null,

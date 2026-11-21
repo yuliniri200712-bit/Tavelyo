@@ -25,6 +25,7 @@ interface AccountData {
   tableSession: { status: string };
   branch: { currency: string };
   orderItems: AccountLine[];
+  people: AccountSnapshot['people'][number][];
   cashSessions: Array<{
     id: string;
     version: number;
@@ -74,6 +75,7 @@ export function createBillingStore(dc: DataConnect): BillingStore {
         // Nunca calcular un saldo sobre una respuesta truncada. Las cuentas mayores requieren paginación.
         if (
           data.orderItems.length >= 1000 ||
+          data.people.length >= 500 ||
           (bill?.billPayments_on_bill.length ?? 0) >= 1000 ||
           (cash?.cashMovements_on_cashSession.length ?? 0) >= 1000 ||
           bill?.billPayments_on_bill.some(
@@ -94,6 +96,7 @@ export function createBillingStore(dc: DataConnect): BillingStore {
           roleCode: data.membership.role.code,
           bill: bill ? { id: bill.id, version: bill.version, status: bill.status } : null,
           lines: data.orderItems,
+          people: data.people,
           payments: (bill?.billPayments_on_bill ?? []).map(
             ({ id, paymentAllocations_on_payment, refunds_on_payment, ...p }) => ({
               ...p,

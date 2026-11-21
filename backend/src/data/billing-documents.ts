@@ -39,7 +39,10 @@ export const BILL_ROWS = `
   }
   orderItems(where: { tenantId: { eq: $tenantId }, branchId: { eq: $branchId }, order: { sessionId: { eq: $sessionId } } }, orderBy: [{ id: ASC }], limit: 1000) {
     id version status lineTotalMinor taxMinor productNameSnapshot quantity
-    order { participantId participant { guestNumber } sentToKitchenAt approval }
+    order { participantId sentToKitchenAt approval }
+  }
+  people: sessionParticipants(where: { tenantId: { eq: $tenantId }, branchId: { eq: $branchId }, sessionId: { eq: $sessionId } }, orderBy: [{ joinedAt: ASC }, { id: ASC }], limit: 500) {
+    id guestNumber
   }
 `;
 

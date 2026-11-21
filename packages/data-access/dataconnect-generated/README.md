@@ -1818,6 +1818,8 @@ export interface StaffOrderDeskData {
     id: UUIDString;
     guestNumber?: number | null;
     joinedAt: TimestampString;
+    expiresAt: TimestampString;
+    removedAt?: TimestampString | null;
   } & SessionParticipant_Key)[];
 }
 ```
@@ -3998,6 +4000,7 @@ The `data` property is an object of type `SessionParticipantsData`, which is def
 export interface SessionParticipantsData {
   sessionParticipants: ({
     id: UUIDString;
+    guestNumber?: number | null;
     joinedAt: TimestampString;
     expiresAt: TimestampString;
     removedAt?: TimestampString | null;

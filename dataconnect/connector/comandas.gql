@@ -89,19 +89,22 @@ query StaffOrderDesk($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!) @aut
       }
     }
   }
+  # Todas las personas de la sesión, también vencidas o retiradas, para numerarlas igual que el
+  # salón y la caja; la pantalla solo ofrece las vigentes y el servidor lo vuelve a comprobar.
   sessionParticipants(
     where: {
-      _and: [
-        { sessionId: { eq: $sessionId } }
-        { removedAt: { isNull: true } }
-        { _or: [{ guestNumber: { isNull: false } }, { expiresAt: { gt_expr: "request.time" } }] }
-      ]
+      tenantId: { eq: $tenantId }
+      branchId: { eq: $branchId }
+      sessionId: { eq: $sessionId }
     }
-    orderBy: [{ joinedAt: ASC }]
+    orderBy: [{ joinedAt: ASC }, { id: ASC }]
+    limit: 500
   ) {
     id
     guestNumber
     joinedAt
+    expiresAt
+    removedAt
   }
 }
 
@@ -137,6 +140,7 @@ mutation AddTableGuest($tenantId: UUID!, $branchId: UUID!, $sessionId: UUID!, $n
 
     tableSession(id: $sessionId)
       @check(expr: "vars.number > 0", message: "Indica un número de persona mayor que cero")
+      @check(expr: "vars.number <= 99", message: "La mesa admite hasta 99 personas sin teléfono")
       @check(expr: "this != null", message: "Sesión inexistente") {
       status @check(expr: "this == 'OPEN'", message: "La mesa está cerrada")
       tenantId @check(expr: "this == vars.tenantId", message: "Sesión fuera de la empresa")

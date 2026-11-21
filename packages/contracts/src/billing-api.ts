@@ -54,9 +54,14 @@ export interface BillResponse extends BillPartResponse {
     readonly quantity: number;
     readonly taxMinor: string;
   })[];
+  /**
+   * Saldo por persona, con su número en la mesa (D-43): `personNumber` si se unió con su teléfono
+   * o `guestNumber` si no tiene; la misma numeración que el salón y la comanda.
+   */
   readonly participants: readonly (BillPartResponse & {
     readonly participantId: string;
     readonly guestNumber?: number;
+    readonly personNumber?: number;
   })[];
   /** Suma de los reembolsos confirmados (por plato y generales). */
   readonly refundedMinor: string;

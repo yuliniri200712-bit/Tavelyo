@@ -52,15 +52,24 @@ const sectors: FloorSector[] = [
 const people: SessionParticipant[] = [
   {
     id: 'p1',
+    guestNumber: null,
     joinedAt: new Date('2026-11-16T00:45:00Z'),
     expiresAt: new Date('2026-11-16T04:45:00Z'),
     removedAt: null,
   },
   {
     id: 'p2',
+    guestNumber: null,
     joinedAt: new Date('2026-11-16T00:50:00Z'),
     expiresAt: new Date('2026-11-16T04:50:00Z'),
     removedAt: new Date('2026-11-16T00:55:00Z'),
+  },
+  {
+    id: 'g1',
+    guestNumber: 1,
+    joinedAt: new Date('2026-11-16T00:52:00Z'),
+    expiresAt: new Date('2026-11-16T00:52:00Z'),
+    removedAt: null,
   },
 ];
 
@@ -177,6 +186,11 @@ describe('FloorServicePage', () => {
     const second = within(list).getByText('Persona 2').closest('li') as HTMLElement;
     expect(within(second).getByText('Retirada')).toBeTruthy();
     expect(within(second).queryByRole('button', { name: 'Retirar de la mesa' })).toBeNull();
+    // Sin teléfono (D-43): no vence y conserva su propio número.
+    const guest = within(list).getByText('Persona sin teléfono 1').closest('li') as HTMLElement;
+    expect(within(guest).getByText('En la mesa')).toBeTruthy();
+    expect(within(guest).getByText(/Sin teléfono, la agregó el mesero a las/)).toBeTruthy();
+    expect(within(guest).getByRole('button', { name: 'Retirar de la mesa' })).toBeTruthy();
     expect(gateway.participants).toHaveBeenCalledWith(scope, 'ses2');
 
     fireEvent.click(within(first).getByRole('button', { name: 'Retirar de la mesa' }));

@@ -158,12 +158,23 @@ El operador de plataforma no aparece en la matriz operativa: solo tiene permisos
 - Las escrituras vuelven a comprobar en la transacción la membresía activa, el permiso, la sucursal y el estado del turno.
 - `recordPayment` y `refundPayment` en efectivo usan la caja abierta de quien llama (D-40).
 
-## 10. Pantalla de caja y comprobante (Fase 4, bloque 6 en desarrollo)
+## 10. Pantalla de caja y comprobante (Fase 4, parte 6a, aprobada el 2026-11-21)
 
 - `BillingTables` exige `payment.record`, membresía y empresa activas y acceso a la sucursal. Lista las sesiones abiertas de esa empresa y sucursal con la solicitud de cuenta pendiente. Los importes proceden de `readBill`.
 - `readPaymentReceipt` exige `payment.record` en la sucursal activa. Comprueba que el pago confirmado pertenece a la empresa, la sucursal y la sesión solicitadas. La interfaz de Operaciones usa el mismo permiso para las rutas de caja y comprobante.
 
-## 11. Pendiente
+## 11. Pedidos del mesero (Fase 4, parte 6b, D-42 y D-43)
+
+Las tres operaciones exigen `order.create` (propietario, administrador de sucursal y mesero; **no** el cajero ni la cocina), membresía y empresa activas, la sucursal asignada (el propietario accede a todas las de su empresa), sucursal activa y la sesión abierta de esa empresa y sucursal.
+
+- `StaffOrderDesk` (`comandas.gql`): la carta disponible de la sucursal y las personas de la sesión con `id`, `guestNumber`, `joinedAt`, `expiresAt` y `removedAt`. **Nunca** el uid de Firebase Auth del comensal. Trae también a las vencidas y retiradas solo para numerarlas igual que el salón y la caja; la pantalla ofrece únicamente las vigentes.
+- `AddTableGuest` (`comandas.gql`): agrega una persona sin teléfono con un número de 1 a 99, único en la sesión (`@unique(sessionId, guestNumber)`), con `@transaction`, bloqueo de la sesión abierta y `AuditEvent` `session_participant.add_guest`. Repetir el mismo número nunca crea otra persona.
+- `submitStaffOrder` (backend): el servidor recalcula el pedido, comprueba que la persona pertenece a esa sesión y está vigente (sin teléfono: no retirada; con teléfono: además no vencida) y lo envía **siempre directo a cocina** (D-42) con `ServerSendStaffOrder` (`NO_ACCESS`), que vuelve a comprobar membresía, permiso y sucursal dentro de la transacción (revocación) y que el resumen lo hizo ese mismo mesero (`OrderQuote.staffUid`). El comensal no puede enviar un resumen del mesero (`ServerQuoteForSubmit` filtra `staffUid` nulo). La clave idempotente se guarda con el uid del mesero.
+- El mesero puede pedir para una persona sin teléfono o para un comensal con teléfono vigente en la mesa (D-43, ampliada el 2026-11-21); el pedido se carga al saldo de esa persona.
+- Retirar a una persona sin teléfono usa `RemoveParticipant` (`session.close`), como a cualquier otra; lo que ya pidió sigue en la cuenta.
+- Nombres en pantalla, iguales en el salón, la comanda y la caja (`packages/core/src/table-people.ts`): «Persona N» por orden de llegada entre quienes tienen teléfono y «Persona sin teléfono N» con su número. `readBill` devuelve `personNumber` o `guestNumber`.
+
+## 12. Pendiente
 
 - Topes concretos de descuento por rol (los de reembolso, D-34, están implementados desde 4b).
 - Política de autenticación reforzada para propietarios (según capacidades verificadas de Firebase Auth).

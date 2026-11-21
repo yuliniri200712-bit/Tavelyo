@@ -51,7 +51,9 @@ export interface Bill {
   readonly refundedMinor: string;
   readonly lines: readonly BillLine[];
   readonly participants: readonly {
+    /** Número en la mesa (D-43): sin teléfono, `guestNumber`; con teléfono, `personNumber`. */
     readonly guestNumber?: number;
+    readonly personNumber?: number;
     readonly participantId: string;
     readonly totalMinor: string;
     readonly paidMinor: string;

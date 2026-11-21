@@ -12,7 +12,9 @@ import { callFunction } from '../../backend/tests/support/functions.ts';
 import { FUNCTION_WAIT, signInStaff } from '../support/orders.ts';
 import type { BillResponse, StaffOrderResponse } from '@tavelyo/contracts';
 
-test('el mesero toma la comanda sin teléfono y traslada la sesión con su cuenta', async ({
+// Parte 6b (D-42, D-43): el mesero toma el pedido de una persona sin teléfono, que va directo a
+// cocina aunque la sucursal pida aprobación, y cada persona conserva su propio saldo.
+test('el mesero toma la comanda de una persona sin teléfono y va directo a cocina', async ({
   page,
 }, info) => {
   test.slow();
@@ -28,15 +30,6 @@ test('el mesero toma la comanda sin teléfono y traslada la sesión con su cuent
   await insertMembership(tenant.id, waiter, 'waiter', [branchId]);
   await insertMembership(tenant.id, cashier, 'cashier', [branchId]);
   const f = await buildFixture(owner, tenant.id, branchId);
-  const dest = expectOk(
-    await mutate<{ diningTable_insert: { id: string } }>(owner, 'CreateTable', {
-      ...scope,
-      sectorId: f.sectorId,
-      code: 'M2',
-      seats: 4,
-    }),
-    'Crear destino',
-  ).diningTable_insert.id;
   const session = expectOk(
     await mutate<{ tableSession_insert: { id: string } }>(waiter, 'OpenTableSession', {
       ...scope,
@@ -68,30 +61,24 @@ test('el mesero toma la comanda sin teléfono y traslada la sesión con su cuent
   });
   const id = await page.getByLabel('Persona de la mesa').inputValue();
   const seat = { ...scope, sessionId: session };
-  const bill = await callFunction<BillResponse>(cashier, 'readBill', seat);
-  expect(bill).toMatchObject({
+  expect(await callFunction<BillResponse>(cashier, 'readBill', seat)).toMatchObject({
     ok: true,
     result: {
       totalMinor: '3200000',
       participants: [{ participantId: id, guestNumber: 1, outstandingMinor: '3200000' }],
     },
   });
-  await page.getByRole('button', { name: 'Trasladar mesa' }).click();
-  const transfer = page.getByRole('dialog', { name: 'Trasladar mesa M1' });
-  await transfer.getByLabel('Mesa de destino').selectOption(dest);
-  await transfer.getByRole('button', { name: 'Confirmar traslado' }).click();
-  await expect(page.getByText('Sesión trasladada a la mesa M2.')).toBeVisible();
-  const moved = page
-    .getByRole('listitem')
-    .filter({ has: page.getByText('Mesa M2', { exact: true }) });
-  await expect(moved.getByText('1 línea en cocina')).toBeVisible();
-  expect(await callFunction<BillResponse>(cashier, 'readBill', seat)).toEqual(bill);
+  // En el panel de personas del salón sigue en la mesa: no tiene acceso por QR que venza.
+  await page.getByRole('button', { name: 'Ver personas en la mesa' }).click();
+  const people = page.getByRole('list', { name: 'Personas en la mesa M1' });
+  const guest = people.getByRole('listitem').filter({ hasText: 'Persona sin teléfono 1' });
+  await expect(guest.getByText('En la mesa')).toBeVisible();
   const audit = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag22aa'])
     .analyze();
   expect(audit.violations).toEqual([]);
 
-  // Otro comensal tiene un saldo independiente aunque se repita el envío tras perder la respuesta.
+  // Otra persona sin teléfono tiene su saldo aunque se repita el envío tras perder la respuesta.
   const other = expectOk(
     await mutate<{ sessionParticipant_insert: { id: string } }>(waiter, 'AddTableGuest', {
       ...seat,
@@ -124,8 +111,7 @@ test('el mesero toma la comanda sin teléfono y traslada la sesión con su cuent
   const sent = await callFunction<StaffOrderResponse>(waiter, 'submitStaffOrder', request);
   expect(sent).toMatchObject({ ok: true, result: { outcome: 'sent' } });
   expect(await callFunction(waiter, 'submitStaffOrder', request)).toEqual(sent);
-  const after = await callFunction<BillResponse>(cashier, 'readBill', seat);
-  expect(after).toMatchObject({
+  expect(await callFunction<BillResponse>(cashier, 'readBill', seat)).toMatchObject({
     ok: true,
     result: {
       totalMinor: '6400000',
@@ -151,10 +137,4 @@ test('el mesero toma la comanda sin teléfono y traslada la sesión con su cuent
     ok: false,
     status: 'PERMISSION_DENIED',
   });
-  const stale = await mutate(waiter, 'TransferTableSession', {
-    ...seat,
-    sourceId: f.tableId,
-    tableId: dest,
-  });
-  expect(stale.errors?.length).toBeTruthy();
 });

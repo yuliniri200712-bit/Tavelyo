@@ -49,6 +49,10 @@ export function ComandaPanel({ gateway, scope, tableCode, sector, offline }: Pro
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [requestKey, setRequestKey] = useState(key);
+  // Persona sin teléfono cuya alta quedó sin confirmar: se reintenta con el mismo número.
+  const [pendingGuest, setPendingGuest] = useState<number | null>(null);
+  // Número de la persona sin teléfono que debe quedar elegida cuando llegue la lista nueva.
+  const [chooseGuest, setChooseGuest] = useState<number | null>(null);
   if (state.status === 'loading') return <LoadingState message="Cargando la comanda…" />;
   if (state.status === 'error')
     return (
@@ -59,7 +63,19 @@ export function ComandaPanel({ gateway, scope, tableCode, sector, offline }: Pro
       />
     );
   const menu = state.data;
-  const selected = menu.people.find((p) => p.id === person);
+  const selected =
+    menu.people.find((p) => p.id === person) ??
+    (chooseGuest === null ? undefined : menu.people.find((p) => p.guestNumber === chooseGuest));
+  // Cambiar la persona o los platos es otra comanda: lleva otra clave (la anterior ya no aplica).
+  const editLines = (next: readonly CartLine[]) => {
+    setLines(next);
+    setRequestKey(key());
+  };
+  const choosePerson = (id: string) => {
+    setPerson(id);
+    setChooseGuest(null);
+    setRequestKey(key());
+  };
   const total = cartTotal(lines, menu.currency);
   const products = menu.products.filter((p) =>
     (p.name + ' ' + p.categoryName)
@@ -68,19 +84,51 @@ export function ComandaPanel({ gateway, scope, tableCode, sector, offline }: Pro
   );
   const fail = (text: string) => setNotice({ tone: 'error', text });
   const addGuest = async () => {
+    const retry = pendingGuest !== null;
+    const number = pendingGuest ?? menu.nextGuestNumber;
+    if (number === null) {
+      fail('La mesa ya tiene 99 personas sin teléfono. Elige una de la lista.');
+      return;
+    }
     setBusy(true);
     try {
-      const number = Math.max(0, ...menu.people.map((p) => p.guestNumber ?? 0)) + 1;
       const result = await gateway.addGuest(scope, number);
-      if (result.ok) {
-        setPerson(result.value);
+      if (!result.ok) {
+        const unknown = result.error.kind === 'network' || result.error.kind === 'unknown';
+        setPendingGuest(unknown ? number : null);
+        fail(
+          unknown
+            ? 'Falta confirmar si se agregó la Persona sin teléfono ' +
+                number +
+                '. Reintenta para comprobarlo sin agregarla dos veces.'
+            : serverErrorText(result.error),
+        );
+        return;
+      }
+      setPendingGuest(null);
+      if (result.value.outcome === 'added') {
+        choosePerson(result.value.participantId);
         setNotice({
           tone: 'success',
           text: 'Persona sin teléfono ' + number + ' agregada a la mesa.',
         });
-      } else fail(serverErrorText(result.error));
-      refresh();
+      } else if (retry) {
+        // El intento anterior sí la agregó: se elige cuando llegue la lista actualizada.
+        choosePerson('');
+        setChooseGuest(number);
+        setNotice({
+          tone: 'success',
+          text: 'La Persona sin teléfono ' + number + ' ya estaba en la mesa y quedó elegida.',
+        });
+      } else {
+        fail(
+          'Otra persona del equipo acaba de agregar la Persona sin teléfono ' +
+            number +
+            '. Vuelve a pulsar «Agregar persona sin teléfono» si es alguien más.',
+        );
+      }
     } finally {
+      refresh();
       setBusy(false);
     }
   };
@@ -106,16 +154,15 @@ export function ComandaPanel({ gateway, scope, tableCode, sector, offline }: Pro
         return;
       }
       setUncertain(false);
-      setRequestKey(key());
       if (r.value.outcome === 'sent') {
-        setLines([]);
+        editLines([]);
         setProduct(null);
         setNotice({
           tone: 'success',
           text: 'Pedido enviado a cocina para ' + selected.label + '.',
         });
       } else if (r.value.outcome === 'changed') {
-        setLines(acceptServerPrices(lines, r.value.summary));
+        editLines(acceptServerPrices(lines, r.value.summary));
         fail('Cambió el precio. Revisa el nuevo resumen antes de enviar.');
         refresh();
       } else {
@@ -136,8 +183,8 @@ export function ComandaPanel({ gateway, scope, tableCode, sector, offline }: Pro
         <legend>Persona y productos</legend>
         <SelectField
           label="Persona de la mesa"
-          value={person}
-          onChange={(e) => setPerson(e.target.value)}
+          value={selected?.id ?? ''}
+          onChange={(e) => choosePerson(e.target.value)}
         >
           <option value="">Elige a quién corresponde el pedido</option>
           {menu.people.map((p) => (
@@ -147,7 +194,9 @@ export function ComandaPanel({ gateway, scope, tableCode, sector, offline }: Pro
           ))}
         </SelectField>
         <TavelyoButton variant="secondary" onClick={() => void addGuest()}>
-          Agregar persona sin teléfono
+          {pendingGuest === null
+            ? 'Agregar persona sin teléfono'
+            : 'Reintentar agregar Persona sin teléfono ' + pendingGuest}
         </TavelyoButton>
         <TextField
           label="Buscar por producto o categoría"
@@ -175,7 +224,7 @@ export function ComandaPanel({ gateway, scope, tableCode, sector, offline }: Pro
             onAdd={(choice) => {
               const next = addToCart(lines, product, choice, key);
               if (!next.ok) return next.message;
-              setLines(next.lines);
+              editLines(next.lines);
               setProduct(null);
               return null;
             }}
@@ -184,8 +233,8 @@ export function ComandaPanel({ gateway, scope, tableCode, sector, offline }: Pro
         {lines.length ? (
           <CartLines
             lines={lines}
-            onQuantity={(id, n) => setLines(setQuantity(lines, id, n))}
-            onRemove={(id) => setLines(removeLine(lines, id))}
+            onQuantity={(id, n) => editLines(setQuantity(lines, id, n))}
+            onRemove={(id) => editLines(removeLine(lines, id))}
           />
         ) : null}
       </fieldset>

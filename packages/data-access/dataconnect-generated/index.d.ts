@@ -1826,6 +1826,7 @@ export interface SessionParticipant_Key {
 export interface SessionParticipantsData {
   sessionParticipants: ({
     id: UUIDString;
+    guestNumber?: number | null;
     joinedAt: TimestampString;
     expiresAt: TimestampString;
     removedAt?: TimestampString | null;
@@ -1932,6 +1933,8 @@ export interface StaffOrderDeskData {
     id: UUIDString;
     guestNumber?: number | null;
     joinedAt: TimestampString;
+    expiresAt: TimestampString;
+    removedAt?: TimestampString | null;
   } & SessionParticipant_Key)[];
 }
 
