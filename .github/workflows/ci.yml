@@ -79,8 +79,9 @@ jobs:
   navegadores:
     name: PWA, accesibilidad y recorridos del personal y del cliente (Playwright)
     runs-on: ubuntu-latest
-    # Los recorridos con emuladores corren en los 5 navegadores de D-15 (unos 19 minutos).
-    timeout-minutes: 45
+    # Los recorridos con emuladores corren en los 5 navegadores de D-15: unos 42 minutos desde el
+    # bloque 6 de la Fase 4 (la CI #73 tardó 44 min 51 s y la #74 se cortó a los 45).
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
