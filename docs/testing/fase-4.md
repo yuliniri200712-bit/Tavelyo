@@ -257,7 +257,7 @@ Cambios:
 
 Observación sin cambio, para decidir más adelante: si la mesa vieja se vuelve a abrir con otro grupo, quien recargue su QR se une al grupo nuevo (comportamiento de la Fase 3, que permite estar en dos sesiones). La cuenta de cada sesión sigue separada.
 
-Pendiente: los otros navegadores de D-15 (los corre la CI) y la aprobación del propietario de la 6c.
+CI #76 (`1ea9a84`, con la 6c y la CI repartida) en verde en sus 8 trabajos, unos 14 minutos en total: calidad 1,8 min, PWA y accesibilidad 3,1 min, conectores y backend 13,9 min y recorridos de 10,1 a 10,9 min por navegador (Chrome, Edge, Safari de escritorio, Chrome en Android y Safari en iPhone). Con eso el propietario aprueba la parte 6c, como lo había dejado autorizado el 2026-11-22, y queda **cerrado el bloque 6**.
 
 ## 2026-11-22 — CI repartida por navegador
 
