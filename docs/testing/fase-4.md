@@ -227,7 +227,7 @@ Casos de integración de la 6b, todos en verde:
 
 CI de la 6b: la #74 se cortó a los 45 minutos en los recorridos de los 5 navegadores (la #73 ya había tardado 44 min 51 s), sin pruebas fallidas. Con el límite subido a 60 minutos (`32b1d17`), la **CI #75 pasó en verde** los tres trabajos; los recorridos tardaron 46 min 30 s.
 
-Pendiente: la aprobación del propietario de la 6b.
+El propietario aprueba la parte 6b el 2026-11-22.
 
 ## 2026-11-22 — Parte 6c: traslado de mesa (D-42, D-44)
 
@@ -258,3 +258,7 @@ Cambios:
 Observación sin cambio, para decidir más adelante: si la mesa vieja se vuelve a abrir con otro grupo, quien recargue su QR se une al grupo nuevo (comportamiento de la Fase 3, que permite estar en dos sesiones). La cuenta de cada sesión sigue separada.
 
 Pendiente: los otros navegadores de D-15 (los corre la CI) y la aprobación del propietario de la 6c.
+
+## 2026-11-22 — CI repartida por navegador
+
+Aprobado por el propietario el 2026-11-22 para que los recorridos no se acerquen al límite: los recorridos con emuladores y backend corren en **un trabajo por navegador de D-15, en paralelo** (trabajo `recorridos` de `.github/workflows/ci.yml`, con `E2E_PROJECT` en `playwright.emulators.config.ts`; un nombre desconocido detiene la ejecución). Cada trabajo instala solo su navegador y tiene 30 minutos. PWA y accesibilidad siguen en el trabajo `navegadores` (20 minutos). Sin la variable, en local, se corren los 5 (115 recorridos; 23 por navegador).

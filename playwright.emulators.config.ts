@@ -3,6 +3,21 @@ import { APPS, EMULATOR_ENV } from './playwright.config.ts';
 
 // Recorridos que necesitan los emuladores de Auth, SQL Connect y Cloud Functions en marcha.
 // Uso: `npm run test:e2e:emulators` (los arranca y los detiene).
+
+// Matriz D-15 completa, como los recorridos sin datos (playwright.config.ts).
+const PROJECTS = [
+  { name: 'chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
+  { name: 'edge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
+  { name: 'safari-escritorio', use: { ...devices['Desktop Safari'] } },
+  { name: 'chrome-android', use: { ...devices['Pixel 7'] } },
+  { name: 'safari-iphone', use: { ...devices['iPhone 15'] } },
+];
+// La CI corre un navegador por trabajo, en paralelo (E2E_PROJECT=chrome, …). Sin la variable, todos.
+const only = process.env['E2E_PROJECT'];
+if (only && !PROJECTS.some((project) => project.name === only)) {
+  throw new Error(`E2E_PROJECT desconocido: ${only}`);
+}
+
 export default defineConfig({
   testDir: './e2e/emulators',
   fullyParallel: false,
@@ -11,14 +26,7 @@ export default defineConfig({
   reporter: process.env['CI'] ? [['list'], ['github']] : [['list']],
   timeout: 90_000,
   use: { trace: 'retain-on-failure' },
-  // Matriz D-15 completa, como los recorridos sin datos (playwright.config.ts).
-  projects: [
-    { name: 'chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' } },
-    { name: 'edge', use: { ...devices['Desktop Edge'], channel: 'msedge' } },
-    { name: 'safari-escritorio', use: { ...devices['Desktop Safari'] } },
-    { name: 'chrome-android', use: { ...devices['Pixel 7'] } },
-    { name: 'safari-iphone', use: { ...devices['iPhone 15'] } },
-  ],
+  projects: only ? PROJECTS.filter((project) => project.name === only) : PROJECTS,
   webServer: [
     {
       command: 'npm run build -w @tavelyo/menu-web && npm run preview -w @tavelyo/menu-web',

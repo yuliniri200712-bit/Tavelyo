@@ -77,11 +77,9 @@ jobs:
       - run: npm run test:integration
 
   navegadores:
-    name: PWA, accesibilidad y recorridos del personal y del cliente (Playwright)
+    name: PWA y accesibilidad en los 5 navegadores (Playwright)
     runs-on: ubuntu-latest
-    # Los recorridos con emuladores corren en los 5 navegadores de D-15: unos 42 minutos desde el
-    # bloque 6 de la Fase 4 (la CI #73 tardó 44 min 51 s y la #74 se cortó a los 45).
-    timeout-minutes: 60
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -93,12 +91,46 @@ jobs:
         run: npx playwright install --with-deps chromium webkit chrome msedge
       - name: PWA y accesibilidad
         run: npm run test:e2e
-      - name: Recorridos con emuladores y backend (5 navegadores)
+      - name: Trazas de las pruebas fallidas
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-trazas-pwa
+          path: test-results/
+          retention-days: 7
+
+  # Recorridos con emuladores y backend: un trabajo por navegador de D-15, en paralelo. En un solo
+  # trabajo llegaron a 46 min 30 s (CI #75, Fase 4 bloque 6) y seguían creciendo.
+  recorridos:
+    name: Recorridos con emuladores y backend (${{ matrix.navegador.nombre }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        navegador:
+          - { proyecto: chrome, instalar: chrome, nombre: Chrome }
+          - { proyecto: edge, instalar: msedge, nombre: Edge }
+          - { proyecto: safari-escritorio, instalar: webkit, nombre: Safari de escritorio }
+          - { proyecto: chrome-android, instalar: chromium, nombre: Chrome en Android }
+          - { proyecto: safari-iphone, instalar: webkit, nombre: Safari en iPhone }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Navegador
+        run: npx playwright install --with-deps ${{ matrix.navegador.instalar }}
+      - name: Recorridos con emuladores y backend
+        env:
+          E2E_PROJECT: ${{ matrix.navegador.proyecto }}
         run: npm run test:e2e:emulators
       - name: Trazas de las pruebas fallidas
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-trazas
+          name: playwright-trazas-${{ matrix.navegador.proyecto }}
           path: test-results/
           retention-days: 7
