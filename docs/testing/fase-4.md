@@ -225,7 +225,9 @@ Casos de integración de la 6b, todos en verde:
 - persona retirada;
 - dos meseros que agregan el mismo número a la vez (solo uno lo crea), y números 0 y 100 rechazados.
 
-Pendiente: los otros navegadores de D-15 (los corre la CI) y la aprobación del propietario de la 6b.
+CI de la 6b: la #74 se cortó a los 45 minutos en los recorridos de los 5 navegadores (la #73 ya había tardado 44 min 51 s), sin pruebas fallidas. Con el límite subido a 60 minutos (`32b1d17`), la **CI #75 pasó en verde** los tres trabajos; los recorridos tardaron 46 min 30 s.
+
+Pendiente: la aprobación del propietario de la 6b.
 
 ## 2026-11-22 — Parte 6c: traslado de mesa (D-42, D-44)
 
