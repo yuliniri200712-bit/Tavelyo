@@ -1107,4 +1107,115 @@ describe('traslado de sesión con su cuenta (bloque 6)', () => {
       { actorId: u.waiterA.uid, reason: (winner === first ? one : two) + ' → ' + target },
     ]);
   });
+
+  it('rechaza destino archivado, ocupado o la misma mesa, mesa cerrada y membresía revocada', async () => {
+    const scope = { tenantId: a.tenantId, branchId: a.branchId };
+    const sector = async (name: string) =>
+      expectOk(
+        await mutate<{ sector_insert: { id: string } }>(u.ownerA, 'CreateSector', {
+          ...scope,
+          name,
+          sort: 11,
+        }),
+        'Sector',
+      ).sector_insert.id;
+    const table = async (sectorId: string, code: string) =>
+      expectOk(
+        await mutate<{ diningTable_insert: { id: string } }>(u.ownerA, 'CreateTable', {
+          ...scope,
+          sectorId,
+          code,
+          seats: 4,
+        }),
+        'Mesa',
+      ).diningTable_insert.id;
+    const open = async (tableId: string) =>
+      expectOk(
+        await mutate<{ tableSession_insert: { id: string } }>(u.waiterA, 'OpenTableSession', {
+          ...scope,
+          tableId,
+        }),
+        'Abrir',
+      ).tableSession_insert.id;
+    const main = await sector('Traslados 2');
+    const lone = await sector('Traslados 3');
+    const [source, busy, free, archived, inArchived] = [
+      await table(main, 'TA1'),
+      await table(main, 'TA2'),
+      await table(main, 'TA3'),
+      await table(main, 'TA4'),
+      await table(lone, 'TA5'),
+    ];
+    const session = await open(source);
+    await open(busy);
+    expectOk(
+      await mutate(u.ownerA, 'UpdateTable', {
+        ...scope,
+        tableId: archived,
+        sectorId: main,
+        code: 'TA4',
+        seats: 4,
+        archived: true,
+      }),
+      'Archivar mesa',
+    );
+    expectOk(
+      await mutate(u.ownerA, 'UpdateTable', {
+        ...scope,
+        tableId: inArchived,
+        sectorId: lone,
+        code: 'TA5',
+        seats: 4,
+        archived: true,
+      }),
+      'Archivar mesa del sector',
+    );
+    expectOk(
+      await mutate(u.ownerA, 'UpdateSector', {
+        ...scope,
+        sectorId: lone,
+        name: 'Traslados 3',
+        sort: 11,
+        archived: true,
+      }),
+      'Archivar sector',
+    );
+    const move = (tableId: string, user = u.waiterA, sessionId = session) =>
+      mutate(user, 'TransferTableSession', { ...scope, sessionId, sourceId: source, tableId });
+    const rejected = async (pending: ReturnType<typeof move>, why: RegExp) => {
+      const errors = (await pending).errors;
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.join(' | ')).toMatch(why);
+    };
+    await rejected(move(busy), /ya está ocupada/);
+    await rejected(move(source), /ya está ocupada/);
+    await rejected(move(archived), /archivada/);
+    await rejected(move(inArchived), /archivad/);
+
+    const revoked = await createUser('traslado-revocado');
+    await createProfile(revoked);
+    await insertMembership(a.tenantId, revoked, 'waiter', [a.branchId]);
+    expectOk(
+      await admin(
+        'mutation ($t: UUID!, $u: String!) { membership_update(key: { tenantId: $t, userId: $u }, data: { status: REVOKED }) }',
+        { t: a.tenantId, u: revoked.uid },
+      ),
+      'Revocar',
+    );
+    await rejected(move(free, revoked), /Sin membresía activa/);
+
+    expectOk(
+      await mutate(u.waiterA, 'CloseTableSession', { ...scope, sessionId: session }),
+      'Cerrar mesa',
+    );
+    await rejected(move(free), /cambió de mesa o ya está cerrada/);
+    const state = expectOk(
+      await admin<{ tableSession: { tableId: string; status: string } }>(
+        'query ($id: UUID!) { tableSession(id: $id) { tableId status } }',
+        { id: session },
+      ),
+      'Sesión',
+    );
+    expect(state.tableSession).toEqual({ tableId: source, status: 'CLOSED' });
+  });
 });

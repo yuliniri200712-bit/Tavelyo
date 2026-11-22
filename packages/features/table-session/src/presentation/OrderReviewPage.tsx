@@ -15,6 +15,7 @@ import { describeChange, describeProblem, formatMinor } from '../application/rev
 import type { PublicMenu } from '../domain/index.ts';
 import { MenuGate } from './MenuGate.tsx';
 import { useTableOrder } from './TableOrderProvider.tsx';
+import { MovedTableNotice, shownTableCode } from './MovedTable.tsx';
 
 export interface OrderReviewPageProps {
   /** Enlace para volver a la carta (la navegación es de la app). */
@@ -28,6 +29,7 @@ export interface OrderReviewPageProps {
  * al final en el restaurante). Según la sucursal, llega a cocina o espera al mesero (D-32).
  */
 export function OrderReviewPage({ menuLink, myOrdersLink }: OrderReviewPageProps) {
+  const { seat } = useTableOrder();
   return (
     <MenuGate>
       {(menu) => (
@@ -36,11 +38,12 @@ export function OrderReviewPage({ menuLink, myOrdersLink }: OrderReviewPageProps
             <div>
               <h1>Tu pedido</h1>
               <p className="tv-list__meta">
-                {menu.branchName} · Mesa {menu.tableCode}
+                {menu.branchName} · Mesa {shownTableCode(seat.seat, menu)}
               </p>
             </div>
             <div className="tv-toolbar">{menuLink}</div>
           </header>
+          <MovedTableNotice />
           <ReviewContent menu={menu} myOrdersLink={myOrdersLink} />
         </div>
       )}

@@ -21,6 +21,7 @@ import { formatMinor } from '../application/review-text.ts';
 import type { MenuProduct } from '../domain/index.ts';
 import { MenuGate } from './MenuGate.tsx';
 import { useTableOrder } from './TableOrderProvider.tsx';
+import { MovedTableNotice, shownTableCode } from './MovedTable.tsx';
 
 export interface TableMenuPageProps {
   /** Enlace a la pantalla del pedido con el texto dado (la navegación es de la app). */
@@ -33,7 +34,7 @@ const ALL = 'todas';
 
 /** Carta de la mesa del QR: cualquiera la ve; para pedir hay que unirse a la mesa abierta. */
 export function TableMenuPage({ orderLink, myOrdersLink }: TableMenuPageProps) {
-  const { cart, now } = useTableOrder();
+  const { cart, now, seat } = useTableOrder();
   const [notice, setNotice] = useState<{ tone: 'success'; text: string } | null>(null);
   const [category, setCategory] = useState(ALL);
   const [query, setQuery] = useState('');
@@ -55,12 +56,13 @@ export function TableMenuPage({ orderLink, myOrdersLink }: TableMenuPageProps) {
                 <h1>{menu.branchName}</h1>
                 <span className="tv-menu-hero__table">
                   <Icon name="freeTable" />
-                  Mesa {menu.tableCode}
+                  Mesa {shownTableCode(seat.seat, menu)}
                 </span>
               </div>
               <div className="tv-toolbar">{myOrdersLink}</div>
             </header>
             <ActionNotice notice={notice} />
+            <MovedTableNotice />
             {sections.length === 0 ? (
               <EmptyState
                 title="La carta no tiene productos disponibles"

@@ -1351,6 +1351,25 @@ export interface ServerMarkRefundPendingVariables {
   refundRef: string;
 }
 
+export interface ServerMyOpenParticipationData {
+  sessionParticipants: ({
+    id: UUIDString;
+    expiresAt: TimestampString;
+    session: {
+      id: UUIDString;
+      table: {
+        code: string;
+      };
+    } & TableSession_Key;
+  } & SessionParticipant_Key)[];
+}
+
+export interface ServerMyOpenParticipationVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  authUid: string;
+}
+
 export interface ServerOpenSessionByQrData {
   diningTables: ({
     id: UUIDString;
@@ -3406,6 +3425,18 @@ export const serverOpenSessionByQrRef: ServerOpenSessionByQrRef;
 
 export function serverOpenSessionByQr(vars: ServerOpenSessionByQrVariables, options?: ExecuteQueryOptions): QueryPromise<ServerOpenSessionByQrData, ServerOpenSessionByQrVariables>;
 export function serverOpenSessionByQr(dc: DataConnect, vars: ServerOpenSessionByQrVariables, options?: ExecuteQueryOptions): QueryPromise<ServerOpenSessionByQrData, ServerOpenSessionByQrVariables>;
+
+interface ServerMyOpenParticipationRef {
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerMyOpenParticipationVariables): QueryRef<ServerMyOpenParticipationData, ServerMyOpenParticipationVariables>;
+  /* Allow users to pass in custom DataConnect instances */
+  (dc: DataConnect, vars: ServerMyOpenParticipationVariables): QueryRef<ServerMyOpenParticipationData, ServerMyOpenParticipationVariables>;
+  operationName: string;
+}
+export const serverMyOpenParticipationRef: ServerMyOpenParticipationRef;
+
+export function serverMyOpenParticipation(vars: ServerMyOpenParticipationVariables, options?: ExecuteQueryOptions): QueryPromise<ServerMyOpenParticipationData, ServerMyOpenParticipationVariables>;
+export function serverMyOpenParticipation(dc: DataConnect, vars: ServerMyOpenParticipationVariables, options?: ExecuteQueryOptions): QueryPromise<ServerMyOpenParticipationData, ServerMyOpenParticipationVariables>;
 
 interface ServerInsertParticipantRef {
   /* Allow users to create refs without passing in DataConnect */

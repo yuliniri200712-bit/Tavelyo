@@ -29,6 +29,7 @@ import type { MyOrder, PublicMenu, TableSeat } from '../domain/index.ts';
 import { MenuGate } from './MenuGate.tsx';
 import { ServiceCard } from './ServiceCard.tsx';
 import { useTableOrder } from './TableOrderProvider.tsx';
+import { MovedTableNotice, shownTableCode } from './MovedTable.tsx';
 import { customerErrorText } from './useCheckout.ts';
 
 export interface MyOrdersPageProps {
@@ -41,24 +42,32 @@ export interface MyOrdersPageProps {
  * (ADR-0007). Desde aquí también llama al mesero o pide la cuenta.
  */
 export function MyOrdersPage({ menuLink }: MyOrdersPageProps) {
+  return <MenuGate>{(menu) => <MyOrdersView menu={menu} menuLink={menuLink} />}</MenuGate>;
+}
+
+function MyOrdersView({
+  menu,
+  menuLink,
+}: {
+  readonly menu: PublicMenu;
+  readonly menuLink: ReactNode;
+}) {
+  const tableCode = shownTableCode(useTableOrder().seat.seat, menu);
   return (
-    <MenuGate>
-      {(menu) => (
-        <div className="tv-page">
-          <header className="tv-page__header">
-            <div>
-              <h1>Mis pedidos</h1>
-              <p className="tv-list__meta">
-                {menu.branchName} · Mesa {menu.tableCode}
-              </p>
-            </div>
-            <div className="tv-toolbar">{menuLink}</div>
-          </header>
-          <ServiceCard />
-          <MyOrdersContent menu={menu} />
+    <div className="tv-page">
+      <header className="tv-page__header">
+        <div>
+          <h1>Mis pedidos</h1>
+          <p className="tv-list__meta">
+            {menu.branchName} · Mesa {tableCode}
+          </p>
         </div>
-      )}
-    </MenuGate>
+        <div className="tv-toolbar">{menuLink}</div>
+      </header>
+      <MovedTableNotice />
+      <ServiceCard />
+      <MyOrdersContent menu={menu} />
+    </div>
   );
 }
 

@@ -27,6 +27,7 @@ import type {
   MenuProduct,
   MyOrder,
   MyOrderApproval,
+  TableSeat,
 } from '@tavelyo/table-session/domain';
 import { mapCommandError } from './command-errors.ts';
 import { ITEM_STATUS } from './item-status.ts';
@@ -175,6 +176,11 @@ export interface CustomerClient {
  * Cliente en la mesa (ADR-0011): la carta es pública; para unirse, revisar el pedido y pagar
  * hace falta una sesión de Firebase Auth, anónima, que se crea solo cuando la persona pide.
  */
+/** Solo las variables que piden las operaciones: `movedTo` es de la pantalla (traslado, D-42). */
+function seatVariables(seat: TableSeat): { sessionId: string; branchId: string } {
+  return { sessionId: seat.sessionId, branchId: seat.branchId };
+}
+
 export function createCustomerGateway({
   auth,
   dataConnect,
@@ -234,7 +240,7 @@ export function createCustomerGateway({
     submit: (request) => call<SubmitOrderRequest, SubmitOrderResponse>('submitOrder', request),
     async withdraw(seat, orderId) {
       try {
-        await withdrawMyOrder(dataConnect, { ...seat, orderId });
+        await withdrawMyOrder(dataConnect, { ...seatVariables(seat), orderId });
         return ok(undefined);
       } catch (error) {
         const mapped = mapCommandError(error);
@@ -257,9 +263,18 @@ export function createCustomerGateway({
       });
     },
     myOrders: (seat) =>
-      readQuery(() => myOrders(dataConnect, seat, SERVER_ONLY), toMyOrders, mapCustomerDataError),
+      readQuery(
+        () => myOrders(dataConnect, seatVariables(seat), SERVER_ONLY),
+        toMyOrders,
+        mapCustomerDataError,
+      ),
     watchMyOrders: (seat, observer) =>
-      watchQuery(myOrdersRef(dataConnect, seat), toMyOrders, observer, mapCustomerDataError),
+      watchQuery(
+        myOrdersRef(dataConnect, seatVariables(seat)),
+        toMyOrders,
+        observer,
+        mapCustomerDataError,
+      ),
     requestService: (request) =>
       call<RequestServiceRequest, RequestServiceResponse>('requestService', request),
   };

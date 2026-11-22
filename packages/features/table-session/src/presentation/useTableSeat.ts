@@ -13,7 +13,11 @@ export function useTableSeat(gateway: CustomerGateway, qrPublicId: string) {
   const [seat, setSeat] = useState<TableSeat | null>(null);
 
   const remember = useCallback((joined: JoinTableSessionResponse): TableSeat => {
-    const next = { sessionId: joined.sessionId, branchId: joined.branchId };
+    const next: TableSeat = {
+      sessionId: joined.sessionId,
+      branchId: joined.branchId,
+      ...(joined.transferred ? { movedTo: joined.tableCode } : {}),
+    };
     current.current = next;
     setSeat(next);
     return next;

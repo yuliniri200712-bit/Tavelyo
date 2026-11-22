@@ -37,6 +37,36 @@ query ServerOpenSessionByQr($qrPublicId: UUID!, $authUid: String!) @auth(level: 
   }
 }
 
+# Participación vigente y propia de quien escanea, en una sesión abierta de la misma empresa y
+# sucursal (traslado de mesa, D-42): solo se consulta cuando la mesa del QR quedó libre, para
+# llevar al comensal a la mesa a la que se trasladó su sesión. Nunca devuelve la de otra persona.
+query ServerMyOpenParticipation($tenantId: UUID!, $branchId: UUID!, $authUid: String!)
+@auth(level: NO_ACCESS) {
+  sessionParticipants(
+    where: {
+      _and: [
+        { tenantId: { eq: $tenantId } }
+        { branchId: { eq: $branchId } }
+        { authUid: { eq: $authUid } }
+        { removedAt: { isNull: true } }
+        { expiresAt: { gt_expr: "request.time" } }
+        { session: { status: { eq: OPEN } } }
+      ]
+    }
+    orderBy: [{ joinedAt: DESC }]
+    limit: 1
+  ) {
+    id
+    expiresAt
+    session {
+      id
+      table {
+        code
+      }
+    }
+  }
+}
+
 # Alta de un participante (lo decide joinTableSession), auditada con el uid anónimo del cliente.
 mutation ServerInsertParticipant(
   $tenantId: UUID!

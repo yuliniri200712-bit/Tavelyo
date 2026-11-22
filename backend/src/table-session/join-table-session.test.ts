@@ -5,6 +5,7 @@ import {
   createJoinTableSession,
   MAX_ACTIVE_PARTICIPANTS,
   parseJoinTableSessionInput,
+  type MovedParticipation,
   type OpenTable,
   type ParticipantRecord,
   type TableSessionStore,
@@ -31,13 +32,17 @@ function table(session: OpenTable['session']): OpenTable {
 const openSession = (mine: ParticipantRecord | null = null, activeCount = 0) =>
   table({ id: '5'.repeat(32), mine, activeCount });
 
-function setup(found: OpenTable | null, options: { insert?: string | null; admit?: boolean } = {}) {
+function setup(
+  found: OpenTable | null,
+  options: { insert?: string | null; admit?: boolean; moved?: MovedParticipation | null } = {},
+) {
   const sessions = {
     openTableByQr: vi.fn(async () => found),
     insertParticipant: vi.fn(async () =>
       options.insert === undefined ? 'p-nuevo' : options.insert,
     ),
     renewParticipant: vi.fn(async () => undefined),
+    myOpenParticipation: vi.fn(async () => options.moved ?? null),
   } satisfies TableSessionStore;
   const limiter = { admit: vi.fn(async () => options.admit ?? true) };
   const join = createJoinTableSession({ sessions, limiter, clock: { now: () => NOW } });
@@ -147,5 +152,55 @@ describe('joinTableSession', () => {
       ok: true,
       value: { participantId: 'p-otra' },
     });
+  });
+
+  it('mesa trasladada (D-42): quien seguía en la sesión vuelve a ella con la mesa nueva', async () => {
+    const moved = {
+      sessionId: '6'.repeat(32),
+      participantId: 'p-trasladada',
+      expiresAt: new Date(IN_FOUR_HOURS),
+      tableCode: 'M2',
+    };
+    const { join, sessions } = setup(table(null), { moved });
+    expect(await join(actor, { qrPublicId: QR })).toEqual({
+      ok: true,
+      value: {
+        sessionId: moved.sessionId,
+        branchId: '4'.repeat(32),
+        participantId: 'p-trasladada',
+        tableCode: 'M2',
+        expiresAt: IN_FOUR_HOURS,
+        transferred: true,
+      },
+    });
+    expect(sessions.myOpenParticipation).toHaveBeenCalledWith(
+      '3'.repeat(32),
+      '4'.repeat(32),
+      actor.uid,
+    );
+    expect(sessions.insertParticipant).not.toHaveBeenCalled();
+  });
+
+  it('mesa libre sin participación vigente propia: sigue sin abrir y no crea nada', async () => {
+    const vencida = {
+      sessionId: '6'.repeat(32),
+      participantId: 'p-vencida',
+      expiresAt: NOW,
+      tableCode: 'M2',
+    };
+    for (const moved of [null, vencida]) {
+      const { join, sessions } = setup(table(null), { moved });
+      expect(await join(actor, { qrPublicId: QR })).toMatchObject({
+        ok: false,
+        error: { code: 'failed-precondition' },
+      });
+      expect(sessions.insertParticipant).not.toHaveBeenCalled();
+    }
+  });
+
+  it('con la mesa abierta no busca otra sesión aunque tenga una en otra mesa', async () => {
+    const { join, sessions } = setup(openSession());
+    expect((await join(actor, { qrPublicId: QR })).ok).toBe(true);
+    expect(sessions.myOpenParticipation).not.toHaveBeenCalled();
   });
 });

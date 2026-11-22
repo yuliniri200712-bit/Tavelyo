@@ -481,6 +481,23 @@ describe('carta y pedido del cliente', () => {
     expect(screen.getByText('Hamburguesa: en camino a tu mesa.')).toBeTruthy();
   });
 
+  it('si su mesa se trasladó (D-42), muestra la mesa nueva y lo avisa sin perder sus pedidos', async () => {
+    const moved = { ...seated, tableCode: 'M2', transferred: true as const };
+    const { gateway } = renderFlow(fakeGateway({ resume: vi.fn(async () => ok(moved)) }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Mis pedidos' }));
+    expect(
+      await screen.findByText(
+        /Tu mesa se trasladó a la mesa M2. Tus pedidos y tu cuenta siguen contigo/,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(/· Mesa M2$/)).toBeTruthy();
+    expect(await screen.findByText('1 × Hamburguesa')).toBeTruthy();
+    expect(gateway.watchMyOrders).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: 's1', branchId: 'b1' }),
+      expect.anything(),
+    );
+  });
+
   it('sin pedidos en este teléfono lo dice y no se une a la mesa solo por mirar', async () => {
     const { gateway } = renderFlow(fakeGateway({ resume: vi.fn(async () => ok(null)) }));
     fireEvent.click(await screen.findByRole('button', { name: 'Mis pedidos' }));

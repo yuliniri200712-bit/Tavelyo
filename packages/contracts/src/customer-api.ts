@@ -16,6 +16,11 @@ export interface JoinTableSessionResponse {
   readonly tableCode: string;
   /** La participación vence en este instante UTC (o antes, si se cierra la mesa). */
   readonly expiresAt: string;
+  /**
+   * La mesa del QR quedó libre porque la sesión de esta persona se trasladó (D-42): `sessionId`
+   * y `tableCode` son los de la mesa nueva.
+   */
+  readonly transferred?: true;
 }
 
 export interface QuoteLineRequest {

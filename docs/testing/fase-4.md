@@ -226,3 +226,33 @@ Casos de integración de la 6b, todos en verde:
 - dos meseros que agregan el mismo número a la vez (solo uno lo crea), y números 0 y 100 rechazados.
 
 Pendiente: los otros navegadores de D-15 (los corre la CI) y la aprobación del propietario de la 6b.
+
+## 2026-11-22 — Parte 6c: traslado de mesa (D-42, D-44)
+
+Revisión sin cambiar código (autorizada por el propietario el 2026-11-21) y después terminada con sus dos decisiones del 2026-11-22 (D-44). Ya cumplía: destino libre de la misma empresa y sucursal, no archivado y con la sucursal activa; traslado condicionado a que la sesión siga abierta en la mesa de origen; auditoría con «origen → destino»; la cuenta, las personas y los pedidos van con la sesión, y las pantallas del personal se refrescan solas.
+
+Cambios:
+
+1. **El comensal sigue a su sesión (D-44):** si escanea o recarga el QR de la mesa vieja y esa mesa quedó libre, `joinTableSession` lo lleva a su propia participación vigente en la mesa nueva (`ServerMyOpenParticipation`, solo servidor) con `transferred: true`. La carta, «Tu pedido» y «Mis pedidos» muestran la mesa nueva y el aviso «Tu mesa se trasladó a la mesa …». El gateway del comensal envía a SQL Connect solo `sessionId` y `branchId`.
+2. **Permiso:** el mesero traslada sin motivo; la matriz pasa a ✅ y `session.merge` queda en su propia fila, fuera de la Fase 4.
+3. Pruebas de integración nuevas de conectores: destino ocupado, la misma mesa, destino archivado o en un sector archivado, membresía revocada y mesa cerrada (se suman a las de cajero, otra sucursal, otra empresa, cliente, sin sesión, destino de otra empresa y dos traslados a la vez).
+4. Pruebas de integración nuevas del backend (`backend/tests/traslado-fase-4-6c.int.test.ts`):
+   - el QR viejo lleva a la misma participación con la mesa nueva, sin crear otra;
+   - quien no estaba, la persona retirada y una mesa libre de otra sucursal no llegan a la sesión;
+   - con la sesión trasladada ya cerrada, el QR viejo vuelve a decir que la mesa no está abierta.
+5. Pruebas de pantalla: el diálogo «Trasladar mesa» (solo mesas libres, éxito, rechazo, y sin mesas libres, sin conexión o sin permiso no deja trasladar), el aviso del comensal y `joinTableSession` (3 unitarias nuevas).
+6. El recorrido `traslado-mesa.spec.ts` comprueba también que el comensal unido antes del traslado llega a la mesa M2 con el QR viejo.
+
+| Comprobación | Resultado |
+|---|---|
+| ESLint, tipos y formato de los archivos cambiados | Correctos. El formato general marca `.vscode/launch.json`, archivo local del editor fuera de Git, que no se tocó |
+| Unitarias | 1027 pruebas en 79 archivos |
+| Integración del backend | 105 pruebas, incluidas las 3 nuevas de la 6c y la regresión de la 6b, 4a, 4b, 4c y caja |
+| Integración de SQL Connect | 119 pruebas, incluida la nueva del traslado |
+| SDK generado | Regenerado en `tavelyo-emu` y copiado a `packages/data-access/dataconnect-generated` |
+| Chrome con emuladores | `traslado-mesa`, `mesero-comanda`, `caja-comprobante`, `customer-order` (2) y `customer-live`: 6 en verde (3,1 min) |
+| `npm run check:secrets` | Sin secretos en 553 archivos |
+
+Observación sin cambio, para decidir más adelante: si la mesa vieja se vuelve a abrir con otro grupo, quien recargue su QR se une al grupo nuevo (comportamiento de la Fase 3, que permite estar en dos sesiones). La cuenta de cada sesión sigue separada.
+
+Pendiente: los otros navegadores de D-15 (los corre la CI) y la aprobación del propietario de la 6c.

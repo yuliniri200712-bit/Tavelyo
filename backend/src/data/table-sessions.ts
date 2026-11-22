@@ -1,6 +1,10 @@
 import type { DataConnect } from 'firebase-admin/data-connect';
 import type { RateLimiter } from '../shared/rate-limit.ts';
-import type { OpenTable, TableSessionStore } from '../table-session/join-table-session.ts';
+import type {
+  MovedParticipation,
+  OpenTable,
+  TableSessionStore,
+} from '../table-session/join-table-session.ts';
 
 // Operaciones NO_ACCESS del conector (dataconnect/connector/servidor.gql) con el Admin SDK sin
 // suplantar: el backend ya hizo sus comprobaciones y SQL Connect no admite a ningún cliente.
@@ -81,6 +85,28 @@ export function createTableSessionStore(dataConnect: DataConnect): TableSessionS
         participantId,
         expiresAt: expiresAt.toISOString(),
       });
+    },
+
+    async myOpenParticipation(tenantId, branchId, authUid): Promise<MovedParticipation | null> {
+      const { data } = await dataConnect.executeQuery<
+        {
+          sessionParticipants: Array<{
+            id: string;
+            expiresAt: string;
+            session: { id: string; table: { code: string } };
+          }>;
+        },
+        { tenantId: string; branchId: string; authUid: string }
+      >('ServerMyOpenParticipation', { tenantId, branchId, authUid });
+      const found = data.sessionParticipants[0];
+      return found
+        ? {
+            sessionId: found.session.id,
+            participantId: found.id,
+            expiresAt: new Date(found.expiresAt),
+            tableCode: found.session.table.code,
+          }
+        : null;
     },
   };
 }

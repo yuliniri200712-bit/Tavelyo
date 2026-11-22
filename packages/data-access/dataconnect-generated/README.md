@@ -40,6 +40,7 @@ This README will guide you through the process of using the generated JavaScript
   - [*FloorView*](#floorview)
   - [*SessionParticipants*](#sessionparticipants)
   - [*ServerOpenSessionByQr*](#serveropensessionbyqr)
+  - [*ServerMyOpenParticipation*](#servermyopenparticipation)
   - [*ServerQuoteContext*](#serverquotecontext)
   - [*ServerProductsForQuote*](#serverproductsforquote)
   - [*ServerQuoteByKey*](#serverquotebykey)
@@ -4199,6 +4200,130 @@ console.log(data.diningTables);
 executeQuery(ref).then((response) => {
   const data = response.data;
   console.log(data.diningTables);
+});
+```
+
+## ServerMyOpenParticipation
+You can execute the `ServerMyOpenParticipation` query using the following action shortcut function, or by calling `executeQuery()` after calling the following `QueryRef` function, both of which are defined in [dataconnect-generated/index.d.ts](./index.d.ts):
+```typescript
+serverMyOpenParticipation(vars: ServerMyOpenParticipationVariables, options?: ExecuteQueryOptions): QueryPromise<ServerMyOpenParticipationData, ServerMyOpenParticipationVariables>;
+
+interface ServerMyOpenParticipationRef {
+  ...
+  /* Allow users to create refs without passing in DataConnect */
+  (vars: ServerMyOpenParticipationVariables): QueryRef<ServerMyOpenParticipationData, ServerMyOpenParticipationVariables>;
+}
+export const serverMyOpenParticipationRef: ServerMyOpenParticipationRef;
+```
+You can also pass in a `DataConnect` instance to the action shortcut function or `QueryRef` function.
+```typescript
+serverMyOpenParticipation(dc: DataConnect, vars: ServerMyOpenParticipationVariables, options?: ExecuteQueryOptions): QueryPromise<ServerMyOpenParticipationData, ServerMyOpenParticipationVariables>;
+
+interface ServerMyOpenParticipationRef {
+  ...
+  (dc: DataConnect, vars: ServerMyOpenParticipationVariables): QueryRef<ServerMyOpenParticipationData, ServerMyOpenParticipationVariables>;
+}
+export const serverMyOpenParticipationRef: ServerMyOpenParticipationRef;
+```
+
+If you need the name of the operation without creating a ref, you can retrieve the operation name by calling the `operationName` property on the serverMyOpenParticipationRef:
+```typescript
+const name = serverMyOpenParticipationRef.operationName;
+console.log(name);
+```
+
+### Variables
+The `ServerMyOpenParticipation` query requires an argument of type `ServerMyOpenParticipationVariables`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+
+```typescript
+export interface ServerMyOpenParticipationVariables {
+  tenantId: UUIDString;
+  branchId: UUIDString;
+  authUid: string;
+}
+```
+### Return Type
+Recall that executing the `ServerMyOpenParticipation` query returns a `QueryPromise` that resolves to an object with a `data` property.
+
+The `data` property is an object of type `ServerMyOpenParticipationData`, which is defined in [dataconnect-generated/index.d.ts](./index.d.ts). It has the following fields:
+```typescript
+export interface ServerMyOpenParticipationData {
+  sessionParticipants: ({
+    id: UUIDString;
+    expiresAt: TimestampString;
+    session: {
+      id: UUIDString;
+      table: {
+        code: string;
+      };
+    } & TableSession_Key;
+  } & SessionParticipant_Key)[];
+}
+```
+### Using `ServerMyOpenParticipation`'s action shortcut function
+
+```typescript
+import { getDataConnect } from 'firebase/data-connect';
+import { connectorConfig, serverMyOpenParticipation, ServerMyOpenParticipationVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerMyOpenParticipation` query requires an argument of type `ServerMyOpenParticipationVariables`:
+const serverMyOpenParticipationVars: ServerMyOpenParticipationVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  authUid: ..., 
+};
+
+// Call the `serverMyOpenParticipation()` function to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await serverMyOpenParticipation(serverMyOpenParticipationVars);
+// Variables can be defined inline as well.
+const { data } = await serverMyOpenParticipation({ tenantId: ..., branchId: ..., authUid: ..., });
+
+// You can also pass in a `DataConnect` instance to the action shortcut function.
+const dataConnect = getDataConnect(connectorConfig);
+const { data } = await serverMyOpenParticipation(dataConnect, serverMyOpenParticipationVars);
+
+console.log(data.sessionParticipants);
+
+// Or, you can use the `Promise` API.
+serverMyOpenParticipation(serverMyOpenParticipationVars).then((response) => {
+  const data = response.data;
+  console.log(data.sessionParticipants);
+});
+```
+
+### Using `ServerMyOpenParticipation`'s `QueryRef` function
+
+```typescript
+import { getDataConnect, executeQuery } from 'firebase/data-connect';
+import { connectorConfig, serverMyOpenParticipationRef, ServerMyOpenParticipationVariables } from '@tavelyo/dataconnect-sdk';
+
+// The `ServerMyOpenParticipation` query requires an argument of type `ServerMyOpenParticipationVariables`:
+const serverMyOpenParticipationVars: ServerMyOpenParticipationVariables = {
+  tenantId: ..., 
+  branchId: ..., 
+  authUid: ..., 
+};
+
+// Call the `serverMyOpenParticipationRef()` function to get a reference to the query.
+const ref = serverMyOpenParticipationRef(serverMyOpenParticipationVars);
+// Variables can be defined inline as well.
+const ref = serverMyOpenParticipationRef({ tenantId: ..., branchId: ..., authUid: ..., });
+
+// You can also pass in a `DataConnect` instance to the `QueryRef` function.
+const dataConnect = getDataConnect(connectorConfig);
+const ref = serverMyOpenParticipationRef(dataConnect, serverMyOpenParticipationVars);
+
+// Call `executeQuery()` on the reference to execute the query.
+// You can use the `await` keyword to wait for the promise to resolve.
+const { data } = await executeQuery(ref);
+
+console.log(data.sessionParticipants);
+
+// Or, you can use the `Promise` API.
+executeQuery(ref).then((response) => {
+  const data = response.data;
+  console.log(data.sessionParticipants);
 });
 ```
 

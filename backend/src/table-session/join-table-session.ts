@@ -31,6 +31,15 @@ export interface OpenTable {
   } | null;
 }
 
+/** Participación vigente de quien escanea en una sesión abierta de la sucursal (traslado, D-42). */
+export interface MovedParticipation {
+  readonly sessionId: string;
+  readonly participantId: string;
+  readonly expiresAt: Date;
+  /** Código de la mesa a la que se trasladó la sesión. */
+  readonly tableCode: string;
+}
+
 export interface NewParticipant {
   readonly tenantId: string;
   readonly branchId: string;
@@ -45,6 +54,12 @@ export interface TableSessionStore {
   /** Devuelve el id del participante, o null si ya existía (doble pulsación simultánea). */
   insertParticipant(participant: NewParticipant): Promise<string | null>;
   renewParticipant(participantId: string, expiresAt: Date): Promise<void>;
+  /** Participación vigente y propia en una sesión abierta de la empresa y sucursal; null si no hay. */
+  myOpenParticipation(
+    tenantId: string,
+    branchId: string,
+    authUid: string,
+  ): Promise<MovedParticipation | null>;
 }
 
 export interface JoinTableSessionDeps {
@@ -71,7 +86,8 @@ const FULL = 'La mesa alcanzó el máximo de personas conectadas. Pide ayuda al 
 /**
  * Une a quien escaneó el QR a la sesión abierta de esa mesa (ADR-0011). Es idempotente: volver a
  * escanear devuelve la misma participación y, si venció con la mesa abierta, la renueva. Nadie
- * expulsado vuelve a entrar con la misma cuenta.
+ * expulsado vuelve a entrar con la misma cuenta. Si la mesa quedó libre porque su sesión se
+ * trasladó (D-42), quien seguía en ella vuelve a su sesión con el código de la mesa nueva.
  */
 export function createJoinTableSession(deps: JoinTableSessionDeps) {
   return async (actor: Actor, data: unknown): Promise<Outcome<JoinTableSessionResponse>> => {
@@ -88,10 +104,25 @@ export function createJoinTableSession(deps: JoinTableSessionDeps) {
 
     const table = await deps.sessions.openTableByQr(qrPublicId, actor.uid);
     if (!table) return err(failure('not-found', NOT_A_TABLE));
-    if (!table.session) return err(failure('failed-precondition', NOT_OPEN));
+    const now = deps.clock.now();
+    if (!table.session) {
+      const moved = await deps.sessions.myOpenParticipation(
+        table.tenantId,
+        table.branchId,
+        actor.uid,
+      );
+      if (!moved || moved.expiresAt <= now) return err(failure('failed-precondition', NOT_OPEN));
+      return ok({
+        sessionId: moved.sessionId,
+        branchId: table.branchId,
+        participantId: moved.participantId,
+        tableCode: moved.tableCode,
+        expiresAt: moved.expiresAt.toISOString(),
+        transferred: true,
+      });
+    }
     const session = table.session;
 
-    const now = deps.clock.now();
     const expiresAt = new Date(now.getTime() + PARTICIPATION_TTL_MS);
     const respond = (participantId: string, until: Date) =>
       ok({

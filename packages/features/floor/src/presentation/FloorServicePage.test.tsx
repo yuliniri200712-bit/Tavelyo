@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { err, ok } from '@tavelyo/core';
 import type {
@@ -291,5 +291,75 @@ describe('FloorServicePage', () => {
     expect(renderOrders).toHaveBeenCalledWith(expect.objectContaining({ id: 'ses2' }), '2');
     // Una mesa libre no tiene pedidos que ver.
     expect(within(await tableItem('1')).queryByRole('button', { name: 'Ver pedidos' })).toBeNull();
+  });
+});
+
+describe('traslado de mesa (parte 6c, D-42)', () => {
+  function renderTransfer(gateway = fakeGateway(), canTransfer = true) {
+    render(
+      <FloorServicePage
+        gateway={gateway}
+        scope={scope}
+        branchName="Centro"
+        timezone="America/Bogota"
+        canClose
+        canTransfer={canTransfer}
+        now={now}
+      />,
+    );
+    return gateway;
+  }
+
+  it('solo ofrece mesas libres de la sucursal y confirma el traslado', async () => {
+    const gateway = renderTransfer();
+    const open = await tableItem('2');
+    fireEvent.click(within(open).getByRole('button', { name: 'Trasladar mesa' }));
+    const dialog = screen.getByRole('dialog', { name: 'Trasladar mesa 2' });
+    expect(
+      within(dialog).getByText(/La cuenta, las personas y los pedidos pasan juntos/),
+    ).toBeTruthy();
+    const options = within(dialog).getAllByRole('option') as HTMLOptionElement[];
+    expect(options.map((o) => o.textContent)).toEqual(['1']);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirmar traslado' }));
+    expect(await screen.findByText('Sesión trasladada a la mesa 1.')).toBeTruthy();
+    expect(gateway.transfer).toHaveBeenCalledWith(scope, 'ses2', 'm2', 'm1');
+  });
+
+  it('si el servidor lo rechaza, lo dice y no da el traslado por hecho', async () => {
+    const transfer = vi.fn(async () =>
+      err<FloorError>({ kind: 'rejected', message: 'La mesa de destino ya está ocupada.' }),
+    );
+    renderTransfer(fakeGateway({ transfer }));
+    fireEvent.click(within(await tableItem('2')).getByRole('button', { name: 'Trasladar mesa' }));
+    const dialog = screen.getByRole('dialog', { name: 'Trasladar mesa 2' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirmar traslado' }));
+    expect(await screen.findByText('La mesa de destino ya está ocupada.')).toBeTruthy();
+    expect(screen.queryByText(/Sesión trasladada/)).toBeNull();
+  });
+
+  it('sin mesas libres, sin conexión o sin session.transfer no deja trasladar', async () => {
+    const full = sectors.map((sector) => ({
+      ...sector,
+      tables: sector.tables.filter((t) => t.session),
+    }));
+    renderTransfer(fakeGateway({ floor: vi.fn(async () => ok(full)) }));
+    const button = within(await tableItem('2')).getByRole('button', {
+      name: 'Trasladar mesa',
+    }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    cleanup();
+
+    renderTransfer();
+    const open = await tableItem('2');
+    act(() => observer?.onError({ kind: 'network' }));
+    expect(
+      (within(open).getByRole('button', { name: 'Trasladar mesa' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    cleanup();
+
+    renderTransfer(fakeGateway(), false);
+    expect(
+      within(await tableItem('2')).queryByRole('button', { name: 'Trasladar mesa' }),
+    ).toBeNull();
   });
 });

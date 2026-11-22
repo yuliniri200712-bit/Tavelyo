@@ -34,7 +34,8 @@ Leyenda: ✅ permitido · 🔸 permitido con tope, motivo o autenticación refor
 | `price.change` | 🔸 | 🔸 | — | — | — | — |
 | `table.manage` (sectores/mesas) | ✅ | ✅ | — | — | — | — |
 | `session.open` / `session.close` | ✅ | ✅ | ✅ | — | ✅ | — |
-| `session.transfer` / `session.merge` | ✅ | ✅ | 🔸 | — | — | — |
+| `session.transfer` (sin motivo y auditado, D-42) | ✅ | ✅ | ✅ | — | — | — |
+| `session.merge` (unir mesas: fuera de la Fase 4) | ✅ | ✅ | 🔸 | — | — | — |
 | `order.create` | ✅ | ✅ | ✅ | — | — | ✅ propia sesión |
 | `order.amend` (tras envío) | ✅ | ✅ | 🔸 | — | — | — |
 | `order.approve` (pedidos del cliente, D-32) | ✅ | ✅ | ✅ | — | — | — |
@@ -174,7 +175,14 @@ Las tres operaciones exigen `order.create` (propietario, administrador de sucurs
 - Retirar a una persona sin teléfono usa `RemoveParticipant` (`session.close`), como a cualquier otra; lo que ya pidió sigue en la cuenta.
 - Nombres en pantalla, iguales en el salón, la comanda y la caja (`packages/core/src/table-people.ts`): «Persona N» por orden de llegada entre quienes tienen teléfono y «Persona sin teléfono N» con su número. `readBill` devuelve `personNumber` o `guestNumber`.
 
-## 12. Pendiente
+## 12. Traslado de mesa (Fase 4, parte 6c, D-42 y D-44)
+
+- `TransferTableSession` (`salon.gql`) exige `session.transfer` (propietario, administrador de sucursal y mesero, **sin motivo**, D-44; no el cajero ni la cocina), membresía y empresa activas y la sucursal asignada (el propietario accede a todas las de su empresa). El destino debe ser de la misma empresa y sucursal, no estar archivado ni en un sector archivado, con la sucursal activa y **sin mesa abierta**. Solo traslada si la sesión sigue abierta en la mesa de origen (`_updateMany` condicionado y `@check`), y la unicidad de `openTableId` impide dos sesiones en la misma mesa. Deja `AuditEvent` `session.transfer` con «origen → destino» en la misma transacción.
+- La cuenta, las personas y los pedidos van con la sesión: ningún dato guarda la mesa aparte. La vista del salón, la cocina, «Listos para recoger», las solicitudes y los pedidos por aprobar se refrescan con el traslado (ADR-0007).
+- **Comensal (D-44):** `joinTableSession` solo consulta `ServerMyOpenParticipation` (`NO_ACCESS`) cuando la mesa del QR está libre, y devuelve únicamente la participación vigente y propia de quien llama en una sesión abierta de esa empresa y sucursal, con `transferred: true` y el código de la mesa nueva. No crea participaciones ni revela otras sesiones.
+- Unir mesas (`session.merge`) queda fuera de la Fase 4.
+
+## 13. Pendiente
 
 - Topes concretos de descuento por rol (los de reembolso, D-34, están implementados desde 4b).
 - Política de autenticación reforzada para propietarios (según capacidades verificadas de Firebase Auth).

@@ -1,7 +1,14 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { buildFixture } from '../../dataconnect/tests/support/catalog-fixture.ts';
-import { createUser, expectOk, mutate, query } from '../../dataconnect/tests/support/emulator.ts';
+import {
+  admin,
+  createAnonymousUser,
+  createUser,
+  expectOk,
+  mutate,
+  query,
+} from '../../dataconnect/tests/support/emulator.ts';
 import {
   createProfile,
   provisionTenant,
@@ -10,7 +17,11 @@ import {
 } from '../../dataconnect/tests/support/provisioning.ts';
 import { callFunction } from '../../backend/tests/support/functions.ts';
 import { signInStaff } from '../support/orders.ts';
-import type { BillResponse, StaffOrderResponse } from '@tavelyo/contracts';
+import type {
+  BillResponse,
+  JoinTableSessionResponse,
+  StaffOrderResponse,
+} from '@tavelyo/contracts';
 
 // Parte 6c (D-42): traslado de la sesión a una mesa libre de la misma sucursal, con su cuenta.
 test('el mesero traslada la sesión a una mesa libre y la cuenta pasa con ella', async ({
@@ -78,6 +89,19 @@ test('el mesero traslada la sesión a una mesa libre y la cuenta pasa con ella',
       ],
     }),
   ).toMatchObject({ ok: true, result: { outcome: 'sent' } });
+  // Un comensal con teléfono se unió desde el QR de la mesa de origen.
+  const oldQr = expectOk(
+    await admin<{ diningTable: { qrPublicId: string } }>(
+      'query ($id: UUID!) { diningTable(id: $id) { qrPublicId } }',
+      { id: f.tableId },
+    ),
+    'QR de origen',
+  ).diningTable.qrPublicId;
+  const diner = await createAnonymousUser('traslado-cliente-' + tag);
+  const joined = await callFunction<JoinTableSessionResponse>(diner, 'joinTableSession', {
+    qrPublicId: oldQr,
+  });
+  expect(joined).toMatchObject({ ok: true, result: { tableCode: 'M1' } });
   const bill = await callFunction<BillResponse>(cashier, 'readBill', seat);
   expect(bill).toMatchObject({ ok: true, result: { totalMinor: '3200000' } });
 
@@ -93,6 +117,17 @@ test('el mesero traslada la sesión a una mesa libre y la cuenta pasa con ella',
     .filter({ has: page.getByText('Mesa M2', { exact: true }) });
   await expect(moved.getByText('1 línea en cocina')).toBeVisible();
   expect(await callFunction<BillResponse>(cashier, 'readBill', seat)).toEqual(bill);
+  // Al recargar con el QR viejo, el comensal llega a su sesión en la mesa nueva.
+  expect(
+    await callFunction<JoinTableSessionResponse>(diner, 'joinTableSession', { qrPublicId: oldQr }),
+  ).toMatchObject({
+    ok: true,
+    result: {
+      sessionId: joined.ok ? joined.result.sessionId : '',
+      tableCode: 'M2',
+      transferred: true,
+    },
+  });
   const audit = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag22aa'])
     .analyze();

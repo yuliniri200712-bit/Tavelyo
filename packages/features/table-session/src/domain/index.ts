@@ -52,6 +52,8 @@ export type CustomerResult<T> = Promise<Result<T, CustomerError>>;
 export interface TableSeat {
   readonly sessionId: string;
   readonly branchId: string;
+  /** Código de la mesa nueva si la sesión se trasladó desde la mesa del QR (D-42). */
+  readonly movedTo?: string;
 }
 
 /** Línea de un pedido propio, con su estado y su importe (D-06: solo los propios). */
